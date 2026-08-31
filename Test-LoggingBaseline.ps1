@@ -34,6 +34,14 @@
     Path to a selection CSV produced by New-LoggingBaseline.ps1. When given,
     tier switches are ignored and only Selected = Y items are assessed.
 
+.PARAMETER WefRole
+    Also check Windows Event Forwarding plumbing for this host's role in a
+    WEF deployment. 'Source' checks the SubscriptionManager policy and the
+    WinRM service; 'Collector' checks the Wecsvc service, ForwardedEvents
+    sizing/retention and that at least one subscription exists. Default:
+    None (no WEF checks). WEF rows appear in the detail CSV and affect the
+    exit code, but not the per-category rollup.
+
 .PARAMETER OutputDir
     Where the CSVs are written. Default: .\Results next to this script.
 
@@ -46,6 +54,8 @@ param(
     [switch]$IncludeHighVolume,
     [switch]$IncludeOptional,
     [string]$BaselineFile,
+    [ValidateSet('None', 'Source', 'Collector')]
+    [string]$WefRole = 'None',
     # Default resolved in the body: $PSScriptRoot is not reliably available
     # during param-default evaluation under powershell.exe -File.
     [string]$OutputDir
@@ -311,6 +321,60 @@ if ($null -ne $afSkip) {
     } else {
         $curText = '<absent>'; if ($null -ne $current) { $curText = "$current" }
         Add-Row $af.Categories 'Registry' "$adcsPath\$($af.Name)" "$($af.Value)" $curText 'FAIL'
+    }
+}
+
+# ------------------------------- WEF plumbing (optional, role-dependent) ----
+# Not part of the behaviour-category model: these verify the transport layer
+# set up per the New-WefSubscription.ps1 guidance.
+
+if ($WefRole -eq 'Source') {
+    $smKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SOFTWARE\Policies\Microsoft\Windows\EventLog\EventForwarding\SubscriptionManager')
+    if ($null -ne $smKey) {
+        $smValues = @($smKey.GetValueNames() | Where-Object { $_ -ne '' })
+        $smKey.Close()
+    } else { $smValues = @() }
+    if ($smValues.Count -gt 0) {
+        Add-Row @() 'WEF' 'SubscriptionManager policy' 'at least one collector URL' "$($smValues.Count) value(s) configured" 'PASS'
+    } else {
+        Add-Row @() 'WEF' 'SubscriptionManager policy' 'at least one collector URL' 'not configured' 'FAIL' 'Set via GPO: Event Forwarding > Configure target Subscription Manager'
+    }
+    $winrm = Get-Service -Name WinRM -ErrorAction SilentlyContinue
+    if ($null -ne $winrm -and $winrm.Status -eq 'Running') {
+        Add-Row @() 'WEF' 'WinRM service (source)' 'Running' "$($winrm.Status)" 'PASS'
+    } else {
+        $state = 'not installed'; if ($null -ne $winrm) { $state = "$($winrm.Status)" }
+        Add-Row @() 'WEF' 'WinRM service (source)' 'Running' $state 'FAIL' 'Source-initiated forwarding needs WinRM'
+    }
+}
+
+if ($WefRole -eq 'Collector') {
+    $wec = Get-Service -Name Wecsvc -ErrorAction SilentlyContinue
+    if ($null -ne $wec -and $wec.Status -eq 'Running') {
+        Add-Row @() 'WEF' 'Windows Event Collector service' 'Running' "$($wec.Status)" 'PASS'
+    } else {
+        $state = 'not installed'; if ($null -ne $wec) { $state = "$($wec.Status)" }
+        Add-Row @() 'WEF' 'Windows Event Collector service' 'Running' $state 'FAIL' 'Run: wecutil qc /q'
+    }
+    $fwd = Get-WinEvent -ListLog ForwardedEvents -ErrorAction SilentlyContinue
+    if ($null -ne $fwd) {
+        $fwdMB = [math]::Round($fwd.MaximumSizeInBytes / 1MB)
+        $fwdProblems = @()
+        if ($fwd.MaximumSizeInBytes -lt 134217728) { $fwdProblems += "size $fwdMB MB below 128 MB minimum (1 GB recommended for collectors)" }
+        if ($fwd.LogMode -eq 'Retain') { $fwdProblems += 'retention set to "do not overwrite"' }
+        if ($fwdProblems.Count -eq 0) {
+            Add-Row @() 'WEF' 'ForwardedEvents log' '>= 128 MB, circular' "$fwdMB MB, mode=$($fwd.LogMode)" 'PASS'
+        } else {
+            Add-Row @() 'WEF' 'ForwardedEvents log' '>= 128 MB, circular' "$fwdMB MB, mode=$($fwd.LogMode)" 'FAIL' ($fwdProblems -join '; ')
+        }
+    } else {
+        Add-Row @() 'WEF' 'ForwardedEvents log' '>= 128 MB, circular' 'not present' 'FAIL' 'Windows Event Collector not configured'
+    }
+    $subs = @(& wecutil es 2>$null | Where-Object { $_ -match '\S' })
+    if ($LASTEXITCODE -eq 0 -and $subs.Count -gt 0) {
+        Add-Row @() 'WEF' 'Collector subscriptions' 'at least one subscription' ($subs -join '; ') 'PASS'
+    } else {
+        Add-Row @() 'WEF' 'Collector subscriptions' 'at least one subscription' 'none' 'FAIL' 'Load one: wecutil cs <subscription.xml> (generate with New-WefSubscription.ps1)'
     }
 }
 

@@ -44,9 +44,13 @@
   Microsoft_Server as selection CSVs, faithful to Yamato's
   EventLog-Baseline-Guide scripts, drift-checked in CI against
   `tools/New-PresetBaselines.ps1`
-- [ ] Collector-side checks (SubscriptionManager policy and WinRM state on
-  sources, ForwardedEvents sizing) in Test-LoggingBaseline
-- [ ] Remaining GPO items below
+- [x] Collector/source-side WEF checks in Test-LoggingBaseline (`-WefRole`)
+- [x] GPO pack: `New-GpoPack.ps1` generates the audit policy `audit.csv`
+  and LGPO-format `registry.txt` from any selection
+- [x] ATT&CK coverage reporting via a vendored OSSEM-DM snapshot
+  (`Export-AttackCoverage.ps1`)
+- [x] Documentation site (MkDocs Material on GitHub Pages)
+- [ ] Remaining GPO refinements below
 
 ### GPO delivery for fleet scale
 

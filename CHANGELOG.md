@@ -6,6 +6,23 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 ## v0.4.0 - Unreleased
 
 ### Added
+- GPO delivery: `New-GpoPack.ps1` generates the advanced audit policy
+  `audit.csv` (GUID-driven) and an LGPO-format `registry.txt` from any
+  selection, with explicit reminders for what GPO packs deliberately
+  exclude (channel sizing, NTLM security options, SMB auditing, AD CS).
+- WEF plumbing verification: `Test-LoggingBaseline.ps1 -WefRole
+  Source|Collector` checks the SubscriptionManager policy and WinRM on
+  sources, and Wecsvc / ForwardedEvents sizing / loaded subscriptions on
+  collectors.
+- ATT&CK coverage reporting: `Export-AttackCoverage.ps1` joins a vendored,
+  provenance-recorded [OSSEM-DM](https://github.com/OTRF/OSSEM-DM)
+  snapshot (`data/ossem/`, MIT) against any selection and reports
+  observable techniques with reasons for the gaps (NotSelected / NotInKit /
+  RequiresSysmon). Reference numbers: Core 282/362, Core+HighVolume
+  320/362 mapped Windows techniques.
+- Documentation site (MkDocs Material, deployed to GitHub Pages by the
+  Docs workflow): getting started, commands, baselines and presets, fleet
+  deployment, coverage mapping, safety, FAQ.
 - WEF/WEC central collection: `New-WefSubscription.ps1` generates a
   source-initiated Windows Event Forwarding subscription XML from the
   settings table or any baseline selection CSV (one query per selected
