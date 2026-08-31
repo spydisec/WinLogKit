@@ -1,5 +1,9 @@
 # Safety & Volume
 
+The settings that can genuinely hurt a Windows machine, how the kit avoids
+every one of them, and which of the *safe* settings still cost real disk
+and money.
+
 ## What the kit will never do
 
 Windows auditing has settings that can hang, halt or lock out a server. The
