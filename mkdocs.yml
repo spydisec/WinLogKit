@@ -66,6 +66,7 @@ nav:
   - Commands: commands.md
   - Deployment: deployment.md
   - Coverage: mapping.md
+  - Reference: reference.md
   - Architecture: architecture.md
   - Safety: safety.md
   - FAQ: faq.md

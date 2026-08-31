@@ -177,7 +177,9 @@ what you're choosing between:
 | `spydi_Server_Heavy.csv` | **279 of 472 = 98% - the full native reach** |
 
 Every group traced to its sources (A = ASD, C = Microsoft Client,
-S = Microsoft Server, Y = Yamato) and key events:
+S = Microsoft Server, Y = Yamato) and key events - and for the full
+per-setting breakdown with real Minimal/Heavy membership per item, see the
+[Reference page](reference.md):
 
 | Group | Key events | Refs | Minimal | Heavy |
 |---|---|---|---|---|

@@ -158,6 +158,14 @@ try {
         if (Compare-Object $a $b) { Fail "presets\$name.csv drifted from the generator - rerun tools\New-PresetBaselines.ps1" } else { Pass "preset $name matches generator" }
     }
 
+    # 6b. Reference page: committed docs\reference.md must match the generator
+    $refTmp = Join-Path $tmp 'reference.md'
+    & (Join-Path $KitRoot 'tools\Export-ReferenceTable.ps1') -OutFile $refTmp | Out-Null
+    $committedRef = Get-Content (Join-Path $KitRoot 'docs\reference.md') -Raw -ErrorAction SilentlyContinue
+    if ($null -eq $committedRef) { Fail 'docs\reference.md missing - run tools\Export-ReferenceTable.ps1' }
+    elseif ($committedRef -ne (Get-Content $refTmp -Raw)) { Fail 'docs\reference.md drifted - rerun tools\Export-ReferenceTable.ps1' }
+    else { Pass 'reference page matches generator' }
+
     # 7a. GPO pack: audit.csv row count matches selection; registry.txt has policy values
     $gpoTmp = Join-Path $tmp 'gpo'
     & (Join-Path $KitRoot 'New-GpoPack.ps1') -OutDir $gpoTmp -IncludeHighVolume | Out-Null
