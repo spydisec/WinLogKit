@@ -20,8 +20,10 @@
 - [x] **Intune delivery**: `New-IntuneRemediationPack.ps1` compiles the
   settings table (or a baseline CSV) into a self-contained detection +
   remediation pair (SYSTEM, 64-bit, exit-code contract)
-- [x] IPsec Driver subcategory added (Optional) from the Microsoft baseline
-  via Yamato's EventLog-Baseline-Guide comparison
+- [x] IPsec Driver subcategory added (Optional) from
+  [Microsoft's baseline recommendation](https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations)
+  via Yamato's [EventLog-Baseline-Guide](https://github.com/Yamato-Security/EventLog-Baseline-Guide)
+  comparison
 - [ ] Field-test the pack in a real Intune tenant (assignment, schedule,
   reporting) and fold back findings
 - [ ] Settings-catalog / CSP mappings where they exist (PowerShell logging and

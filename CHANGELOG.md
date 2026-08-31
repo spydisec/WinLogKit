@@ -15,9 +15,11 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
   detection + remediation script pair (SYSTEM, 64-bit, Intune exit-code
   contract). AD CS AuditFilter excluded from packs by design (CertSvc
   restart).
-- IPsec Driver audit subcategory (Optional tier) - present in Microsoft's
-  baseline recommendation but not the Yamato set; surfaced by reviewing
-  Yamato's EventLog-Baseline-Guide comparison app, now credited in the README.
+- IPsec Driver audit subcategory (Optional tier) - present in
+  [Microsoft's baseline recommendation](https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations)
+  but not the Yamato set; surfaced by reviewing Yamato's
+  [EventLog-Baseline-Guide](https://github.com/Yamato-Security/EventLog-Baseline-Guide)
+  comparison app, now credited in the README.
 - Kit self-checks extended to generate and validate the Intune pack.
 
 ## v0.2.0 - 2026-08-31

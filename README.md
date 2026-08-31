@@ -149,7 +149,7 @@ Notes:
 |---|---|---|
 | Core | always | Everything with low or justified volume |
 | HighVolume | `-IncludeHighVolume` | Process Creation + command line, PowerShell script block + module logging, Filtering Platform Connection, Sensitive Privilege Use |
-| Optional | `-IncludeOptional` | PowerShell transcription (set an output directory for your environment), Crypto-DPAPI debug channel |
+| Optional | `-IncludeOptional` | PowerShell transcription (set an output directory for your environment), Crypto-DPAPI debug channel, IPsec Driver auditing |
 
 ---
 
@@ -189,14 +189,18 @@ you built) into a standalone detection + remediation script pair for Intune:
 .\New-IntuneRemediationPack.ps1 -BaselineFile .\WorkstationBaseline.csv -OutDir .\Intune\Workstation
 ```
 
-Upload both files under **Devices > Scripts and remediations > Create**:
+Upload both files under **Devices > Manage devices > Scripts and remediations > Create**:
 run using logged-on credentials **No** (SYSTEM), run in 64-bit PowerShell
 **Yes**. Detection exits 0 when compliant and 1 with a one-line drift summary
 otherwise; remediation applies only what is below baseline (idempotent, never
 shrinks logs, never restarts anything - the AD CS AuditFilter is excluded
-from packs for exactly that reason). Regenerate the pack whenever the
-settings table or your baseline CSV changes; the generated files say not to
-edit them by hand.
+from packs for exactly that reason). Remediation also corrects "do not
+overwrite" retention back to circular, matching the kit's never-do list.
+Regenerate the pack whenever the settings table or your baseline CSV changes;
+the generated files say not to edit them by hand. Like the kit's own
+verification, the generated audit policy checks assume an English-language OS
+(auditpol output is localised); on non-English endpoints detection may
+re-trigger remediation each schedule, which is idempotent but noisy.
 
 ## Windows Server 2025 notes
 

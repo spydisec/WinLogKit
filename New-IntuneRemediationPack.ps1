@@ -26,7 +26,7 @@
       - The AD CS AuditFilter is deliberately EXCLUDED from packs: it needs a
         CertSvc restart, which does not belong in an unattended remediation.
 
-    Intune deployment (Devices > Scripts and remediations > Create):
+    Intune deployment (Devices > Manage devices > Scripts and remediations > Create):
       - Run this script using the logged-on credentials: No  (runs as SYSTEM)
       - Run script in 64-bit PowerShell: Yes
       - Enforce script signature check: per your org's policy
@@ -153,6 +153,9 @@ $template = @'
 # Source: __SOURCE__ | Items: __COUNT__ | Kit: https://github.com/spydisec/WinLogKit
 # Do not edit by hand - regenerate from the kit so the pack matches the tested baseline.
 # Intune settings: run as SYSTEM (logged-on credentials: No), 64-bit PowerShell: Yes.
+# Assumes an English-language OS: auditpol state text is localised, so audit
+# policy checks on non-English Windows may re-remediate each schedule (see the
+# kit README; locale-neutral checking is a roadmap item).
 
 $Mode = '__MODE__'
 $ErrorActionPreference = 'Stop'
@@ -192,12 +195,16 @@ foreach ($i in $Items) {
                 $checked++
                 $needSize   = ($log.MaximumSizeInBytes -lt $i.TargetBytes)
                 $needEnable = ($i.MustEnable -and -not $log.IsEnabled)
-                if ($needSize -or $needEnable) {
+                # 'Retain' = "do not overwrite": logging silently stops when the
+                # log fills - a kit never-do, so treat it as non-compliant.
+                $needMode   = ($log.LogMode -eq 'Retain')
+                if ($needSize -or $needEnable -or $needMode) {
                     if ($Mode -eq 'Detect') {
                         $failList.Add("Channel:$($i.Name)")
                     } else {
-                        if ($needSize)   { wevtutil sl "$($i.Name)" /ms:$($i.TargetBytes) 2>&1 | Out-Null }
-                        if ($needEnable) { wevtutil sl "$($i.Name)" /e:true 2>&1 | Out-Null }
+                        if ($needSize)   { wevtutil sl "$($i.Name)" /ms:$($i.TargetBytes) 2>&1 | Out-Null; if ($LASTEXITCODE -ne 0) { throw "wevtutil size set failed (exit $LASTEXITCODE)" } }
+                        if ($needEnable) { wevtutil sl "$($i.Name)" /e:true 2>&1 | Out-Null; if ($LASTEXITCODE -ne 0) { throw "wevtutil enable failed (exit $LASTEXITCODE)" } }
+                        if ($needMode)   { wevtutil sl "$($i.Name)" /rt:false 2>&1 | Out-Null; if ($LASTEXITCODE -ne 0) { throw "wevtutil retention set failed (exit $LASTEXITCODE)" } }
                         $fixed++
                     }
                 }
@@ -273,8 +280,12 @@ if ($Mode -eq 'Detect') {
 # ------------------------------------------------------------ write output ---
 
 New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
+$outDirFull = (Resolve-Path $OutDir).Path
 $itemsBlock = $lines -join "`r`n"
 
+# UTF-8 WITHOUT a BOM: Windows PowerShell 5.1's Set-Content -Encoding UTF8
+# writes a BOM, which breaks Intune's script signature enforcement.
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 foreach ($mode in @('Detect', 'Remediate')) {
     $fileName = "$mode-LoggingBaseline.ps1"
     $content = $template.
@@ -283,7 +294,7 @@ foreach ($mode in @('Detect', 'Remediate')) {
         Replace('__COUNT__', "$($lines.Count)").
         Replace('__MODE__', $mode).
         Replace('__ITEMS__', $itemsBlock)
-    Set-Content -Path (Join-Path $OutDir $fileName) -Value $content -Encoding UTF8
+    [System.IO.File]::WriteAllText((Join-Path $outDirFull $fileName), $content, $utf8NoBom)
 }
 
 Write-Host "Intune remediation pack written to $OutDir ($($lines.Count) items, from $sourceDesc):" -ForegroundColor Green
@@ -291,5 +302,5 @@ Write-Host '  Detect-LoggingBaseline.ps1     (detection: exit 0 compliant / 1 no
 Write-Host '  Remediate-LoggingBaseline.ps1  (remediation: applies the embedded baseline)'
 Write-Host ''
 Write-Host 'Excluded by design: AD CS AuditFilter (needs a CertSvc restart - not for unattended remediation).' -ForegroundColor Yellow
-Write-Host 'Upload both in Intune: Devices > Scripts and remediations > Create. Run as SYSTEM, 64-bit: Yes.'
+Write-Host 'Upload both in Intune: Devices > Manage devices > Scripts and remediations > Create. Run as SYSTEM, 64-bit: Yes.'
 exit 0
