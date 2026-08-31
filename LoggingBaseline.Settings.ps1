@@ -352,7 +352,7 @@ $script:BaselineAuditSubcategories = @(
     # --- System ---
     @{ Name = 'IPsec Driver';                         Guid = '0CCE9213-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Optional'
        Categories = @('Network flow and sessions')
-       Purpose = 'IPsec driver packet events (4960-4963, 4965) and IPsec service start/stop and filter-processing events (5478-5485). In Microsoft''s baseline recommendation (and the Microsoft_Client baseline in Yamato''s EventLog-Baseline-Guide) but not in the Yamato set, so Optional: enable where IPsec is actually used.' }
+       Purpose = 'IPsec driver packet events (4960-4963, 4965) and IPsec service start/stop and filter-processing events (5478-5480, 5483-5485). In Microsoft''s baseline recommendation (and the Microsoft_Client baseline in Yamato''s EventLog-Baseline-Guide) but not in the Yamato set, so Optional: enable where IPsec is actually used.' }
 
     @{ Name = 'Security State Change';                Guid = '0CCE9210-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Core'
        Categories = @('Logging tampered with')

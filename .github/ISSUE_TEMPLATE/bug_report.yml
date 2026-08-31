@@ -1,0 +1,52 @@
+name: Bug report
+description: Something applied, verified or generated incorrectly
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Kit version
+      description: Release tag, or commit hash if running from a clone
+      placeholder: v0.8.0
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Windows version and role
+      placeholder: Server 2022 member server / Windows 11 24H2 workstation / Server 2019 DC
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: >-
+        The command you ran, what you expected, and what you got instead.
+        Paste console output inside the code fence.
+      value: |
+        Command:
+
+        ```powershell
+
+        ```
+
+        Expected:
+
+        Actual:
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Transcript / results
+      description: >-
+        Relevant lines from the `.\Logs\` transcript or `.\Results\` CSVs.
+        Please redact hostnames and account names.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I ran with -WhatIf first and the diff matched what I describe
+        - label: This host is not domain-joined, or I have ruled out a GPO overriding the setting at refresh

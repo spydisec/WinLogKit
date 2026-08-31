@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/spydisec/WinLogKit/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue.
+  - name: Documentation
+    url: https://spydisec.github.io/WinLogKit/
+    about: The docs may already answer your question (FAQ, Reference, Safety).

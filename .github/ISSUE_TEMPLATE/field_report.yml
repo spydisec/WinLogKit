@@ -1,0 +1,39 @@
+name: Field report
+description: "The most valuable contribution: real event volumes and pilot experience from your environment"
+labels: [field-report]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Thank you - real volume data is what tunes the presets. Rough numbers
+        are fine; redact anything identifying (hostnames, accounts, domains).
+  - type: input
+    id: baseline
+    attributes:
+      label: Baseline used
+      placeholder: spydi_Workstation_Minimal / Core + HighVolume / custom CSV
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Host role and Windows version
+      placeholder: "~50 Win11 workstations / one busy 2019 file server / 2 DCs"
+    validations:
+      required: true
+  - type: textarea
+    id: volumes
+    attributes:
+      label: Observed volumes
+      description: >-
+        Per channel or per event ID, whatever you have: events/day, MB/day,
+        or Hayabusa eid-metrics output. A week of data beats a day.
+    validations:
+      required: true
+  - type: textarea
+    id: verdicts
+    attributes:
+      label: What you kept, dropped or tuned
+      description: >-
+        Settings that flooded, settings that earned their keep, anything the
+        risk notes did or didn't warn you about.
