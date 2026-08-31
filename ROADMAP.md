@@ -1,15 +1,19 @@
 # Roadmap
 
-## v0.1.0 (current)
+## v0.2.0 (current)
 
-- Windows Server 2019 / 2022, standalone and domain joined
+- Windows Server 2019 / 2022 / 2025, standalone and domain joined (Server 2025
+  SMB signing/encryption auditing included, OS-gated)
 - Enable / test / rollback via local PowerShell 5.1, tiered (Core, HighVolume, Optional)
 - Interactive baseline builder (`New-LoggingBaseline.ps1`): per-setting selection
   with the kit recommendation and risk notes shown, Excel-editable CSV output
   consumed by enable and test via `-BaselineFile`
 - Independent verification via WELA with archived evidence
+- SDLC: branch + PR flow, CI (lint on PSScriptAnalyzer, self-checks on PS 5.1
+  and PS 7, DevSkim security scan), Dependabot, tagged zip releases with
+  SHA256 checksums
 
-## v0.2 - Workstation profile (Windows 10 / 11)
+## v0.3 - Workstation profile (Windows 10 / 11)
 
 - Client-OS settings table: defaults differ from Server (e.g. Credential
   Validation and Kerberos subcategories are No Auditing on client OS), and the
@@ -23,7 +27,7 @@
   where one exists (PowerShell logging and command line capture are
   ADMX-backed; audit policy needs the remediation route)
 
-## v0.3 - GPO delivery for fleet scale
+## v0.4 - GPO delivery for fleet scale
 
 - Generate a GPO-importable advanced audit policy `audit.csv` directly from
   the settings table, so the GPO can never drift from the tested baseline
@@ -40,7 +44,8 @@
 
 - Locale-independent verification: parse numeric setting values from
   `auditpol /backup` output instead of localised `auditpol /get /r` text
-- Pester test suite and CI (PSScriptAnalyzer + parse checks on 5.1 and 7)
+- Pester-based test suite (CI with PSScriptAnalyzer + self-checks on 5.1 and 7
+  shipped in v0.2.0; migrating the harness to Pester remains)
 - Event volume telemetry: a companion script that measures events/hour per
   setting after the pilot week, to make the HighVolume decision evidence-based
 - Optional Windows Event Forwarding (WEC/WEF) subscription templates for the

@@ -1,0 +1,63 @@
+# CI: lint, kit self-checks on both PowerShell engines, and security scanning.
+# Runs on every pull request and on pushes to main.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+          $results = Invoke-ScriptAnalyzer -Path . -Settings .\PSScriptAnalyzerSettings.psd1 -Recurse
+          $results | Format-Table RuleName, Severity, ScriptName, Line, Message -AutoSize | Out-String -Width 300 | Write-Host
+          if (@($results | Where-Object Severity -in @('Error','Warning')).Count -gt 0) {
+            Write-Error "PSScriptAnalyzer found $(@($results).Count) issue(s)."
+            exit 1
+          }
+          Write-Host 'PSScriptAnalyzer: clean.'
+
+  test:
+    name: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The kit must run on stock Windows PowerShell 5.1 - test that engine first.
+      - name: Kit checks (Windows PowerShell 5.1)
+        shell: powershell
+        run: .\tests\Invoke-KitChecks.ps1
+
+      - name: Kit checks (PowerShell 7)
+        shell: pwsh
+        run: .\tests\Invoke-KitChecks.ps1
+
+  security:
+    name: security
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # DevSkim covers PowerShell; findings appear under the repo's Security tab.
+      - name: DevSkim scan
+        uses: microsoft/DevSkim-Action@v1
+
+      - name: Upload DevSkim results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: devskim-results.sarif

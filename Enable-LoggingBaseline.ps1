@@ -80,12 +80,16 @@ param(
     [switch]$IncludeOptional,
     [string]$BaselineFile,
     [switch]$Rollback,
-    [string]$BaselineDir = (Join-Path $PSScriptRoot 'Baseline'),
-    [string]$LogDir      = (Join-Path $PSScriptRoot 'Logs')
+    # Defaults resolved in the body: $PSScriptRoot is not reliably available
+    # during param-default evaluation under powershell.exe -File.
+    [string]$BaselineDir,
+    [string]$LogDir
 )
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrEmpty($BaselineDir)) { $BaselineDir = Join-Path $PSScriptRoot 'Baseline' }
+if ([string]::IsNullOrEmpty($LogDir))      { $LogDir      = Join-Path $PSScriptRoot 'Logs' }
 
 . (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
 
@@ -146,6 +150,30 @@ function Get-DesiredInclusion {
     if ($Success) { return 'Success' }
     if ($Failure) { return 'Failure' }
     return 'No Auditing'
+}
+
+# Current state of the Server 2025+ SMB signing/encryption audit settings.
+# Returns a hashtable Id -> current bool; items missing from the hashtable are
+# unsupported on this OS (the properties only exist on Server 2025 / Win11 24H2+).
+function Get-SmbAuditState {
+    $state = @{}
+    $srv = $null; $cli = $null
+    try { $srv = Get-SmbServerConfiguration -ErrorAction Stop } catch { $srv = $null }
+    try { $cli = Get-SmbClientConfiguration -ErrorAction Stop } catch { $cli = $null }
+    foreach ($item in $script:BaselineSmbAuditSettings) {
+        $cfg = $srv
+        if ($item.Side -eq 'Client') { $cfg = $cli }
+        if ($null -ne $cfg -and ($cfg.PSObject.Properties.Name -contains $item.Id)) {
+            $state[$item.Id] = [bool]$cfg.($item.Id)
+        }
+    }
+    return $state
+}
+
+function Set-SmbAuditSetting {
+    param([hashtable]$Item)
+    $setParams = @{ $Item.Id = $Item.Value; Force = $true }
+    if ($Item.Side -eq 'Server') { Set-SmbServerConfiguration @setParams } else { Set-SmbClientConfiguration @setParams }
 }
 
 function Get-AdcsRegPath {
@@ -269,6 +297,19 @@ try {
             } catch { Add-Result 'Channel' $ch.Name 'Error' $_.Exception.Message; $exitCode = 1 }
         }
 
+        if ($baseline.PSObject.Properties.Name -contains 'SmbAudit') {
+            $smbNow = Get-SmbAuditState
+            foreach ($sb in $baseline.SmbAudit) {
+                try {
+                    if (-not $smbNow.ContainsKey($sb.Id)) { continue }
+                    if ($PSCmdlet.ShouldProcess("SMB audit: $($sb.Id)", "Restore to $($sb.Value)")) {
+                        Set-SmbAuditSetting -Item @{ Id = $sb.Id; Side = $sb.Side; Value = [bool]$sb.Value }
+                        Add-Result 'SmbAudit' $sb.Id 'Changed' "Restored to $($sb.Value)"
+                    }
+                } catch { Add-Result 'SmbAudit' $sb.Id 'Error' $_.Exception.Message; $exitCode = 1 }
+            }
+        }
+
         foreach ($rv in $baseline.Registry) {
             try {
                 if ($rv.Existed) {
@@ -321,11 +362,20 @@ try {
                 }
             }
 
+            $smbBaseline = @()
+            $smbNow = Get-SmbAuditState
+            foreach ($sa in $script:BaselineSmbAuditSettings) {
+                if ($smbNow.ContainsKey($sa.Id)) {
+                    $smbBaseline += @{ Id = $sa.Id; Side = $sa.Side; Value = $smbNow[$sa.Id] }
+                }
+            }
+
             @{
                 CapturedUtc = (Get-Date).ToUniversalTime().ToString('s')
                 Host        = $env:COMPUTERNAME
                 Channels    = $chBaseline
                 Registry    = $regBaseline
+                SmbAudit    = $smbBaseline
             } | ConvertTo-Json -Depth 5 | Set-Content -Path $baselineJson -Encoding UTF8
 
             Write-Host "Baseline captured to $BaselineDir (audit policy backup + channel sizes + registry values)." -ForegroundColor Green
@@ -453,6 +503,36 @@ try {
             } catch { Add-Result 'Registry' $itemLabel 'Error' $_.Exception.Message; $exitCode = 1 }
         } else {
             Add-Result 'Registry' $itemLabel 'WouldChange' $descText
+        }
+    }
+
+    # --------------------- SMB signing/encryption auditing (Server 2025+) ---
+    Write-Host ''
+    Write-Host '=== SMB signing/encryption auditing (Windows Server 2025+) ===' -ForegroundColor White
+    $smbState = Get-SmbAuditState
+    foreach ($sa in $script:BaselineSmbAuditSettings) {
+        $decision = Get-ItemDecision $sa.Tier 'SmbAudit' $sa.Id
+        if ($decision -eq 'PendingDecision') {
+            Add-Result 'SmbAudit' $sa.Id 'PendingDecision' "$($sa.Tier) tier - rerun with -Include$($sa.Tier) to apply"
+            continue
+        }
+        if ($decision -eq 'Excluded')  { Add-Result 'SmbAudit' $sa.Id 'Excluded' 'Selected = N in baseline file'; continue }
+        if ($decision -eq 'NotListed') { Add-Result 'SmbAudit' $sa.Id 'Excluded' 'Not listed in baseline file'; continue }
+        if (-not $smbState.ContainsKey($sa.Id)) {
+            Add-Result 'SmbAudit' $sa.Id 'NotApplicable' 'Requires Windows Server 2025 / Windows 11 24H2 or later'
+            continue
+        }
+        if ($smbState[$sa.Id] -eq $sa.Value) {
+            Add-Result 'SmbAudit' $sa.Id 'AlreadyCorrect' "= $($sa.Value)"
+            continue
+        }
+        if ($PSCmdlet.ShouldProcess("SMB audit ($($sa.Side)): $($sa.Id)", "Set to $($sa.Value)")) {
+            try {
+                Set-SmbAuditSetting -Item $sa
+                Add-Result 'SmbAudit' $sa.Id 'Changed' "$($smbState[$sa.Id]) -> $($sa.Value)"
+            } catch { Add-Result 'SmbAudit' $sa.Id 'Error' $_.Exception.Message; $exitCode = 1 }
+        } else {
+            Add-Result 'SmbAudit' $sa.Id 'WouldChange' "$($smbState[$sa.Id]) -> $($sa.Value)"
         }
     }
 

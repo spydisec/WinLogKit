@@ -196,6 +196,14 @@ $script:BaselineChannels = @(
        Categories = @('Scheduled and automated tasks','Persistence')
        Purpose = 'Task registration, updates and execution. DISABLED by default so must be enabled. Tasks are a top persistence mechanism.' }
 
+    @{ Name = 'Microsoft-Windows-SMBServer/Audit';                                      TargetBytes = $mb128; MustEnable = $false; Tier = 'Core'; DefaultSize = '8 MB'; MayBeAbsent = $true
+       Categories = @('Remote access','Network flow and sessions')
+       Purpose = 'SMB server audit events, including Windows Server 2025 signing/encryption capability auditing (3021/3022) - identifies clients that cannot do SMB signing or encryption before you enforce it.' }
+
+    @{ Name = 'Microsoft-Windows-SmbClient/Audit';                                      TargetBytes = $mb128; MustEnable = $false; Tier = 'Core'; DefaultSize = '8 MB'; MayBeAbsent = $true
+       Categories = @('Remote access','Network flow and sessions')
+       Purpose = 'SMB client audit events, including Windows Server 2025 signing/encryption capability auditing (31998/31999) and NTLM-blocking diagnostics.' }
+
     @{ Name = 'Microsoft-Windows-Crypto-DPAPI/Debug';                                   TargetBytes = $mb128; MustEnable = $true;  Tier = 'Optional'; DefaultSize = '1 MB'; MayBeAbsent = $true
        Categories = @('Certificates and keys')
        Purpose = 'DPAPI key operations. Added by WELA v2.1 configure. A debug-class channel, so Optional: enable only if DPAPI theft (e.g. Mimikatz backup key export) is a monitored scenario.'
@@ -453,6 +461,36 @@ $script:BaselineRegistrySettings = @(
        Path = 'HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters'; Name = 'AuditNTLMInDomain'; Kind = 'DWord'; Value = 7
        Scope = 'DomainController'; Tier = 'Core'; Categories = @('Authentication')
        Purpose = 'Audit all NTLM authentication passing through this domain controller (7 = all). Audit-only.' }
+)
+
+# -----------------------------------------------------------------------------
+# 3b. SMB SIGNING/ENCRYPTION AUDITING (Windows Server 2025 / Win 11 24H2+)
+#
+# New in Windows Server 2025: audit which peers cannot do SMB signing or
+# encryption, so enforcement can be planned on evidence instead of breaking
+# file shares. Configured via Set-SmbServerConfiguration /
+# Set-SmbClientConfiguration (documented by Microsoft in "What's new in
+# Windows Server 2025"), not registry or auditpol, so these have their own
+# item type. On older OSes the properties do not exist and the scripts report
+# NOT APPLICABLE. Events land in the SMBServer/Audit and SmbClient/Audit
+# channels sized above. Audit-only: nothing is blocked or enforced.
+# -----------------------------------------------------------------------------
+$script:BaselineSmbAuditSettings = @(
+    @{ Id = 'AuditClientDoesNotSupportEncryption'; Side = 'Server'; Value = $true; Tier = 'Core'; Scope = 'All'
+       Categories = @('Remote access','Network flow and sessions')
+       Purpose = 'SMB server logs clients that cannot do SMB encryption (event 3021 in SMBServer/Audit). Windows Server 2025+ only.' }
+
+    @{ Id = 'AuditClientDoesNotSupportSigning'; Side = 'Server'; Value = $true; Tier = 'Core'; Scope = 'All'
+       Categories = @('Remote access','Network flow and sessions')
+       Purpose = 'SMB server logs clients that cannot do SMB signing (event 3022 in SMBServer/Audit). Windows Server 2025+ only.' }
+
+    @{ Id = 'AuditServerDoesNotSupportEncryption'; Side = 'Client'; Value = $true; Tier = 'Core'; Scope = 'All'
+       Categories = @('Remote access','Network flow and sessions')
+       Purpose = 'SMB client logs servers that cannot do SMB encryption (event 31998 in SmbClient/Audit). Windows Server 2025+ only.' }
+
+    @{ Id = 'AuditServerDoesNotSupportSigning'; Side = 'Client'; Value = $true; Tier = 'Core'; Scope = 'All'
+       Categories = @('Remote access','Network flow and sessions')
+       Purpose = 'SMB client logs servers that cannot do SMB signing (event 31999 in SmbClient/Audit). Windows Server 2025+ only.' }
 )
 
 # -----------------------------------------------------------------------------
