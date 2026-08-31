@@ -1,30 +1,54 @@
-# WinLogKit
+---
+hide:
+  - navigation
+  - toc
+---
 
-**WinLogKit** turns the
-[Yamato Security](https://github.com/Yamato-Security) logging baselines into
-something you can actually deploy: enable the right Windows events, prove
-they're being recorded, and roll back if you change your mind - plain
-PowerShell, no agents.
+<div class="sp-hero" markdown>
 
-[Get started in 10 minutes](getting-started.md){ .md-button .md-button--primary }
-[See your ATT&CK coverage](mapping.md){ .md-button }
-[View on GitHub](https://github.com/spydisec/WinLogKit){ .md-button }
+# :material-shield-search: WinLogKit
 
-Out of the box, Windows logs support only 10-20% of Sigma detection rules -
-and overwrite the evidence within hours.
+<p class="sp-tagline" markdown>
+**WinLogKit** turns the <a href="https://github.com/Yamato-Security">Yamato Security</a>
+logging baselines into something you can actually deploy: enable the right
+Windows events, prove they're being recorded, and roll back if you change
+your mind - plain PowerShell, no agents.
+</p>
+
+<div class="sp-cta" markdown>
+[:material-rocket-launch: Get started in 10 minutes](getting-started.md){ .md-button .md-button--primary }
+[:material-radar: See your ATT&CK coverage](mapping.md){ .md-button }
+[:fontawesome-brands-github: View on GitHub](https://github.com/spydisec/WinLogKit){ .md-button }
+</div>
+
+<p class="sp-badges">
+<a href="https://github.com/spydisec/WinLogKit/actions/workflows/ci.yml"><img src="https://github.com/spydisec/WinLogKit/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
+<a href="https://github.com/spydisec/WinLogKit/releases"><img src="https://img.shields.io/github/v/release/spydisec/WinLogKit?include_prereleases&color=1b3a4b" alt="Release"/></a>
+<a href="https://github.com/spydisec/WinLogKit/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-14b8a6.svg" alt="MIT License"/></a>
+</p>
+
+<p class="sp-hook" markdown>
+Out of the box, Windows supports only 10-20% of Sigma detection rules, and
+default log sizes of 1-20 MB mean evidence is quickly overwritten
+(<a href="https://github.com/Yamato-Security/EnableWindowsLogSettings">Yamato's guide</a>).
+</p>
+
+</div>
+
+---
 
 ## Why WinLogKit
 
 <div class="grid cards" markdown>
 
--   __Deploy with an exit ramp__
+-   :material-backup-restore:{ .lg .middle } __Deploy with an exit ramp__
 
     ---
 
     Preview everything with `-WhatIf`; an automatic pre-change backup means
     one command rolls it all back.
 
--   __Prove it, don't assume it__
+-   :material-check-decagram:{ .lg .middle } __Prove it, don't assume it__
 
     ---
 
@@ -32,14 +56,14 @@ and overwrite the evidence within hours.
     [WELA](https://github.com/Yamato-Security/WELA) as an independent
     second opinion.
 
--   __Decide volume with numbers__
+-   :material-chart-box:{ .lg .middle } __Decide volume with numbers__
 
     ---
 
     The [ATT&CK coverage report](mapping.md) (current MITRE v19.2 data)
     measures each tier - Heavy buys 98% of the native ceiling.
 
--   __One table, every target__
+-   :material-table-sync:{ .lg .middle } __One table, every target__
 
     ---
 
