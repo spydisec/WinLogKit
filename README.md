@@ -41,14 +41,24 @@ own risk.
 
 | File | What it does |
 |---|---|
-| `LoggingBaseline.Settings.ps1` | The single source of truth: every channel, audit subcategory and registry value, with tier, scope, category tags and a plain-language purpose per setting. Both scripts below dot-source it, so enable and verify can never drift apart. Change settings **here**, not in the scripts. |
+| `LoggingBaseline.Settings.ps1` | The single source of truth: every channel, audit subcategory and registry value, with tier, scope, category tags, a plain-language purpose and (where it matters) a volume/stability risk note per setting. The scripts below dot-source it, so enable and verify can never drift apart. Change settings **here**, not in the scripts. |
+| `New-LoggingBaseline.ps1` | Interactive baseline builder. Walks every setting, shows the kit recommendation and the risk note, and writes your selections to a CSV (`MyBaseline.csv`). Changes nothing; needs no admin. The CSV is Excel-editable and feeds the two scripts below via `-BaselineFile`. |
 | `Enable-LoggingBaseline.ps1` | Applies the baseline. Idempotent, reports changed vs already-correct, `-WhatIf` for a full diff, `-Rollback` to restore first-run state, never reboots, flags high volume settings for a human decision. Writes a transcript to `.\Logs\`. |
 | `Test-LoggingBaseline.ps1` | Verification only, changes nothing. Per-category PASS / FAIL / NOT APPLICABLE to console, detail + summary CSVs to `.\Results\`, non-zero exit code on any failure so it can gate a pipeline. |
 | `Invoke-WELACheck.ps1` | Locates (or with `-Download` fetches) WELA, runs `audit-settings` and `audit-filesize`, parses the CSVs, reports deviations, archives raw output with a timestamp under `.\Evidence\`. |
 
 ## Quick start
 
-All commands from an elevated Windows PowerShell 5.1 prompt, in the kit folder.
+All commands from an elevated Windows PowerShell 5.1 prompt, in the kit folder
+(`New-LoggingBaseline.ps1` is the one script that does not need elevation).
+
+There are two ways to drive the kit. **Path A** uses the tier switches and is
+the fastest route to the recommended baseline. **Path B** builds a custom
+baseline file first - pick that when you want to decide setting-by-setting
+(with the kit recommendation shown as a reference), or when different server
+roles need different selections.
+
+### Path A - tier switches
 
 ```powershell
 # 1. See the full diff. Nothing is changed.
@@ -72,6 +82,30 @@ All commands from an elevated Windows PowerShell 5.1 prompt, in the kit folder.
 # If needed: put everything back the way it was before the first run.
 .\Enable-LoggingBaseline.ps1 -Rollback
 ```
+
+### Path B - build your own baseline (recommendation as reference)
+
+```powershell
+# 1. Walk through every setting interactively. Each item shows the kit
+#    recommendation (Enter accepts it) and its volume/stability risk, so
+#    heavy settings are chosen with eyes open. Writes MyBaseline.csv.
+.\New-LoggingBaseline.ps1
+
+#    ...or skip the prompts: write the recommended set to CSV and edit it
+#    in Excel instead (flip the Selected column between Y and N).
+.\New-LoggingBaseline.ps1 -AcceptRecommended -OutFile .\FileServerBaseline.csv
+
+# 2. Preview, apply, verify - all driven by the same file, so what you
+#    test is exactly what you selected.
+.\Enable-LoggingBaseline.ps1 -BaselineFile .\MyBaseline.csv -WhatIf
+.\Enable-LoggingBaseline.ps1 -BaselineFile .\MyBaseline.csv
+.\Test-LoggingBaseline.ps1   -BaselineFile .\MyBaseline.csv
+```
+
+The baseline CSV is plain text - commit it per server role (file server,
+web, DC) and you get reviewable, versioned logging baselines for free.
+When `-BaselineFile` is used the tier switches are ignored; the file is the
+decision. Rollback works the same in both paths.
 
 Notes:
 
@@ -101,6 +135,26 @@ Notes:
 | Optional | `-IncludeOptional` | PowerShell transcription (set an output directory for your environment), Crypto-DPAPI debug channel |
 
 ---
+
+## Stability safety: what this kit will never do
+
+Windows auditing has a handful of settings that can genuinely hang, halt or
+lock out a server. The kit never touches them, in either path:
+
+| Never touched | Why it is dangerous |
+|---|---|
+| `CrashOnAuditFail` ("Audit: Shut down system immediately if unable to log security audits") | When enabled, a full Security log **halts the machine** with `STOP C0000244 {Audit Failed}`; until an admin clears the log and resets the value, only Administrators can log on - IIS returns 401/500s, AD replication fails with access denied. [Microsoft KB832981](https://learn.microsoft.com/troubleshoot/developer/webapps/iis/health-diagnostic-performance/users-cannot-access-web-sites-when-log-full) |
+| "Do not overwrite events" retention | Logging silently stops when the log fills; combined with `CrashOnAuditFail` it crashes the host. `Test-LoggingBaseline.ps1` flags this mode as a **FAIL** wherever it finds it. |
+| "Audit the access of global system objects" / Global Object Access Auditing | Puts SACLs on every kernel/file/registry object - extreme event volume and measurable performance degradation; Microsoft describes it as too noisy for production. |
+| Blanket File System / Registry SACLs | Per-object auditing volume depends entirely on the SACLs; a careless wildcard SACL can bury a file server. Scoping SACLs is a design decision, never a default. |
+| Shrinking logs, rebooting, restarting services | The enable script only ever raises sizes, warns where a CertSvc restart is needed, and leaves the restart to a change window. |
+
+The settings that are merely *heavy* (rather than dangerous) carry a `Risk`
+note in `LoggingBaseline.Settings.ps1`, shown by the interactive builder and
+summarised in the volume table below - the worst offenders are PowerShell
+module logging (measurable PowerShell execution overhead on script-heavy
+servers) and Filtering Platform Connection (Microsoft rates its volume High;
+it can dominate the Security log on connection-heavy hosts).
 
 ## Category mapping
 

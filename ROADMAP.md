@@ -4,6 +4,9 @@
 
 - Windows Server 2019 / 2022, standalone and domain joined
 - Enable / test / rollback via local PowerShell 5.1, tiered (Core, HighVolume, Optional)
+- Interactive baseline builder (`New-LoggingBaseline.ps1`): per-setting selection
+  with the kit recommendation and risk notes shown, Excel-editable CSV output
+  consumed by enable and test via `-BaselineFile`
 - Independent verification via WELA with archived evidence
 
 ## v0.2 - Workstation profile (Windows 10 / 11)

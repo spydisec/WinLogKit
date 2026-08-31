@@ -8,13 +8,21 @@
     Idempotent - safe to run repeatedly. Every item is compared to its target
     first; already-correct items are reported and left alone.
 
-    Tiers:
+    Two ways to choose what gets applied:
+
+    1. Tier switches (simple):
       Core        applied by default.
       HighVolume  material event volume / performance impact. NOT applied
                   unless -IncludeHighVolume is given - listed as PENDING
                   DECISION so a human chooses.
       Optional    situational (PowerShell transcription, DPAPI debug channel).
                   Applied only with -IncludeOptional.
+
+    2. A custom baseline file (precise): build a selection CSV with
+       New-LoggingBaseline.ps1 (interactively, or -AcceptRecommended then edit
+       in Excel) and pass it via -BaselineFile. Only items with Selected = Y
+       are applied; everything else is reported as excluded. Tier switches are
+       ignored in this mode - the file IS the decision.
 
     On the FIRST real (non -WhatIf) run, the current audit policy, channel
     sizes and registry values are captured to a baseline folder. -Rollback
@@ -38,6 +46,11 @@
     Also apply Optional tier items (PowerShell transcription, Crypto-DPAPI
     debug channel).
 
+.PARAMETER BaselineFile
+    Path to a selection CSV produced by New-LoggingBaseline.ps1 (columns
+    ItemType, Id, Selected are read; the rest is human context). When given,
+    tier switches are ignored and only Selected = Y items are applied.
+
 .PARAMETER Rollback
     Restore audit policy, channel sizes/state and registry values captured
     at first run, then exit.
@@ -54,6 +67,10 @@
     Apply Core + HighVolume tiers.
 
 .EXAMPLE
+    .\Enable-LoggingBaseline.ps1 -BaselineFile .\MyBaseline.csv -WhatIf
+    Preview exactly what a custom baseline selection would change.
+
+.EXAMPLE
     .\Enable-LoggingBaseline.ps1 -Rollback
     Put everything back the way it was before the first run.
 #>
@@ -61,6 +78,7 @@
 param(
     [switch]$IncludeHighVolume,
     [switch]$IncludeOptional,
+    [string]$BaselineFile,
     [switch]$Rollback,
     [string]$BaselineDir = (Join-Path $PSScriptRoot 'Baseline'),
     [string]$LogDir      = (Join-Path $PSScriptRoot 'Logs')
@@ -146,6 +164,7 @@ function Add-Result {
         'WouldChange'     { 'Cyan' }
         'AlreadyCorrect'  { 'DarkGray' }
         'PendingDecision' { 'Yellow' }
+        'Excluded'        { 'DarkGray' }
         'NotApplicable'   { 'DarkGray' }
         'Warning'         { 'Yellow' }
         'Error'           { 'Red' }
@@ -160,6 +179,32 @@ function Test-TierSelected {
     if ($Tier -eq 'HighVolume') { return [bool]$IncludeHighVolume }
     if ($Tier -eq 'Optional') { return [bool]$IncludeOptional }
     return $false
+}
+
+# Selection map from a New-LoggingBaseline.ps1 CSV: "ITEMTYPE|ID" -> bool.
+$script:Selection = $null
+function Import-BaselineSelection {
+    param([string]$Path)
+    $map = @{}
+    foreach ($row in (Import-Csv $Path)) {
+        $map[("$($row.ItemType)|$($row.Id)").ToUpper()] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
+    }
+    return $map
+}
+
+# One decision point for every item: baseline file wins when present,
+# otherwise the tier switches decide. Returns Apply | PendingDecision |
+# Excluded | NotListed.
+function Get-ItemDecision {
+    param([string]$Tier, [string]$ItemType, [string]$Id)
+    if ($null -ne $script:Selection) {
+        $key = ("$ItemType|$Id").ToUpper()
+        if (-not $script:Selection.ContainsKey($key)) { return 'NotListed' }
+        if ($script:Selection[$key]) { return 'Apply' }
+        return 'Excluded'
+    }
+    if (Test-TierSelected $Tier) { return 'Apply' }
+    return 'PendingDecision'
 }
 
 # ------------------------------------------------------------------ setup ---
@@ -180,9 +225,21 @@ try {
     $baselineJson = Join-Path $BaselineDir 'LoggingBaseline-FirstRun.json'
     $auditBackup  = Join-Path $BaselineDir 'auditpol-backup.csv'
 
+    if (-not [string]::IsNullOrEmpty($BaselineFile)) {
+        if (-not (Test-Path $BaselineFile)) {
+            Write-Error "Baseline file not found: $BaselineFile (build one with New-LoggingBaseline.ps1)"
+            exit 1
+        }
+        $script:Selection = Import-BaselineSelection -Path $BaselineFile
+    }
+
     Write-Host ''
     Write-Host "Host role          : $domainRole"
-    Write-Host "Tiers selected     : Core$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
+    if ($null -ne $script:Selection) {
+        Write-Host "Baseline file      : $BaselineFile ($(@($script:Selection.Values | Where-Object { $_ }).Count) items selected; tier switches ignored)"
+    } else {
+        Write-Host "Tiers selected     : Core$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
+    }
     Write-Host "Transcript         : $transcriptFile"
     Write-Host ''
 
@@ -282,10 +339,13 @@ try {
     # ------------------------------------------------------------ channels ---
     Write-Host '=== Event log channels (size and enablement) ===' -ForegroundColor White
     foreach ($ch in $script:BaselineChannels) {
-        if (-not (Test-TierSelected $ch.Tier)) {
+        $decision = Get-ItemDecision $ch.Tier 'Channel' $ch.Name
+        if ($decision -eq 'PendingDecision') {
             Add-Result 'Channel' $ch.Name 'PendingDecision' "$($ch.Tier) tier - rerun with -Include$($ch.Tier) to apply"
             continue
         }
+        if ($decision -eq 'Excluded')  { Add-Result 'Channel' $ch.Name 'Excluded' 'Selected = N in baseline file'; continue }
+        if ($decision -eq 'NotListed') { Add-Result 'Channel' $ch.Name 'Excluded' 'Not listed in baseline file'; continue }
         $log = Get-WinEvent -ListLog $ch.Name -ErrorAction SilentlyContinue
         if ($null -eq $log) {
             $note = 'Channel not registered on this host'
@@ -327,10 +387,13 @@ try {
             Add-Result 'AuditPol' $sub.Name 'NotApplicable' 'Domain controller only - host is not a DC'
             continue
         }
-        if (-not (Test-TierSelected $sub.Tier)) {
+        $decision = Get-ItemDecision $sub.Tier 'AuditPolicy' $sub.Guid
+        if ($decision -eq 'PendingDecision') {
             Add-Result 'AuditPol' $sub.Name 'PendingDecision' "$($sub.Tier) tier - rerun with -Include$($sub.Tier) to apply"
             continue
         }
+        if ($decision -eq 'Excluded')  { Add-Result 'AuditPol' $sub.Name 'Excluded' 'Selected = N in baseline file'; continue }
+        if ($decision -eq 'NotListed') { Add-Result 'AuditPol' $sub.Name 'Excluded' 'Not listed in baseline file'; continue }
 
         $desired = Get-DesiredInclusion -Success $sub.Success -Failure $sub.Failure
         $guid    = $sub.Guid.ToUpper()
@@ -367,10 +430,13 @@ try {
             Add-Result 'Registry' $itemLabel 'NotApplicable' 'Domain controller only - host is not a DC'
             continue
         }
-        if (-not (Test-TierSelected $rs.Tier)) {
+        $decision = Get-ItemDecision $rs.Tier 'Registry' $rs.Id
+        if ($decision -eq 'PendingDecision') {
             Add-Result 'Registry' $itemLabel 'PendingDecision' "$($rs.Tier) tier - rerun with -Include$($rs.Tier) to apply"
             continue
         }
+        if ($decision -eq 'Excluded')  { Add-Result 'Registry' $itemLabel 'Excluded' 'Selected = N in baseline file'; continue }
+        if ($decision -eq 'NotListed') { Add-Result 'Registry' $itemLabel 'Excluded' 'Not listed in baseline file'; continue }
 
         $current = Get-RegValue -Path $rs.Path -Name $rs.Name
         if ("$current" -eq "$($rs.Value)") {
@@ -394,7 +460,10 @@ try {
     Write-Host ''
     Write-Host '=== AD CS audit filter (conditional) ===' -ForegroundColor White
     $adcsPath = Get-AdcsRegPath
-    if ($null -eq $adcsPath) {
+    $adcsDecision = Get-ItemDecision $script:BaselineAdcsAuditFilter.Tier 'Registry' $script:BaselineAdcsAuditFilter.Id
+    if ($adcsDecision -eq 'Excluded' -or $adcsDecision -eq 'NotListed') {
+        Add-Result 'Registry' 'AD CS AuditFilter' 'Excluded' 'Deselected in baseline file'
+    } elseif ($null -eq $adcsPath) {
         Add-Result 'Registry' 'AD CS AuditFilter' 'NotApplicable' 'Certificate Services not installed on this host'
     } else {
         $af = $script:BaselineAdcsAuditFilter

@@ -32,6 +32,33 @@
 #                Used for the per-category PASS/FAIL rollup in the test script.
 #
 # PowerShell 5.1 compatible. No external module dependencies.
+#
+# -----------------------------------------------------------------------------
+# STABILITY SAFETY - settings this kit deliberately NEVER touches, because
+# they can hang, halt or lock out a server:
+#
+#   - CrashOnAuditFail / "Audit: Shut down system immediately if unable to log
+#     security audits" (HKLM\SYSTEM\CurrentControlSet\Control\Lsa\CrashOnAuditFail).
+#     With this on, a full Security log halts the machine with
+#     STOP C0000244 {Audit Failed}, and until reset only Administrators can log
+#     on (breaks IIS, AD replication, everything using non-admin logons).
+#     https://learn.microsoft.com/troubleshoot/developer/webapps/iis/health-diagnostic-performance/users-cannot-access-web-sites-when-log-full
+#   - "Do not overwrite events" retention (LogMode = Retain). Logging silently
+#     stops when the log fills; combined with CrashOnAuditFail it crashes the
+#     host. Test-LoggingBaseline flags Retain mode as a FAIL.
+#   - "Audit the access of global system objects" (AuditBaseObjects) and
+#     Global Object Access Auditing - blanket SACLs on all kernel/file/registry
+#     objects; extreme volume and measurable performance degradation.
+#   - Blanket File System / Registry SACLs - per-object auditing is a scoped
+#     design decision, never a default.
+#   - The kit also never SHRINKS a log, never reboots, and never restarts a
+#     service.
+# -----------------------------------------------------------------------------
+#
+# Optional 'Risk' field on items below: a plain-language stability/performance
+# note, shown by New-LoggingBaseline.ps1 so selections are made with eyes open.
+# Microsoft rates the WFP subcategories' volume as High; module logging has a
+# measurable PowerShell performance cost on script-heavy servers.
 # =============================================================================
 
 Set-StrictMode -Version 2.0
@@ -171,7 +198,8 @@ $script:BaselineChannels = @(
 
     @{ Name = 'Microsoft-Windows-Crypto-DPAPI/Debug';                                   TargetBytes = $mb128; MustEnable = $true;  Tier = 'Optional'; DefaultSize = '1 MB'; MayBeAbsent = $true
        Categories = @('Certificates and keys')
-       Purpose = 'DPAPI key operations. Added by WELA v2.1 configure. A debug-class channel, so Optional: enable only if DPAPI theft (e.g. Mimikatz backup key export) is a monitored scenario.' }
+       Purpose = 'DPAPI key operations. Added by WELA v2.1 configure. A debug-class channel, so Optional: enable only if DPAPI theft (e.g. Mimikatz backup key export) is a monitored scenario.'
+       Risk = 'Debug-class channels carry a small constant tracing overhead and are not designed for always-on production use. Enable deliberately, not by default.' }
 )
 
 # -----------------------------------------------------------------------------
@@ -227,11 +255,13 @@ $script:BaselineAuditSubcategories = @(
 
     @{ Name = 'Process Creation';                     Guid = '0CCE922B-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'HighVolume'
        Categories = @('Execution','Scripting and command line','Persistence')
-       Purpose = 'Process creation (4688). The single highest value audit setting - roughly half of all Sigma rules need it - but HIGH VOLUME. Pair with the command line registry value below.' }
+       Purpose = 'Process creation (4688). The single highest value audit setting - roughly half of all Sigma rules need it - but HIGH VOLUME. Pair with the command line registry value below.'
+       Risk = 'Event volume scales with process churn; heaviest on RDS/Citrix and build servers. Disk and SIEM cost, not a stability risk.' }
 
     @{ Name = 'RPC Events';                           Guid = '0CCE922E-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Core'
        Categories = @('Remote access','Network flow and sessions')
-       Purpose = 'Inbound RPC connections (5712). Rare event in practice; Microsoft warns it can be busy on heavy RPC servers.' }
+       Purpose = 'Inbound RPC connections (5712). Rare event in practice; Microsoft warns it can be busy on heavy RPC servers.'
+       Risk = 'Usually near-silent, but Microsoft flags high volume on RPC-heavy servers (Exchange, some cluster roles). Deselect if 5712 floods.' }
 
     # --- DS Access ---
     @{ Name = 'Directory Service Access';             Guid = '0CCE923B-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'DomainController'; Tier = 'Core'
@@ -270,11 +300,13 @@ $script:BaselineAuditSubcategories = @(
 
     @{ Name = 'File Share';                           Guid = '0CCE9224-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Core'
        Categories = @('File and object access','Remote access')
-       Purpose = 'Share connections (5140, ADMIN$ access), share created/modified/deleted (5142-5144). Busy on file servers and DCs.' }
+       Purpose = 'Share connections (5140, ADMIN$ access), share created/modified/deleted (5142-5144). Busy on file servers and DCs.'
+       Risk = 'On dedicated file servers and DCs (SYSVOL access) this is a steady event stream. Watch log wrap time during the pilot.' }
 
     @{ Name = 'Filtering Platform Connection';        Guid = '0CCE9226-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'HighVolume'
        Categories = @('Network flow and sessions','Blocked and denied activity')
-       Purpose = 'Per-connection allow/block from Windows Filtering Platform (5156/5157) plus listens and binds. The closest native equivalent to network flow telemetry. HIGH VOLUME.' }
+       Purpose = 'Per-connection allow/block from Windows Filtering Platform (5156/5157) plus listens and binds. The closest native equivalent to network flow telemetry. HIGH VOLUME.'
+       Risk = 'Microsoft rates this volume High. On connection-heavy servers (DCs, web, SQL) it can dominate the Security log and add measurable CPU/disk load; can wrap a 1 GB log in hours. Deploy to a pilot host first.' }
 
     @{ Name = 'Other Object Access Events';           Guid = '0CCE9227-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Core'
        Categories = @('Scheduled and automated tasks','Persistence')
@@ -282,11 +314,13 @@ $script:BaselineAuditSubcategories = @(
 
     @{ Name = 'Removable Storage';                    Guid = '0CCE9245-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Core'
        Categories = @('Removable and external devices','File and object access')
-       Purpose = 'Every file access on removable storage (4663), no SACL needed. Volume scales with how much USB storage is actually used.' }
+       Purpose = 'Every file access on removable storage (4663), no SACL needed. Volume scales with how much USB storage is actually used.'
+       Risk = 'A large file copy to USB generates an event per file access. Low on servers where USB is rare; heavy where USB drives are routine.' }
 
     @{ Name = 'SAM';                                  Guid = '0CCE9220-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Core'
        Categories = @('Directory and identity store')
-       Purpose = 'Access to local SAM objects (4661). Detects local account/group reconnaissance. Can be busy on DCs - test there first.' }
+       Purpose = 'Access to local SAM objects (4661). Detects local account/group reconnaissance. Can be busy on DCs - test there first.'
+       Risk = 'High event rate on domain controllers. Volume/cost concern only, not stability.' }
 
     # --- Policy Change ---
     @{ Name = 'Audit Policy Change';                  Guid = '0CCE922F-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Core'
@@ -304,7 +338,8 @@ $script:BaselineAuditSubcategories = @(
     # --- Privilege Use ---
     @{ Name = 'Sensitive Privilege Use';              Guid = '0CCE9228-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'HighVolume'
        Categories = @('Privilege use')
-       Purpose = 'Use of dangerous privileges - SeDebugPrivilege, SeLoadDriverPrivilege, SeTcbPrivilege (4673/4674). Detects credential dumpers and driver loading, but HIGH VOLUME.' }
+       Purpose = 'Use of dangerous privileges - SeDebugPrivilege, SeLoadDriverPrivilege, SeTcbPrivilege (4673/4674). Detects credential dumpers and driver loading, but HIGH VOLUME.'
+       Risk = 'Known to flood on hosts running backup agents and monitoring software (backup/restore privileges fire constantly). Test on one host per server role before fleet rollout.' }
 
     # --- System ---
     @{ Name = 'Security State Change';                Guid = '0CCE9210-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Core'
@@ -335,7 +370,8 @@ $script:BaselineRegistrySettings = @(
     @{ Id = 'CmdLineAudit'
        Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit'; Name = 'ProcessCreationIncludeCmdLine_Enabled'; Kind = 'DWord'; Value = 1
        Scope = 'All'; Tier = 'HighVolume'; Categories = @('Execution','Scripting and command line')
-       Purpose = 'Adds the full command line to every 4688 process creation event. Most process-based detections need it. CAUTION: command lines can contain passwords typed by admins - handle the Security log as sensitive.' }
+       Purpose = 'Adds the full command line to every 4688 process creation event. Most process-based detections need it. CAUTION: command lines can contain passwords typed by admins - handle the Security log as sensitive.'
+       Risk = 'No extra event count (enriches 4688), but a privacy/secrets consideration: credentials passed on command lines become log content.' }
 
     # -- PowerShell script block logging (event 4104) --
     # DEVIATION: the Yamato batch writes only the Wow6432Node path. Group Policy
@@ -344,7 +380,8 @@ $script:BaselineRegistrySettings = @(
     @{ Id = 'ScriptBlock64'
        Path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging'; Name = 'EnableScriptBlockLogging'; Kind = 'DWord'; Value = 1
        Scope = 'All'; Tier = 'HighVolume'; Categories = @('Scripting and command line')
-       Purpose = 'Logs every PowerShell script block AFTER de-obfuscation (event 4104). Obfuscated malware is logged decoded. Moderate-high volume.' }
+       Purpose = 'Logs every PowerShell script block AFTER de-obfuscation (event 4104). Obfuscated malware is logged decoded. Moderate-high volume.'
+       Risk = 'Moderate volume and small per-script overhead; generally safe fleet-wide. Large scripts fragment into 32 KB event blocks.' }
 
     @{ Id = 'ScriptBlock32'
        Path = 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging'; Name = 'EnableScriptBlockLogging'; Kind = 'DWord'; Value = 1
@@ -355,7 +392,8 @@ $script:BaselineRegistrySettings = @(
     @{ Id = 'ModuleLogging64'
        Path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ModuleLogging'; Name = 'EnableModuleLogging'; Kind = 'DWord'; Value = 1
        Scope = 'All'; Tier = 'HighVolume'; Categories = @('Scripting and command line')
-       Purpose = 'Logs pipeline execution detail for PowerShell modules (event 4103), including command output. EXTREMELY high volume - a single Mimikatz run produces 2000+ events / ~7 MB.' }
+       Purpose = 'Logs pipeline execution detail for PowerShell modules (event 4103), including command output. EXTREMELY high volume - a single Mimikatz run produces 2000+ events / ~7 MB.'
+       Risk = 'The heaviest setting in the kit. Adds measurable PowerShell execution overhead and huge log volume on script-heavy servers (Exchange management, SCCM, heavy automation). Many teams take script block logging and skip this one.' }
 
     @{ Id = 'ModuleLogging32'
        Path = 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\ModuleLogging'; Name = 'EnableModuleLogging'; Kind = 'DWord'; Value = 1

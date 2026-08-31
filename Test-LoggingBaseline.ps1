@@ -18,7 +18,9 @@
     HighVolume and Optional tier items are only assessed when the matching
     switch is given - mirroring Enable-LoggingBaseline.ps1 - otherwise they
     report NOT APPLICABLE with the reason, so an undeployed tier does not
-    show as a failure.
+    show as a failure. With -BaselineFile, the selection CSV decides instead:
+    only Selected = Y items are assessed, so verification always matches
+    exactly what was chosen for deployment.
 
     Requires: Windows PowerShell 5.1+, local Administrator (auditpol needs it).
 
@@ -28,17 +30,22 @@
 .PARAMETER IncludeOptional
     Assess Optional tier items as requirements.
 
+.PARAMETER BaselineFile
+    Path to a selection CSV produced by New-LoggingBaseline.ps1. When given,
+    tier switches are ignored and only Selected = Y items are assessed.
+
 .PARAMETER OutputDir
     Where the CSVs are written. Default: .\Results next to this script.
 
 .EXAMPLE
-    .\Test-LoggingBaseline.ps1 -IncludeHighVolume
+    .\Test-LoggingBaseline.ps1 -BaselineFile .\MyBaseline.csv
     if ($LASTEXITCODE -ne 0) { 'baseline drift detected' }
 #>
 [CmdletBinding()]
 param(
     [switch]$IncludeHighVolume,
     [switch]$IncludeOptional,
+    [string]$BaselineFile,
     [string]$OutputDir = (Join-Path $PSScriptRoot 'Results')
 )
 
@@ -86,6 +93,31 @@ function Test-TierSelected {
     return $false
 }
 
+# Selection map from a New-LoggingBaseline.ps1 CSV: "ITEMTYPE|ID" -> bool.
+$script:Selection = $null
+function Import-BaselineSelection {
+    param([string]$Path)
+    $map = @{}
+    foreach ($row in (Import-Csv $Path)) {
+        $map[("$($row.ItemType)|$($row.Id)").ToUpper()] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
+    }
+    return $map
+}
+
+# Returns $null when the item should be assessed, otherwise the
+# NOT APPLICABLE reason text.
+function Get-SkipReason {
+    param([string]$Tier, [string]$ItemType, [string]$Id)
+    if ($null -ne $script:Selection) {
+        $key = ("$ItemType|$Id").ToUpper()
+        if (-not $script:Selection.ContainsKey($key)) { return 'Not listed in baseline file' }
+        if (-not $script:Selection[$key]) { return 'Selected = N in baseline file' }
+        return $null
+    }
+    if (Test-TierSelected $Tier) { return $null }
+    return "$Tier tier not selected for this assessment"
+}
+
 $rows = New-Object System.Collections.Generic.List[object]
 function Add-Row {
     param([string[]]$Categories, [string]$ItemType, [string]$Item, [string]$Expected, [string]$Actual, [string]$Result, [string]$Notes = '')
@@ -107,10 +139,22 @@ if (-not (Test-IsAdmin)) {
     exit 1
 }
 
+if (-not [string]::IsNullOrEmpty($BaselineFile)) {
+    if (-not (Test-Path $BaselineFile)) {
+        Write-Error "Baseline file not found: $BaselineFile (build one with New-LoggingBaseline.ps1)"
+        exit 1
+    }
+    $script:Selection = Import-BaselineSelection -Path $BaselineFile
+}
+
 $domainRole = Get-DomainRole
 Write-Host "Test-LoggingBaseline (verification only, nothing is changed)"
 Write-Host "Host role      : $domainRole"
-Write-Host "Tiers assessed : Core$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
+if ($null -ne $script:Selection) {
+    Write-Host "Baseline file  : $BaselineFile (tier switches ignored)"
+} else {
+    Write-Host "Tiers assessed : Core$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
+}
 Write-Host ''
 
 # ------------------------------------------------------------ channels ------
@@ -118,8 +162,9 @@ Write-Host ''
 foreach ($ch in $script:BaselineChannels) {
     $targetMB = [math]::Round($ch.TargetBytes / 1MB)
     $expected = "enabled, >= $targetMB MB, circular retention"
-    if (-not (Test-TierSelected $ch.Tier)) {
-        Add-Row $ch.Categories 'Channel' $ch.Name $expected '' 'NOT APPLICABLE' "$($ch.Tier) tier not selected for this assessment"
+    $skip = Get-SkipReason $ch.Tier 'Channel' $ch.Name
+    if ($null -ne $skip) {
+        Add-Row $ch.Categories 'Channel' $ch.Name $expected '' 'NOT APPLICABLE' $skip
         continue
     }
     $log = Get-WinEvent -ListLog $ch.Name -ErrorAction SilentlyContinue
@@ -156,8 +201,9 @@ foreach ($sub in $script:BaselineAuditSubcategories) {
         Add-Row $sub.Categories 'AuditPolicy' $sub.Name $expected '' 'NOT APPLICABLE' 'Domain controller only - host is not a DC'
         continue
     }
-    if (-not (Test-TierSelected $sub.Tier)) {
-        Add-Row $sub.Categories 'AuditPolicy' $sub.Name $expected '' 'NOT APPLICABLE' "$($sub.Tier) tier not selected for this assessment"
+    $skip = Get-SkipReason $sub.Tier 'AuditPolicy' $sub.Guid
+    if ($null -ne $skip) {
+        Add-Row $sub.Categories 'AuditPolicy' $sub.Name $expected '' 'NOT APPLICABLE' $skip
         continue
     }
 
@@ -191,8 +237,9 @@ foreach ($rs in $script:BaselineRegistrySettings) {
         Add-Row $rs.Categories 'Registry' $label $expected '' 'NOT APPLICABLE' 'Domain controller only - host is not a DC'
         continue
     }
-    if (-not (Test-TierSelected $rs.Tier)) {
-        Add-Row $rs.Categories 'Registry' $label $expected '' 'NOT APPLICABLE' "$($rs.Tier) tier not selected for this assessment"
+    $skip = Get-SkipReason $rs.Tier 'Registry' $rs.Id
+    if ($null -ne $skip) {
+        Add-Row $rs.Categories 'Registry' $label $expected '' 'NOT APPLICABLE' $skip
         continue
     }
 
@@ -209,7 +256,10 @@ foreach ($rs in $script:BaselineRegistrySettings) {
 # AD CS AuditFilter (conditional on the role being installed)
 $af = $script:BaselineAdcsAuditFilter
 $activeCa = Get-RegValue -Path $af.BasePath -Name 'Active'
-if ([string]::IsNullOrEmpty($activeCa)) {
+$afSkip = Get-SkipReason $af.Tier 'Registry' $af.Id
+if ($null -ne $afSkip) {
+    Add-Row $af.Categories 'Registry' 'AD CS AuditFilter' "$($af.Value)" '' 'NOT APPLICABLE' $afSkip
+} elseif ([string]::IsNullOrEmpty($activeCa)) {
     Add-Row $af.Categories 'Registry' 'AD CS AuditFilter' "$($af.Value)" '' 'NOT APPLICABLE' 'Certificate Services not installed on this host'
 } else {
     $adcsPath = "$($af.BasePath)\$activeCa"
