@@ -25,12 +25,14 @@ Yamato Security baselines fix that - this kit makes them **operational**:
   per-category PASS/FAIL and CSV evidence, plus an independent second
   opinion from Yamato's [WELA](https://github.com/Yamato-Security/WELA).
 - **Evidence-based selection** - the
-  [ATT&CK coverage mapping](mapping.md) (built on
-  [OSSEM-DM](https://github.com/OTRF/OSSEM-DM)) tells you which techniques a
-  selection makes observable: the deliberately conservative Core tier covers
-  **152 of 362** mapped Windows techniques, and the HighVolume tier (process
-  creation + command line, PowerShell logging, WFP connections, sensitive
-  privilege use) raises that to **320** - the volume decision, quantified.
+  [ATT&CK coverage mapping](mapping.md), derived from **current MITRE
+  ATT&CK data (v19.2)** joined through a kit-curated event map, tells you
+  which techniques a selection makes observable and why the rest are not.
+  MITRE's own analytics put the native-logging ceiling at 284 of 472
+  Windows techniques (the rest need Sysmon/EDR/network telemetry); the
+  HighVolume tier reaches **279 of that 284** - the volume decision,
+  quantified. Approach credit: OTRF's
+  [OSSEM-DM](https://github.com/OTRF/OSSEM-DM), retained as a cross-check.
 - **Fleet delivery built in** - Intune remediation packs, WEF/WEC
   subscription generation, and GPO artefacts, all compiled from one
   settings table so nothing can drift.

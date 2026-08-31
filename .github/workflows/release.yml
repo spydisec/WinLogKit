@@ -29,6 +29,9 @@ jobs:
           $stage = "WinLogKit-$tag"
           New-Item -ItemType Directory -Path $stage | Out-Null
           Copy-Item *.ps1, PSScriptAnalyzerSettings.psd1, README.md, ROADMAP.md, CHANGELOG.md, LICENSE $stage
+          # Data-dependent scripts (coverage mapping, presets) must work from
+          # the zip, not only from a git clone.
+          Copy-Item data, presets, tools, tests $stage -Recurse
           Compress-Archive -Path $stage -DestinationPath "WinLogKit-$tag.zip"
           (Get-FileHash "WinLogKit-$tag.zip" -Algorithm SHA256).Hash.ToLower() + "  WinLogKit-$tag.zip" |
             Set-Content "SHA256SUMS.txt" -Encoding ascii

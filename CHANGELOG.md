@@ -3,7 +3,27 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
-## v0.5.0 - 2026-08-31
+## v0.6.0 - Unreleased
+
+### Added
+- Native ATT&CK mapping: `Export-AttackCoverage.ps1` now joins a snapshot
+  derived from **current MITRE ATT&CK Enterprise v19.2** (detection
+  strategies -> Windows analytics -> literal log sources and event codes)
+  through a kit-curated event map (`data/attack/`, every row sourced).
+  New statuses NotNative and Unmapped keep the limits and the curation
+  worklist visible. MITRE attribution and OSSEM approach-credit in
+  `data/attack/README.md`; `-UseOssem` retains the OSSEM-DM snapshot join
+  as a cross-check. Reference numbers: 472 Windows techniques mapped,
+  native-logging ceiling 284 (MITRE's analytics are Sysmon-first),
+  Core 162, Core+HighVolume 279 of the 284 ceiling.
+- Architecture page on the docs site with a mermaid diagram of the kit's
+  one mechanism (snapshots in -> settings table -> host + fleet artefacts
+  -> events out to collector/SIEM); mermaid rendering enabled site-wide.
+
+### Fixed
+- Release zip packaging omitted `data/`, `presets/`, `tools/` and `tests/`,
+  so data-dependent scripts (coverage, presets) failed from a zip install
+  (field-reported). The zip now carries them.
 
 ### Added
 - Per-role presets: `presets/role_Workstation.csv`, `role_MemberServer.csv`

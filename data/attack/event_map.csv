@@ -1,0 +1,63 @@
+match_source,match_event,item_type,item_id,prereq,status,note
+WinEventLog:Security,4624,AuditPolicy,0CCE9215-69AE-11D9-BED3-505054503030,,,Logon
+WinEventLog:Security,4625,AuditPolicy,0CCE9215-69AE-11D9-BED3-505054503030,,,Logon failed
+WinEventLog:Security,4648,AuditPolicy,0CCE9215-69AE-11D9-BED3-505054503030,,,Explicit-credential logon
+WinEventLog:Security,4634,AuditPolicy,0CCE9216-69AE-11D9-BED3-505054503030,,,Logoff
+WinEventLog:Security,4672,AuditPolicy,0CCE921B-69AE-11D9-BED3-505054503030,,,Special logon
+WinEventLog:Security,4800,AuditPolicy,0CCE921C-69AE-11D9-BED3-505054503030,,,Workstation locked
+WinEventLog:Security,4801,AuditPolicy,0CCE921C-69AE-11D9-BED3-505054503030,,,Workstation unlocked
+WinEventLog:Security,4688,AuditPolicy,0CCE922B-69AE-11D9-BED3-505054503030,,,Process creation (command line is enrichment via registry item)
+WinEventLog:Security,4697,AuditPolicy,0CCE9211-69AE-11D9-BED3-505054503030,,,Service installed (Security System Extension)
+WinEventLog:Security,7045,Channel,System,,,Service install lands in the System log (enabled by default)
+WinEventLog:Security,4698,AuditPolicy,0CCE9227-69AE-11D9-BED3-505054503030,,,Scheduled task created
+WinEventLog:Security,4702,AuditPolicy,0CCE9227-69AE-11D9-BED3-505054503030,,,Scheduled task updated
+WinEventLog:Security,4656,AuditPolicy,,,NotInKit,File System subcategory is SACL-dependent and outside the baseline
+WinEventLog:Security,4658,AuditPolicy,,,NotInKit,File System subcategory is SACL-dependent and outside the baseline
+WinEventLog:Security,4663,AuditPolicy,,,NotInKit,File System subcategory is SACL-dependent and outside the baseline
+WinEventLog:Security,4670,AuditPolicy,,,NotInKit,File System / permissions auditing is SACL-dependent and outside the baseline
+WinEventLog:Security,4657,AuditPolicy,,,NotInKit,Registry subcategory is SACL-dependent and outside the baseline
+WinEventLog:Security,4661,AuditPolicy,0CCE9220-69AE-11D9-BED3-505054503030,,,SAM object access
+WinEventLog:Security,4662,AuditPolicy,0CCE923B-69AE-11D9-BED3-505054503030,,,Directory Service Access (DC only)
+WinEventLog:Security,5136,AuditPolicy,0CCE923C-69AE-11D9-BED3-505054503030,,,Directory Service Changes (DC only)
+WinEventLog:Security,4928,AuditPolicy,,,NotInKit,Directory Service Replication subcategory is outside the baseline
+WinEventLog:Security,4929,AuditPolicy,,,NotInKit,Directory Service Replication subcategory is outside the baseline
+WinEventLog:Security,4768,AuditPolicy,0CCE9242-69AE-11D9-BED3-505054503030,,,Kerberos TGT (DC only)
+WinEventLog:Security,4771,AuditPolicy,0CCE9242-69AE-11D9-BED3-505054503030,,,Kerberos pre-auth failed (DC only)
+WinEventLog:Security,4769,AuditPolicy,0CCE9240-69AE-11D9-BED3-505054503030,,,Kerberos service ticket (DC only)
+WinEventLog:Security,4770,AuditPolicy,0CCE9240-69AE-11D9-BED3-505054503030,,,Kerberos ticket renewal (DC only)
+WinEventLog:Security,4776,AuditPolicy,0CCE923F-69AE-11D9-BED3-505054503030,,,NTLM credential validation
+WinEventLog:Security,4720,AuditPolicy,0CCE9235-69AE-11D9-BED3-505054503030,,,User account created
+WinEventLog:Security,4723,AuditPolicy,0CCE9235-69AE-11D9-BED3-505054503030,,,Password change attempt
+WinEventLog:Security,4724,AuditPolicy,0CCE9235-69AE-11D9-BED3-505054503030,,,Password reset
+WinEventLog:Security,4726,AuditPolicy,0CCE9235-69AE-11D9-BED3-505054503030,,,User account deleted
+WinEventLog:Security,4738,AuditPolicy,0CCE9235-69AE-11D9-BED3-505054503030,,,User account changed
+WinEventLog:Security,4740,AuditPolicy,0CCE9235-69AE-11D9-BED3-505054503030,,,Account lockout (User Account Management event)
+WinEventLog:Security,4798,AuditPolicy,0CCE9235-69AE-11D9-BED3-505054503030,,,Local group membership enumerated (user)
+WinEventLog:Security,4728,AuditPolicy,0CCE9237-69AE-11D9-BED3-505054503030,,,Member added to global group
+WinEventLog:Security,4729,AuditPolicy,0CCE9237-69AE-11D9-BED3-505054503030,,,Member removed from global group
+WinEventLog:Security,4732,AuditPolicy,0CCE9237-69AE-11D9-BED3-505054503030,,,Member added to local group
+WinEventLog:Security,4733,AuditPolicy,0CCE9237-69AE-11D9-BED3-505054503030,,,Member removed from local group
+WinEventLog:Security,4756,AuditPolicy,0CCE9237-69AE-11D9-BED3-505054503030,,,Member added to universal group
+WinEventLog:Security,4757,AuditPolicy,0CCE9237-69AE-11D9-BED3-505054503030,,,Member removed from universal group
+WinEventLog:Security,4799,AuditPolicy,0CCE9237-69AE-11D9-BED3-505054503030,,,Local group membership enumerated
+WinEventLog:Security,4739,AuditPolicy,0CCE9230-69AE-11D9-BED3-505054503030,,,Domain policy changed
+WinEventLog:Security,4704,AuditPolicy,,,NotInKit,Authorization Policy Change subcategory is outside the baseline
+WinEventLog:Security,4673,AuditPolicy,0CCE9228-69AE-11D9-BED3-505054503030,,,Sensitive privilege use (HighVolume tier)
+WinEventLog:Security,5140,AuditPolicy,0CCE9224-69AE-11D9-BED3-505054503030,,,Network share access
+WinEventLog:Security,5145,AuditPolicy,,,NotInKit,Detailed File Share subcategory excluded for noise (per Yamato)
+WinEventLog:Security,5156,AuditPolicy,0CCE9226-69AE-11D9-BED3-505054503030,,,WFP connection (HighVolume tier)
+WinEventLog:Security,5157,AuditPolicy,0CCE9226-69AE-11D9-BED3-505054503030,,,WFP connection blocked (HighVolume tier)
+WinEventLog:Security,6416,AuditPolicy,0CCE9248-69AE-11D9-BED3-505054503030,,,New external device (Plug and Play)
+WinEventLog:Security,1102,Channel,Security,,,Security log cleared (channel-default event)
+WinEventLog:PowerShell,4103,Channel,Microsoft-Windows-PowerShell/Operational,ModulePair,,Module logging events need EnableModuleLogging + ModuleNames
+WinEventLog:PowerShell,4104,Channel,Microsoft-Windows-PowerShell/Operational,ScriptBlock,,Script block logging events
+WinEventLog:PowerShell,,Channel,Microsoft-Windows-PowerShell/Operational,ScriptBlock,,PowerShell analytics without explicit codes assume script block content
+WinEventLog:System,,Channel,System,,,System log (enabled by default; kit sizes it)
+WinEventLog:Application,,Channel,Application,,,Application log
+WinEventLog:TaskScheduler,,Channel,Microsoft-Windows-TaskScheduler/Operational,,,Task Scheduler operational log (kit enables it)
+WinEventLog:WMI,,Channel,Microsoft-Windows-WMI-Activity/Operational,,,WMI activity log
+WinEventLog:Microsoft-Windows-CodeIntegrity/Operational,,Channel,Microsoft-Windows-CodeIntegrity/Operational,,,Code integrity log
+WinEventLog:Microsoft-Windows-Windows Firewall With Advanced Security/Firewall,,Channel,Microsoft-Windows-Windows Firewall With Advanced Security/Firewall,,,Firewall rule change log
+WinEventLog:Microsoft-Windows-Windows Defender/Operational,,Channel,Microsoft-Windows-Windows Defender/Operational,,,Defender operational log
+WinEventLog:Windows Defender,,Channel,Microsoft-Windows-Windows Defender/Operational,,,Defender operational log (alias naming in ATT&CK)
+WinEventLog:Sysmon,,,,,RequiresSysmon,Sysmon telemetry - excluded from kit scope by design

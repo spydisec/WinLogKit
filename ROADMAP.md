@@ -66,6 +66,18 @@
 - Domain controller profile notes (volume expectations for DS Access, SAM,
   Kerberos subcategories on real DCs)
 
+## v0.6 - Native ATT&CK mapping (in progress)
+
+- [x] Coverage mapping rebuilt on current MITRE ATT&CK data (v19.2
+  detection strategies/analytics) joined through a kit-curated, per-row
+  sourced event map; OSSEM-DM retained as `-UseOssem` cross-check with
+  credit
+- [x] Release zip packaging fixed to include data/presets/tools/tests
+- [x] Docs architecture page with mermaid diagram
+- [ ] Work the Unmapped curation list down (4 sources at snapshot time)
+- [ ] Define a refresh cadence for the ATT&CK snapshot (procedure documented
+  in data/attack/README.md)
+
 ## Later / help wanted
 
 - Locale-independent verification: parse numeric setting values from

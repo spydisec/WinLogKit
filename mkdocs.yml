@@ -32,12 +32,17 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight
 
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - Architecture: architecture.md
   - Commands: commands.md
   - Baselines & Presets: baselines.md
   - Fleet Deployment: deployment.md

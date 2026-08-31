@@ -1,34 +1,34 @@
 <#
 .SYNOPSIS
     Reports which MITRE ATT&CK techniques a baseline selection makes
-    observable, using the vendored OSSEM Detection Model mappings - and,
-    just as importantly, WHY the remaining techniques are not observable.
+    observable - and why the remaining ones are not - using the kit's native
+    mapping derived from current ATT&CK data.
 
 .DESCRIPTION
-    Joins the kit's settings table against the OSSEM-DM snapshot in
-    .\data\ossem\ (see its README for provenance; the kit never fetches
-    anything at runtime). Every Windows technique-to-event mapping row is
-    classified as:
+    Default mapping (native): MITRE ATT&CK Enterprise v19.2's own
+    detection-strategy/analytics model, flattened to Windows analytic log
+    sources and event codes (data\attack\windows_analytics.csv), joined
+    through the kit-curated event map (data\attack\event_map.csv) to the
+    settings table. Provenance and attribution in data\attack\README.md;
+    nothing is fetched at runtime.
 
-      Observable       the enabling item is selected in this baseline
+    Every technique verdict comes with a reason:
+
+      Observable       an enabling item is selected in this baseline
       NotSelected      the kit has the item, but this selection excludes it
-                       (e.g. Process Creation without -IncludeHighVolume)
-      NotInKit         the subcategory is deliberately outside the kit's
-                       baseline (e.g. Registry / Kernel Object / File System,
-                       which are SACL-dependent, or Process Termination)
-      RequiresSysmon   only observable via Sysmon, which the kit excludes by
-                       design (native Windows logging only)
+      NotInKit         needs a subcategory the kit deliberately excludes
+                       (SACL-dependent Registry/File System, DS Replication...)
+      RequiresSysmon   only Sysmon telemetry maps to it (out of kit scope)
+      NotNative        needs ETW tracing, EDR, network sensors or cloud logs
+      Unmapped         ATT&CK names a source the curated map does not cover
+                       yet - reported so curation gaps stay visible
 
-    A technique counts as observable if at least one of its mapping rows is
-    Observable. Techniques with no observable row are listed with the
-    dominant reason, so "what would enabling X buy me?" has a data-driven
-    answer - the same evidence-based approach as OSSEM's
-    attack_techniques_to_events page, computed locally for YOUR selection.
+    Caveat: this maps events, not detection quality - "observable" means the
+    raw events exist; detection still needs rules.
 
-    Caveat: OSSEM maps events, not detection quality. An "observable"
-    technique means the raw events exist; detection still needs rules.
-    PowerShell channel rows additionally assume script block logging is on
-    (a HighVolume tier item).
+    -UseOssem switches to the legacy OSSEM-DM snapshot join (data\ossem\,
+    OTRF, MIT) as a cross-check; see data\attack\README.md for the credit
+    and the relationship between the two mappings.
 
     Requires: Windows PowerShell 5.1+. No admin, no network; changes nothing.
 
@@ -36,22 +36,24 @@
     Selection CSV (New-LoggingBaseline.ps1 or a preset). Without it, tier
     switches decide (Core by default).
 
+.PARAMETER UseOssem
+    Use the vendored OSSEM-DM snapshot instead of the native mapping.
+
 .PARAMETER OutDir
-    Where the detail CSV goes. Default: .\Results next to this script.
+    Where the CSVs go. Default: .\Results next to this script.
 
 .EXAMPLE
     .\Export-AttackCoverage.ps1 -IncludeHighVolume
-    Coverage of Core + HighVolume tiers.
 
 .EXAMPLE
-    .\Export-AttackCoverage.ps1 -BaselineFile .\presets\Microsoft_Client.csv
-    What the Microsoft client baseline actually makes observable.
+    .\Export-AttackCoverage.ps1 -BaselineFile .\presets\role_Workstation.csv
 #>
 [CmdletBinding()]
 param(
     [string]$BaselineFile,
     [switch]$IncludeHighVolume,
     [switch]$IncludeOptional,
+    [switch]$UseOssem,
     # Default resolved in the body: $PSScriptRoot is not reliably available
     # during param-default evaluation under powershell.exe -File.
     [string]$OutDir
@@ -62,12 +64,6 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $PSScriptRoot 'Results' }
 
 . (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
-
-$snapshot = Join-Path $PSScriptRoot 'data\ossem\techniques_to_events_windows.csv'
-if (-not (Test-Path $snapshot)) {
-    Write-Error "OSSEM snapshot not found at $snapshot - see data\ossem\README.md."
-    exit 1
-}
 
 # ---------------------------------------------- resolve the selection sets ---
 
@@ -95,15 +91,14 @@ function Test-ItemOn {
     return $false
 }
 
-# Our subcategory names, split into selected vs known-but-deselected.
-$subcatSelected = @{}
-$subcatKnown    = @{}
+$subcatSelected = @{}; $subcatKnownByGuid = @{}; $subcatNameByGuid = @{}
 foreach ($sub in $script:BaselineAuditSubcategories) {
-    $subcatKnown[$sub.Name] = $true
-    if (Test-ItemOn 'AuditPolicy' $sub.Guid $sub.Tier) { $subcatSelected[$sub.Name] = $true }
+    $g = $sub.Guid.ToUpper()
+    $subcatKnownByGuid[$g] = $true
+    $subcatNameByGuid[$g] = $sub.Name
+    if (Test-ItemOn 'AuditPolicy' $sub.Guid $sub.Tier) { $subcatSelected[$g] = $true }
 }
-$channelSelected = @{}
-$channelKnown    = @{}
+$channelSelected = @{}; $channelKnown = @{}
 foreach ($ch in $script:BaselineChannels) {
     $channelKnown[$ch.Name] = $true
     if (Test-ItemOn 'Channel' $ch.Name $ch.Tier) { $channelSelected[$ch.Name] = $true }
@@ -113,85 +108,129 @@ foreach ($rs in $script:BaselineRegistrySettings) {
     if (Test-ItemOn 'Registry' $rs.Id $rs.Tier) { $regSelected[$rs.Id] = $true }
 }
 
-# OSSEM subcategory names that differ from the kit's.
-$subcatAlias = @{
-    'PNP Activity'  = 'Plug and Play'
-    'Policy Change' = 'Audit Policy Change'
+function Test-Prereq {
+    param([string]$Prereq)
+    if ($Prereq -eq '') { return $true }
+    if ($Prereq -eq 'ScriptBlock') {
+        return ($regSelected.ContainsKey('ScriptBlock64') -or $regSelected.ContainsKey('ScriptBlock32'))
+    }
+    if ($Prereq -eq 'ModulePair') {
+        return (($regSelected.ContainsKey('ModuleLogging64') -and $regSelected.ContainsKey('ModuleNames64')) -or
+                ($regSelected.ContainsKey('ModuleLogging32') -and $regSelected.ContainsKey('ModuleNames32')))
+    }
+    return $false
 }
 
 $sourceDesc = "Core tier$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
 if ($null -ne $selection) { $sourceDesc = "baseline file $(Split-Path $BaselineFile -Leaf)" }
 
-# --------------------------------------------------------------- classify ---
-
-$rows = Import-Csv $snapshot
 $detail = New-Object System.Collections.Generic.List[object]
 
-foreach ($r in $rows) {
-    $status = ''
-    $via = ''
-    $sub = $r.audit_sub_category
-    if ($sub -ne '' -and $subcatAlias.ContainsKey($sub)) { $sub = $subcatAlias[$sub] }
-
-    if ($r.channel -eq 'Microsoft-Windows-Sysmon/Operational') {
-        $status = 'RequiresSysmon'
-    } elseif ($sub -eq '' -and $r.channel -eq 'Microsoft-Windows-PowerShell/Operational' -and "$($r.event_id)".Trim() -match '^(4103|4104|4105|4106)$') {
-        # PowerShell Operational events need their enabling registry policy,
-        # not just the channel: 4103 = module logging (EnableModuleLogging AND
-        # a ModuleNames wildcard), 4104-4106 = script block logging. Either
-        # registry view (native or Wow6432Node) satisfies the prerequisite.
-        if ("$($r.event_id)".Trim() -eq '4103') {
-            $prereqMet = ($regSelected.ContainsKey('ModuleLogging64') -and $regSelected.ContainsKey('ModuleNames64')) -or
-                         ($regSelected.ContainsKey('ModuleLogging32') -and $regSelected.ContainsKey('ModuleNames32'))
-            $prereqDesc = 'module logging policy (EnableModuleLogging + ModuleNames)'
-        } else {
-            $prereqMet = $regSelected.ContainsKey('ScriptBlock64') -or $regSelected.ContainsKey('ScriptBlock32')
-            $prereqDesc = 'script block logging policy'
-        }
-        if (-not $channelSelected.ContainsKey($r.channel)) {
-            $status = 'NotSelected'; $via = "Channel: $($r.channel)"
-        } elseif ($prereqMet) {
-            $status = 'Observable'; $via = "Channel: $($r.channel) + $prereqDesc"
-        } else {
-            $status = 'NotSelected'; $via = "Registry: $prereqDesc (HighVolume tier)"
-        }
-    } elseif ($sub -ne '') {
-        if ($subcatSelected.ContainsKey($sub))  { $status = 'Observable'; $via = "AuditPolicy: $sub" }
-        elseif ($subcatKnown.ContainsKey($sub)) { $status = 'NotSelected'; $via = "AuditPolicy: $sub" }
-        else                                    { $status = 'NotInKit';   $via = "Subcategory: $($r.audit_sub_category)" }
-    } elseif ($r.channel -ne '') {
-        if ($channelSelected.ContainsKey($r.channel))  { $status = 'Observable';  $via = "Channel: $($r.channel)" }
-        elseif ($channelKnown.ContainsKey($r.channel)) { $status = 'NotSelected'; $via = "Channel: $($r.channel)" }
-        else                                           { $status = 'NotInKit';    $via = "Channel: $($r.channel)" }
-    } else {
-        $status = 'NotInKit'; $via = 'No channel/subcategory in OSSEM row'
+if ($UseOssem) {
+    # ------------------- legacy cross-check: OSSEM-DM snapshot join ----------
+    $snapshot = Join-Path $PSScriptRoot 'data\ossem\techniques_to_events_windows.csv'
+    if (-not (Test-Path $snapshot)) { Write-Error "OSSEM snapshot not found at $snapshot"; exit 1 }
+    $subcatAlias = @{ 'PNP Activity' = 'Plug and Play'; 'Policy Change' = 'Audit Policy Change' }
+    $subcatSelectedByName = @{}; $subcatKnownByName = @{}
+    foreach ($sub in $script:BaselineAuditSubcategories) {
+        $subcatKnownByName[$sub.Name] = $true
+        if (Test-ItemOn 'AuditPolicy' $sub.Guid $sub.Tier) { $subcatSelectedByName[$sub.Name] = $true }
+    }
+    foreach ($r in (Import-Csv $snapshot)) {
+        $status = ''; $via = ''
+        $sub = $r.audit_sub_category
+        if ($sub -ne '' -and $subcatAlias.ContainsKey($sub)) { $sub = $subcatAlias[$sub] }
+        if ($r.channel -eq 'Microsoft-Windows-Sysmon/Operational') {
+            $status = 'RequiresSysmon'
+        } elseif ($sub -eq '' -and $r.channel -eq 'Microsoft-Windows-PowerShell/Operational' -and "$($r.event_id)".Trim() -match '^(4103|4104|4105|4106)$') {
+            $isModule = ("$($r.event_id)".Trim() -eq '4103')
+            $prereq = 'ScriptBlock'; if ($isModule) { $prereq = 'ModulePair' }
+            if (-not $channelSelected.ContainsKey($r.channel)) { $status = 'NotSelected'; $via = "Channel: $($r.channel)" }
+            elseif (Test-Prereq $prereq) { $status = 'Observable'; $via = "Channel: $($r.channel) + $prereq policy" }
+            else { $status = 'NotSelected'; $via = "Registry: $prereq policy (HighVolume tier)" }
+        } elseif ($sub -ne '') {
+            if ($subcatSelectedByName.ContainsKey($sub))  { $status = 'Observable'; $via = "AuditPolicy: $sub" }
+            elseif ($subcatKnownByName.ContainsKey($sub)) { $status = 'NotSelected'; $via = "AuditPolicy: $sub" }
+            else                                          { $status = 'NotInKit'; $via = "Subcategory: $($r.audit_sub_category)" }
+        } elseif ($r.channel -ne '') {
+            if ($channelSelected.ContainsKey($r.channel))  { $status = 'Observable';  $via = "Channel: $($r.channel)" }
+            elseif ($channelKnown.ContainsKey($r.channel)) { $status = 'NotSelected'; $via = "Channel: $($r.channel)" }
+            else                                           { $status = 'NotInKit';    $via = "Channel: $($r.channel)" }
+        } else { $status = 'NotInKit'; $via = 'No channel/subcategory in OSSEM row' }
+        $detail.Add([pscustomobject]@{
+            TechniqueId = $r.technique_id; Technique = $r.technique; Tactics = $r.tactics
+            LogSource = $r.channel; EventCodes = $r.event_id; Status = $status; ProvidedBy = $via
+        })
+    }
+    $mappingDesc = 'OSSEM-DM snapshot (cross-check mode)'
+} else {
+    # ------------------------ native mapping: ATT&CK v19.2 + kit event map ---
+    $analyticsCsv = Join-Path $PSScriptRoot 'data\attack\windows_analytics.csv'
+    $mapCsv       = Join-Path $PSScriptRoot 'data\attack\event_map.csv'
+    foreach ($p in @($analyticsCsv, $mapCsv)) {
+        if (-not (Test-Path $p)) { Write-Error "Mapping data not found: $p (see data\attack\README.md)"; exit 1 }
     }
 
-    $detail.Add([pscustomobject]@{
-        TechniqueId   = $r.technique_id
-        Technique     = $r.technique
-        Tactics       = $r.tactics
-        DataComponent = $r.data_component
-        EventId       = $r.event_id
-        EventName     = $r.event_name
-        Channel       = $r.channel
-        Subcategory   = $r.audit_sub_category
-        Status        = $status
-        ProvidedBy    = $via
-    })
+    # Lookup: "source|event" exact, then "source|" fallback.
+    $eventMap = @{}
+    foreach ($m in (Import-Csv $mapCsv)) {
+        $eventMap[("$($m.match_source)|$($m.match_event)")] = $m
+    }
+    # Status ranking: pick the strongest outcome across an analytic's codes.
+    $rank = @{ 'Observable' = 6; 'NotSelected' = 5; 'NotInKit' = 4; 'Unmapped' = 3; 'NotNative' = 2; 'RequiresSysmon' = 1 }
+
+    function Resolve-One {
+        param([string]$Source, [string]$Code)
+        $m = $null
+        if ($eventMap.ContainsKey("$Source|$Code")) { $m = $eventMap["$Source|$Code"] }
+        elseif ($eventMap.ContainsKey("$Source|")) { $m = $eventMap["$Source|"] }
+        if ($null -eq $m) {
+            if ($Source -match '^(etw:|ETW:|EDR:|NSM:|m365:|azure:|dns:|Windows:perfmon)') {
+                return @{ Status = 'NotNative'; Via = "Source: $Source" }
+            }
+            return @{ Status = 'Unmapped'; Via = "Source: $Source" }
+        }
+        if ($m.status -ne '') { return @{ Status = $m.status; Via = "$($m.note)" } }
+        if ($m.item_type -eq 'AuditPolicy') {
+            $g = $m.item_id.ToUpper()
+            if ($subcatSelected.ContainsKey($g))   { return @{ Status = 'Observable';  Via = "AuditPolicy: $($subcatNameByGuid[$g])" } }
+            if ($subcatKnownByGuid.ContainsKey($g)) { return @{ Status = 'NotSelected'; Via = "AuditPolicy: $($subcatNameByGuid[$g])" } }
+            return @{ Status = 'Unmapped'; Via = "Unknown GUID in event map: $g" }
+        }
+        if ($m.item_type -eq 'Channel') {
+            if (-not $channelKnown.ContainsKey($m.item_id)) { return @{ Status = 'Unmapped'; Via = "Unknown channel in event map: $($m.item_id)" } }
+            if (-not $channelSelected.ContainsKey($m.item_id)) { return @{ Status = 'NotSelected'; Via = "Channel: $($m.item_id)" } }
+            if (Test-Prereq $m.prereq) { return @{ Status = 'Observable'; Via = "Channel: $($m.item_id)$(if ($m.prereq) { " + $($m.prereq) policy" })" } }
+            return @{ Status = 'NotSelected'; Via = "Registry: $($m.prereq) policy (HighVolume tier)" }
+        }
+        return @{ Status = 'Unmapped'; Via = "Unhandled map row for $Source" }
+    }
+
+    foreach ($r in (Import-Csv $analyticsCsv)) {
+        $codes = @("$($r.event_codes)".Split(';') | Where-Object { $_ -ne '' })
+        if ($codes.Count -eq 0) { $codes = @('') }
+        $best = $null
+        foreach ($c in $codes) {
+            $res = Resolve-One -Source $r.log_source -Code $c
+            if ($null -eq $best -or $rank[$res.Status] -gt $rank[$best.Status]) { $best = $res }
+        }
+        $detail.Add([pscustomobject]@{
+            TechniqueId = $r.technique_id; Technique = $r.technique; Tactics = $r.tactics
+            LogSource = $r.log_source; EventCodes = $r.event_codes; Status = $best.Status; ProvidedBy = $best.Via
+        })
+    }
+    $mappingDesc = 'MITRE ATT&CK v19.2 (snapshot 2026-08-31) + kit event map'
 }
 
 # ------------------------------------------------------- technique rollup ---
 
 $byTech = $detail | Group-Object TechniqueId
-$observable = New-Object System.Collections.Generic.List[object]
+$observableCount = 0
 $notObservable = New-Object System.Collections.Generic.List[object]
 foreach ($g in $byTech) {
-    $obs = @($g.Group | Where-Object { $_.Status -eq 'Observable' })
-    if ($obs.Count -gt 0) {
-        $observable.Add($g.Group[0])
+    if (@($g.Group | Where-Object { $_.Status -eq 'Observable' }).Count -gt 0) {
+        $observableCount++
     } else {
-        # Dominant reason: what would it take to see this technique?
         $reasons = $g.Group | Group-Object Status | Sort-Object Count -Descending
         $notObservable.Add([pscustomobject]@{
             TechniqueId = $g.Name
@@ -202,17 +241,16 @@ foreach ($g in $byTech) {
 }
 
 Write-Host ''
-Write-Host "ATT&CK coverage for: $sourceDesc (OSSEM-DM snapshot, $($byTech.Count) Windows techniques mapped)" -ForegroundColor White
-Write-Host ("  Observable techniques : {0} of {1}" -f $observable.Count, $byTech.Count) -ForegroundColor Green
-$reasonGroups = $notObservable | Group-Object Reason | Sort-Object Count -Descending
-foreach ($rg in $reasonGroups) {
+Write-Host "ATT&CK coverage for: $sourceDesc" -ForegroundColor White
+Write-Host "Mapping: $mappingDesc ($($byTech.Count) Windows techniques)"
+Write-Host ("  Observable techniques : {0} of {1}" -f $observableCount, $byTech.Count) -ForegroundColor Green
+foreach ($rg in ($notObservable | Group-Object Reason | Sort-Object Count -Descending)) {
     Write-Host ("  Not observable ({0,-14}): {1}" -f $rg.Name, $rg.Count) -ForegroundColor Yellow
 }
 Write-Host ''
-Write-Host 'Interpretation: Observable = the enabling events exist on hosts with this baseline.'
-Write-Host '  NotSelected    -> selecting more kit items (often the HighVolume tier) would add these.'
-Write-Host '  NotInKit       -> needs SACL-dependent or deliberately excluded subcategories.'
-Write-Host '  RequiresSysmon -> only Sysmon telemetry maps to these; native logging cannot see them (kit scope).'
+Write-Host 'Observable = the enabling events exist with this baseline; detection still needs rules.'
+Write-Host '  NotSelected -> selecting more kit items (often HighVolume) adds these.   NotInKit -> excluded subcategories.'
+Write-Host '  RequiresSysmon / NotNative -> beyond native host logging.   Unmapped -> curation worklist (see data\attack\README.md).'
 
 if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null }
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
@@ -221,6 +259,6 @@ $gapsCsv   = Join-Path $OutDir "AttackCoverage_Gaps_$stamp.csv"
 $detail | Export-Csv -Path $detailCsv -NoTypeInformation -Encoding UTF8
 $notObservable | Sort-Object Reason, TechniqueId | Export-Csv -Path $gapsCsv -NoTypeInformation -Encoding UTF8
 Write-Host ''
-Write-Host "Detail CSV (every mapping row): $detailCsv"
-Write-Host "Gaps CSV (techniques not observable, with reason): $gapsCsv"
+Write-Host "Detail CSV: $detailCsv"
+Write-Host "Gaps CSV  : $gapsCsv"
 exit 0

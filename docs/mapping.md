@@ -1,85 +1,89 @@
 # ATT&CK Coverage Mapping
 
-The kit organises settings by **behaviour category** (Authentication,
-Execution, Persistence, ...) so a monitoring requirement traces to the exact
-settings that satisfy it. This page adds the second axis:
-**MITRE ATT&CK techniques**, via the
-[OSSEM Detection Model](https://github.com/OTRF/OSSEM-DM) (Open Threat
-Research Forge, MIT) - the same data behind OSSEM's
-[techniques-to-events](https://ossemproject.com/dm/mitre_attack/attack_techniques_to_events.html)
-page, computed locally for *your* selection.
+Which MITRE ATT&CK techniques does a given baseline make observable - and
+for the ones it doesn't, exactly why not? `Export-AttackCoverage.ps1`
+answers this locally, for any selection, from vendored snapshots - nothing
+is fetched at runtime.
 
-## How it works
+## How the native mapping works
 
-OSSEM-DM maps ATT&CK data components to concrete Windows events
-(technique -> data component -> event ID -> audit subcategory / channel).
-The kit vendors a Windows-only snapshot of that mapping in `data\ossem\`
-(provenance recorded there - **nothing is fetched at runtime**) and joins
-it against the settings table:
+Two data files in `data/attack/` (provenance and attribution in its README):
+
+1. **`windows_analytics.csv`** - derived from **MITRE ATT&CK Enterprise
+   v19.2's own detection model** (snapshot 2026-08-31): detection strategies
+   link techniques to per-platform analytics, and Windows analytics name
+   their log sources literally (`WinEventLog:Security`, `EventCode=4688`,
+   ...). Flattened, that gives technique -> log source -> event codes,
+   straight from MITRE's current data.
+2. **`event_map.csv`** - the kit-curated join: each log source / event code
+   mapped to the settings-table item that produces it (audit subcategory
+   GUID, channel, and any registry prerequisite such as script block
+   logging), one sourced row per claim.
 
 ```powershell
-.\Export-AttackCoverage.ps1                                  # Core tier
-.\Export-AttackCoverage.ps1 -IncludeHighVolume               # Core + HighVolume
-.\Export-AttackCoverage.ps1 -BaselineFile .\presets\ASD.csv  # any selection
+.\Export-AttackCoverage.ps1                                        # Core tier
+.\Export-AttackCoverage.ps1 -IncludeHighVolume
+.\Export-AttackCoverage.ps1 -BaselineFile .\presets\role_Workstation.csv
 ```
 
-Every mapping row is classified, and every technique verdict comes with a
-*reason*:
+Every technique verdict carries a reason:
 
 | Status | Meaning |
 |---|---|
-| Observable | the enabling item is selected - the events will exist |
-| NotSelected | the kit has the item, but this selection excludes it (often the HighVolume tier) |
-| NotInKit | needs a subcategory the kit deliberately excludes (SACL-dependent Registry / File System / Kernel Object, Process Termination, ...) |
-| RequiresSysmon | only Sysmon telemetry maps to it - native logging cannot see it |
+| Observable | an enabling item is selected - the events will exist |
+| NotSelected | the kit has the item, but this selection excludes it |
+| NotInKit | needs a subcategory the kit deliberately excludes (SACL-dependent Registry/File System, DS Replication, ...) |
+| RequiresSysmon | only Sysmon telemetry maps to it - out of kit scope by design |
+| NotNative | needs ETW tracing, EDR, network sensors or cloud logs |
+| Unmapped | ATT&CK names a source the curated map doesn't cover yet - the visible curation worklist |
 
-## Reference numbers (OSSEM-DM snapshot, 362 mapped Windows techniques)
+## Reference numbers (ATT&CK v19.2: 472 Windows techniques with analytics)
 
-| Selection | Observable techniques |
-|---|---|
-| Core tier | 152 |
-| Core + HighVolume | 320 |
-| Microsoft_Client preset | 289 |
+An important context number first: MITRE's current analytics catalogue is
+Sysmon-first - **176 of the 472 techniques are Sysmon-only and another 12
+need ETW/EDR/network/cloud telemetry**, so the ceiling for *any* native
+host-logging configuration is **284 techniques**. Against that ceiling:
 
-The Core -> HighVolume jump of **168 techniques** is the quantified value of
-the HighVolume tier as a whole - process creation + command line, PowerShell
-logging, Filtering Platform Connection and Sensitive Privilege Use (the
-per-setting breakdown is in the detail CSV's `ProvidedBy` column) - the
-number to put next to the volume cost when that decision is made. (The classifier is
-strict: PowerShell 4103/4104 rows count only when their enabling registry
-policy is selected, not merely the channel - which is also why the
-Microsoft_Client preset, which includes process creation, outscores the
-deliberately conservative Core tier.) The residual ~40 are split between
-deliberately excluded subcategories and Sysmon-only telemetry: known,
-stated limits of native logging, not silent gaps.
+| Selection | Observable | Of the native ceiling (284) |
+|---|---|---|
+| Core tier | 162 | 57% |
+| **Core + HighVolume** | **279** | **98%** |
+| role_Workstation preset | 265 | 93% |
+| role_DomainController preset | 273 | 96% |
+| role_MemberServer preset | 263 | 93% |
+| Microsoft_Client preset | 166 | 58% |
+
+Read that middle row carefully: with the HighVolume tier on, the kit reaches
+**279 of the 284 natively-reachable techniques** - the 5 missed are 1
+excluded-subcategory technique and 4 unmapped-source curation items. The
+Core -> HighVolume jump (117 techniques) is the quantified case for that
+tier's volume cost; the per-setting breakdown is in the detail CSV's
+`ProvidedBy` column.
 
 ## Outputs
 
-- `Results\AttackCoverage_Detail_*.csv` - every mapping row: technique,
-  tactic, data component, event ID, channel/subcategory, status, and which
-  kit item provides it
+- `Results\AttackCoverage_Detail_*.csv` - every analytic mapping row with
+  status and which kit item provides it
 - `Results\AttackCoverage_Gaps_*.csv` - techniques not observable, with the
-  dominant reason - the "what would enabling X buy me" worklist
+  dominant reason
 
-## Behaviour categories -> settings
+## OSSEM cross-check
 
-The category-to-settings mapping (which subcategories, channels and
-registry values serve each of the 16 behaviour categories, with
-full/partial coverage stated honestly) lives in the
-[README's category mapping table](https://github.com/spydisec/WinLogKit#category-mapping),
-and interactively in the builder: `.\New-LoggingBaseline.ps1 -Show` renders
-any selection as a tree with per-category coverage counts.
+The approach of joining logging configuration to ATT&CK through event
+metadata was proven by OTRF's [OSSEM-DM](https://github.com/OTRF/OSSEM-DM)
+(MIT) - full credit in `data/attack/README.md`. The kit retains its OSSEM
+snapshot and `-UseOssem` runs the legacy join as an independent cross-check
+(note it maps an older ATT&CK vintage with a different technique set, so
+its numbers are not directly comparable to the native mapping's).
 
 ## Caveats
 
-- OSSEM maps **events, not detections**: "observable" means the raw events
-  exist; detection still needs rules (Sigma, your SIEM analytics).
-- PowerShell Operational rows (4103/4104) require their enabling registry
-  policies - module logging for 4103, script block logging for 4104, per
-  [Microsoft's PowerShell logging documentation](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_logging_windows) -
-  and the classifier enforces the full prerequisite set (including the
-  ModuleNames wildcard for 4103) rather than counting the channel alone.
-- The snapshot is point-in-time (commit and date in
-  `data\ossem\README.md`); refresh procedure is documented there.
-- WELA's ATT&CK Navigator layers (`mitre-ttp-navigator-*.json` in its
-  output) are a complementary view from the Sigma-rule angle.
+- This maps **events, not detections**: "observable" means the raw events
+  exist; detection still needs rules (Sigma, SIEM analytics).
+- A technique counts as observable when at least one of its ATT&CK analytics
+  has at least one producible log source - the optimistic reading;
+  analytics often correlate multiple sources for fidelity.
+- PowerShell 4103/4104 rows enforce their registry prerequisites (module /
+  script block logging policies, per
+  [Microsoft's PowerShell logging documentation](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_logging_windows)).
+- Snapshots are point-in-time; refresh procedure in `data/attack/README.md`.
