@@ -24,9 +24,17 @@
        are applied; everything else is reported as excluded. Tier switches are
        ignored in this mode - the file IS the decision.
 
-    On the FIRST real (non -WhatIf) run, the current audit policy, channel
-    sizes and registry values are captured to a baseline folder. -Rollback
-    restores that captured state.
+    Backups are automatic and happen BEFORE any change:
+      - First real (non -WhatIf) run: the complete pre-kit state (full
+        audit policy backup, channel sizes/enablement, registry values
+        including absence, SMB audit settings) is captured to .\Baseline\.
+        -Rollback always restores this state - "undo the kit entirely".
+      - Every later real run: a timestamped pre-change snapshot of the
+        CURRENT state is saved to .\Baseline\snapshots\<timestamp>\ (same
+        contents), so stepping between baselines leaves a point-in-time
+        record. Restore one manually with
+        auditpol /restore /file:<snapshot>\auditpol-backup.csv plus the
+        values in its State.json.
 
     No setting in this kit requires a reboot. One conditional setting
     (AD CS AuditFilter, only when Certificate Services is installed) requires
@@ -343,58 +351,78 @@ try {
         exit $exitCode
     }
 
-    # ---------------------------------------------------- baseline capture ---
-    # Captured once, on the first real run, before anything is changed.
+    # ---------------------------------------------------- state snapshots ---
+    # Captures the complete pre-change state (full audit policy backup,
+    # channel sizes/enablement, registry values including absence, SMB audit
+    # settings) into a directory. Used for the protected first-run rollback
+    # baseline AND for a timestamped snapshot before every later apply.
+    function Save-StateSnapshot {
+        param([string]$Dir, [string]$JsonName)
+        New-Item -ItemType Directory -Path $Dir -Force | Out-Null
+        auditpol /backup /file:"$(Join-Path $Dir 'auditpol-backup.csv')" | Out-Null
+
+        $chState = @()
+        foreach ($ch in $script:BaselineChannels) {
+            $log = Get-WinEvent -ListLog $ch.Name -ErrorAction SilentlyContinue
+            if ($null -ne $log) {
+                $chState += @{ Name = $ch.Name; MaximumSizeInBytes = $log.MaximumSizeInBytes; IsEnabled = $log.IsEnabled }
+            }
+        }
+
+        $regState = @()
+        $regItems = @($script:BaselineRegistrySettings)
+        $adcsPath = Get-AdcsRegPath
+        if ($null -ne $adcsPath) {
+            $regItems += @(@{ Path = $adcsPath; Name = $script:BaselineAdcsAuditFilter.Name; Kind = $script:BaselineAdcsAuditFilter.Kind })
+        }
+        foreach ($ri in $regItems) {
+            $cur = Get-RegValue -Path $ri.Path -Name $ri.Name
+            $regState += @{
+                Path = $ri.Path; Name = $ri.Name; Kind = $ri.Kind
+                Existed = ($null -ne $cur); Value = $cur
+            }
+        }
+
+        $smbState = @()
+        $smbNow = Get-SmbAuditState
+        foreach ($sa in $script:BaselineSmbAuditSettings) {
+            if ($smbNow.ContainsKey($sa.Id)) {
+                $smbState += @{ Id = $sa.Id; Side = $sa.Side; Value = $smbNow[$sa.Id] }
+            }
+        }
+
+        @{
+            CapturedUtc = (Get-Date).ToUniversalTime().ToString('s')
+            Host        = $env:COMPUTERNAME
+            Channels    = $chState
+            Registry    = $regState
+            SmbAudit    = $smbState
+        } | ConvertTo-Json -Depth 5 | Set-Content -Path (Join-Path $Dir $JsonName) -Encoding UTF8
+    }
+
     if (-not (Test-Path $baselineJson)) {
+        # First real run: the protected rollback baseline, captured before
+        # anything changes. -Rollback always restores THIS state.
         if ($WhatIfPreference) {
             Write-Host '[WhatIf] Baseline would be captured on the first real run (audit policy backup, channel sizes, registry values).' -ForegroundColor Cyan
         } else {
-            New-Item -ItemType Directory -Path $BaselineDir -Force | Out-Null
-            auditpol /backup /file:"$auditBackup" | Out-Null
-
-            $chBaseline = @()
-            foreach ($ch in $script:BaselineChannels) {
-                $log = Get-WinEvent -ListLog $ch.Name -ErrorAction SilentlyContinue
-                if ($null -ne $log) {
-                    $chBaseline += @{ Name = $ch.Name; MaximumSizeInBytes = $log.MaximumSizeInBytes; IsEnabled = $log.IsEnabled }
-                }
-            }
-
-            $regBaseline = @()
-            $regItems = @($script:BaselineRegistrySettings)
-            $adcsPath = Get-AdcsRegPath
-            if ($null -ne $adcsPath) {
-                $regItems += @(@{ Path = $adcsPath; Name = $script:BaselineAdcsAuditFilter.Name; Kind = $script:BaselineAdcsAuditFilter.Kind })
-            }
-            foreach ($ri in $regItems) {
-                $cur = Get-RegValue -Path $ri.Path -Name $ri.Name
-                $regBaseline += @{
-                    Path = $ri.Path; Name = $ri.Name; Kind = $ri.Kind
-                    Existed = ($null -ne $cur); Value = $cur
-                }
-            }
-
-            $smbBaseline = @()
-            $smbNow = Get-SmbAuditState
-            foreach ($sa in $script:BaselineSmbAuditSettings) {
-                if ($smbNow.ContainsKey($sa.Id)) {
-                    $smbBaseline += @{ Id = $sa.Id; Side = $sa.Side; Value = $smbNow[$sa.Id] }
-                }
-            }
-
-            @{
-                CapturedUtc = (Get-Date).ToUniversalTime().ToString('s')
-                Host        = $env:COMPUTERNAME
-                Channels    = $chBaseline
-                Registry    = $regBaseline
-                SmbAudit    = $smbBaseline
-            } | ConvertTo-Json -Depth 5 | Set-Content -Path $baselineJson -Encoding UTF8
-
+            Save-StateSnapshot -Dir $BaselineDir -JsonName 'LoggingBaseline-FirstRun.json'
             Write-Host "Baseline captured to $BaselineDir (audit policy backup + channel sizes + registry values)." -ForegroundColor Green
             Write-Host ''
         }
     } else {
-        Write-Host "Existing baseline found ($baselineJson) - keeping the original first-run capture for rollback." -ForegroundColor DarkGray
+        # Later applies: keep the first-run baseline untouched, but also
+        # snapshot the CURRENT state so every apply has a point-in-time
+        # record (e.g. before stepping up from Minimal to Heavy). Manual
+        # point-in-time restore: auditpol /restore /file:<snapshot>\auditpol-backup.csv
+        # plus the values recorded in its State.json.
+        if ($WhatIfPreference) {
+            Write-Host "Existing first-run baseline kept for -Rollback ($baselineJson). [WhatIf] A pre-change snapshot would be taken on a real run." -ForegroundColor DarkGray
+        } else {
+            $snapDir = Join-Path (Join-Path $BaselineDir 'snapshots') $stamp
+            Save-StateSnapshot -Dir $snapDir -JsonName 'State.json'
+            Write-Host "Existing first-run baseline kept for -Rollback. Pre-change snapshot of the current state saved to $snapDir." -ForegroundColor DarkGray
+        }
         Write-Host ''
     }
 

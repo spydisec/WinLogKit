@@ -112,7 +112,7 @@ Or start from a published reference: see
 
 | Folder | Contents |
 |---|---|
-| `Baseline\` | First-run rollback capture (auditpol backup + JSON) |
+| `Baseline\` | First-run rollback capture (auditpol backup + JSON); `snapshots\<timestamp>\` holds an automatic pre-change snapshot from every later apply |
 | `Results\` | Test and coverage CSVs, timestamped |
 | `Logs\` | Enable transcripts (every run, including `-WhatIf`) |
 | `Evidence\` | Raw WELA output per run, timestamped |
