@@ -118,15 +118,25 @@ if ([string]::IsNullOrEmpty($WelaPath) -or -not (Test-Path $WelaPath)) {
         [Net.ServicePointManager]::SecurityProtocol = $currentProtocols -bor [Net.SecurityProtocolType]::Tls12  # DevSkim: ignore DS440001,DS440020 - additive minimum-version fix, never downgrades
     }
     New-Item -ItemType Directory -Path (Join-Path $welaDir 'config') -Force | Out-Null
-    $files = @{
-        'WELA.ps1'                            = 'https://raw.githubusercontent.com/Yamato-Security/WELA/main/WELA.ps1'
-        'config\eid_subcategory_mapping.csv'  = 'https://raw.githubusercontent.com/Yamato-Security/WELA/main/config/eid_subcategory_mapping.csv'
-        'config\security_rules.json'          = 'https://raw.githubusercontent.com/Yamato-Security/WELA/main/config/security_rules.json'
-    }
-    foreach ($f in $files.Keys) {
-        $dest = Join-Path $welaDir $f
-        Invoke-WebRequest -Uri $files[$f] -OutFile $dest -UseBasicParsing
-        Write-Host "  fetched $f"
+    # Required files hard-fail; Optional covers config files that newer WELA
+    # versions may add (e.g. config/baselines.json from WELA PR #358) or drop -
+    # a missing optional file is skipped so the download works against any
+    # recent WELA main.
+    $files = @(
+        @{ Path = 'WELA.ps1';                           Required = $true }
+        @{ Path = 'config/eid_subcategory_mapping.csv'; Required = $false }
+        @{ Path = 'config/security_rules.json';         Required = $false }
+        @{ Path = 'config/baselines.json';              Required = $false }
+    )
+    foreach ($f in $files) {
+        $dest = Join-Path $welaDir ($f.Path -replace '/', '\')
+        try {
+            Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Yamato-Security/WELA/main/$($f.Path)" -OutFile $dest -UseBasicParsing
+            Write-Host "  fetched $($f.Path)"
+        } catch {
+            if ($f.Required) { throw }
+            Write-Host "  skipped $($f.Path) (not present in current WELA main)" -ForegroundColor DarkGray
+        }
     }
     $WelaPath = Join-Path $welaDir 'WELA.ps1'
 }
