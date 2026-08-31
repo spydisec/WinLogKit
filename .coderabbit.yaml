@@ -1,0 +1,68 @@
+# CodeRabbit configuration for WinLogKit
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en-US"
+
+tone_instructions: >-
+  Be direct and practical. Prioritise correctness, Windows PowerShell 5.1
+  compatibility, security and stability impact. Skip praise and filler.
+
+chat:
+  auto_reply: true
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  changed_files_summary: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+  # Runtime output and downloaded tooling are gitignored, but keep them out of
+  # review scope in case one is ever committed by mistake.
+  path_filters:
+    - "!Evidence/**"
+    - "!Logs/**"
+    - "!Results/**"
+    - "!Baseline/**"
+    - "!WELA/**"
+    - "!**/*.zip"
+
+  path_instructions:
+    - path: "**/*.ps1"
+      instructions: |
+        House rules for this repo (see README "Contributing and SDLC"):
+        - Must run on stock Windows PowerShell 5.1: no ternary operator, no
+          null-coalescing (??), no null-conditional (?.), no pwsh-only cmdlets
+          or parameters. Flag anything 7-only.
+        - $PSScriptRoot is unreliable in param-default expressions under
+          powershell.exe -File; defaults must be resolved in the script body.
+        - Every logging setting lives in LoggingBaseline.Settings.ps1 with a
+          plain-language Purpose (and Risk where volume/stability matters).
+          Flag settings hardcoded in the other scripts.
+        - No external module dependencies, no third party agents (no Sysmon).
+        - Never introduce CrashOnAuditFail, "do not overwrite" log retention,
+          global object access auditing, blanket SACLs, service restarts or
+          reboots - these are documented never-dos.
+        - Enable-* changes must stay idempotent, honour -WhatIf via
+          ShouldProcess, and be captured by the first-run baseline so
+          -Rollback still restores everything.
+        - Write-Host with colour is the intended console UI here; do not flag
+          it.
+    - path: ".github/workflows/**"
+      instructions: |
+        - Actions pinned to latest major tags (Dependabot maintains them).
+        - Least-privilege permissions blocks; flag any broadening.
+        - Release artefacts must keep the zip + SHA256SUMS pattern.
+    - path: "**/*.md"
+      instructions: |
+        - Plain English, accurate event IDs, registry paths and channel names.
+        - Claims about Windows behaviour should be traceable to Microsoft or
+          Yamato Security documentation; flag unsourced behavioural claims.
