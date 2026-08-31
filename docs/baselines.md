@@ -1,5 +1,10 @@
 # Baselines & Presets
 
+A baseline is just a list of which settings are on. This page shows the
+ready-made lists we ship, how to build your own, and which one to pick.
+**In a hurry?** Use `spydi_Workstation_Minimal` for Windows 10/11 and
+`spydi_Server_Minimal` for everything server-shaped, and come back later.
+
 ## The model
 
 The settings table (`LoggingBaseline.Settings.ps1`) is the single source of

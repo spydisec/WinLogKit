@@ -1,6 +1,7 @@
 # Architecture
 
-One claim, one picture: **everything derives from a single settings table,
+How the kit works under the hood, in one picture. The claim it makes:
+**everything derives from a single settings table,
 snapshots come in once with their dates recorded, and events flow out to
 your collector - the kit never talks to the internet at runtime.**
 

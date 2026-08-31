@@ -1,9 +1,9 @@
 # Commands
 
-Every script dot-sources the same settings table
-(`LoggingBaseline.Settings.ps1`), so enable, verify and every generated
-artefact can never drift apart. All scripts run on stock Windows
-PowerShell 5.1.
+Every script, what it does, and the flags you'll actually use. They all
+read the same settings table (`LoggingBaseline.Settings.ps1`), which is why
+what you apply, what you verify and what you deploy can never disagree.
+All scripts run on stock Windows PowerShell 5.1.
 
 ## Enable-LoggingBaseline.ps1
 

@@ -1,9 +1,9 @@
 # ATT&CK Coverage Mapping
 
-Which MITRE ATT&CK techniques does a given baseline make observable - and
-for the ones it doesn't, exactly why not? `Export-AttackCoverage.ps1`
-answers this locally, for any selection, from vendored snapshots - nothing
-is fetched at runtime.
+One question, answered with numbers: **if I turn these settings on, which
+attack techniques could my logs actually see - and for the rest, why not?**
+`Export-AttackCoverage.ps1` computes it locally for any baseline, offline,
+from data shipped in the kit.
 
 ## How the native mapping works
 
