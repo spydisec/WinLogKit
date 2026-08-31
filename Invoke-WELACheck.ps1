@@ -103,8 +103,15 @@ if ([string]::IsNullOrEmpty($WelaPath) -or -not (Test-Path $WelaPath)) {
         exit 1
     }
     Write-Host 'Downloading WELA from github.com/Yamato-Security/WELA (main branch)...' -ForegroundColor Yellow
-    # PS 5.1 defaults can exclude TLS 1.2 - enable it explicitly for GitHub.
-    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    # SystemDefault (0) means the OS chooses TLS 1.2/1.3 - leave that alone.
+    # Only when a legacy explicit protocol set excludes TLS 1.2 (possible on
+    # old Windows PowerShell 5.1 configurations) do we ADD it; nothing is
+    # ever removed, so this cannot downgrade the connection.
+    $currentProtocols = [Net.ServicePointManager]::SecurityProtocol
+    if ($currentProtocols -ne [Net.SecurityProtocolType]::SystemDefault -and
+        -not ($currentProtocols -band [Net.SecurityProtocolType]::Tls12)) {
+        [Net.ServicePointManager]::SecurityProtocol = $currentProtocols -bor [Net.SecurityProtocolType]::Tls12  # DevSkim: ignore DS440000,DS440020 - additive minimum-version fix, never downgrades
+    }
     New-Item -ItemType Directory -Path (Join-Path $welaDir 'config') -Force | Out-Null
     $files = @{
         'WELA.ps1'                            = 'https://raw.githubusercontent.com/Yamato-Security/WELA/main/WELA.ps1'

@@ -119,6 +119,19 @@ roles need different selections.
 .\Test-LoggingBaseline.ps1   -BaselineFile .\MyBaseline.csv
 ```
 
+During the walk-through, press `t` at any prompt to see the **baseline tree**:
+every item's current include/exclude state ( `?` marks not-yet-confirmed
+defaults) plus a per-behaviour-category coverage count, so you always know
+what the baseline contains so far. The same view works standalone:
+
+```powershell
+# What does the recommendation include?
+.\New-LoggingBaseline.ps1 -Show
+
+# What exactly is inside an existing baseline, and which categories does it cover?
+.\New-LoggingBaseline.ps1 -Show -BaselineFile .\MyBaseline.csv
+```
+
 The baseline CSV is plain text - commit it per server role (file server,
 web, DC) and you get reviewable, versioned logging baselines for free.
 When `-BaselineFile` is used the tier switches are ignored; the file is the

@@ -26,6 +26,8 @@
         Enter  accept the shown default for this item
         y / n  include / exclude this item
         a      accept defaults for every remaining item in this section
+        t      show the baseline tree - every item's current include/exclude
+               state plus per-category coverage - then continue
         q      abort without writing anything
 
     Requires: Windows PowerShell 5.1+. No admin needed (nothing is changed).
@@ -49,9 +51,24 @@
 .PARAMETER Force
     Overwrite an existing OutFile.
 
+.PARAMETER Show
+    View-only: print the baseline tree (sections, items with include/exclude
+    markers, tiers, and per-behaviour-category coverage) and exit without
+    writing anything. Shows the recommended selection by default, or the
+    contents of an existing selection CSV when -BaselineFile is given.
+
+.PARAMETER BaselineFile
+    With -Show: render this existing selection CSV as a tree instead of the
+    recommendation, so you can audit exactly what a baseline includes.
+
 .EXAMPLE
     .\New-LoggingBaseline.ps1
     Full interactive walk-through.
+
+.EXAMPLE
+    .\New-LoggingBaseline.ps1 -Show -BaselineFile .\MyBaseline.csv
+    Audit an existing baseline: what is included, and which behaviour
+    categories it covers.
 
 .EXAMPLE
     .\New-LoggingBaseline.ps1 -AcceptRecommended -IncludeHighVolume -OutFile .\ServerBaseline.csv
@@ -65,7 +82,9 @@ param(
     [switch]$AcceptRecommended,
     [switch]$IncludeHighVolume,
     [switch]$IncludeOptional,
-    [switch]$Force
+    [switch]$Force,
+    [switch]$Show,
+    [string]$BaselineFile
 )
 
 Set-StrictMode -Version 2.0
@@ -74,7 +93,7 @@ if ([string]::IsNullOrEmpty($OutFile)) { $OutFile = Join-Path $PSScriptRoot 'MyB
 
 . (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
 
-if ((Test-Path $OutFile) -and -not $Force) {
+if ((Test-Path $OutFile) -and -not $Force -and -not $Show) {
     Write-Error "$OutFile already exists. Use -Force to overwrite, or pick another -OutFile."
     exit 1
 }
@@ -163,6 +182,71 @@ $items.Add([pscustomobject]@{
     Categories = ($af.Categories -join '; ')
 })
 
+# ---- baseline tree ----------------------------------------------------------
+# Renders every item's include/exclude state (decided answers where they
+# exist, otherwise the recommendation, marked with a trailing ?) plus a
+# per-behaviour-category coverage count, so "what exactly is in this
+# baseline?" has a one-screen answer.
+
+function Show-BaselineTree {
+    param([hashtable]$Decided)
+    Write-Host ''
+    Write-Host 'BASELINE TREE   [+] include   [-] exclude   trailing ? = not yet confirmed (default shown)' -ForegroundColor White
+    foreach ($section in ($items | Select-Object -ExpandProperty Section -Unique)) {
+        Write-Host "+- $section" -ForegroundColor Cyan
+        foreach ($it in ($items | Where-Object { $_.Section -eq $section })) {
+            $key = "$($it.ItemType)|$($it.Id)"
+            if ($Decided.ContainsKey($key)) {
+                $inc = $Decided[$key]; $pending = ''
+            } else {
+                $inc = Get-DefaultSelected $it.Tier; $pending = '?'
+            }
+            $marker = "[-$pending]"; $colour = 'DarkGray'
+            if ($inc) { $marker = "[+$pending]"; $colour = 'Green' }
+            $scopeTag = ''
+            if ($it.Scope -eq 'DomainController') { $scopeTag = ' (DC only)' }
+            Write-Host ('|  {0,-4} {1}  [{2}]{3}' -f $marker, $it.Name, $it.Tier, $scopeTag) -ForegroundColor $colour
+        }
+    }
+    Write-Host ''
+    Write-Host 'Behaviour category coverage (included items serving each category):' -ForegroundColor White
+    foreach ($cat in $script:BaselineCategories) {
+        $n = 0
+        foreach ($it in $items) {
+            $key = "$($it.ItemType)|$($it.Id)"
+            if ($Decided.ContainsKey($key)) { $inc = $Decided[$key] } else { $inc = Get-DefaultSelected $it.Tier }
+            if ($inc -and (($it.Categories -split '; ') -contains $cat)) { $n++ }
+        }
+        if ($n -gt 0) {
+            Write-Host ('  {0,-32} {1} item(s)' -f $cat, $n) -ForegroundColor Green
+        } else {
+            Write-Host ('  {0,-32} NOT COVERED by this selection' -f $cat) -ForegroundColor Red
+        }
+    }
+    Write-Host ''
+}
+
+# ---- view-only mode ----------------------------------------------------------
+
+if ($Show) {
+    $decided = @{}
+    if (-not [string]::IsNullOrEmpty($BaselineFile)) {
+        if (-not (Test-Path $BaselineFile)) {
+            Write-Error "Baseline file not found: $BaselineFile"
+            exit 1
+        }
+        Write-Host "Showing selection from: $BaselineFile"
+        foreach ($row in (Import-Csv $BaselineFile)) {
+            $decided["$($row.ItemType)|$($row.Id)"] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
+        }
+    } else {
+        Write-Host "Showing the kit recommendation (Core$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'}))"
+        foreach ($it in $items) { $decided["$($it.ItemType)|$($it.Id)"] = Get-DefaultSelected $it.Tier }
+    }
+    Show-BaselineTree -Decided $decided
+    exit 0
+}
+
 # ---- selection --------------------------------------------------------------
 
 $selections = @{}   # "ItemType|Id" -> bool
@@ -174,7 +258,7 @@ if ($AcceptRecommended) {
     Write-Host ''
     Write-Host 'Build your logging baseline' -ForegroundColor White
     Write-Host 'The kit recommendation is the default - press Enter to accept it per item.'
-    Write-Host 'Keys: [Enter]=default  [y]=include  [n]=exclude  [a]=defaults for rest of section  [q]=abort'
+    Write-Host 'Keys: [Enter]=default  [y]=include  [n]=exclude  [a]=defaults for rest of section  [t]=show tree  [q]=abort'
     Write-Host ''
 
     foreach ($section in @('Event log channels', 'Advanced audit policy subcategories', 'Registry settings', 'SMB audit settings (Windows Server 2025+)')) {
@@ -203,14 +287,15 @@ if ($AcceptRecommended) {
 
             $answered = $false
             while (-not $answered) {
-                $resp = Read-Host ("      Include? recommended [{0}] (Enter/y/n/a/q)" -f $defText)
+                $resp = Read-Host ("      Include? recommended [{0}] (Enter/y/n/a/t/q)" -f $defText)
                 switch -Regex ($resp.Trim()) {
                     '^$'      { $selections[$key] = $default; $answered = $true }
                     '^[Yy]$'  { $selections[$key] = $true;    $answered = $true }
                     '^[Nn]$'  { $selections[$key] = $false;   $answered = $true }
                     '^[Aa]$'  { $selections[$key] = $default; $answered = $true; $acceptRest = $true }
+                    '^[Tt]$'  { Show-BaselineTree -Decided $selections }
                     '^[Qq]$'  { Write-Host 'Aborted - nothing written.' -ForegroundColor Yellow; exit 1 }
-                    default   { Write-Host '      Please answer Enter, y, n, a or q.' -ForegroundColor DarkYellow }
+                    default   { Write-Host '      Please answer Enter, y, n, a, t or q.' -ForegroundColor DarkYellow }
                 }
             }
         }
