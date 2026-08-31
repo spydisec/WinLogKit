@@ -84,7 +84,7 @@ Reading the columns:
 | Authentication Policy Change | Audit subcategory | 4739, 4706, 4707, 4717 | - | Low | Y | :material-check: | :material-check: |
 | Other Policy Change Events | Audit subcategory | 5447 | - | Low | A Y | :material-check: | :material-check: |
 | Sensitive Privilege Use | Audit subcategory | 4673, 4674 | - | High | Y | - | :material-check: |
-| IPsec Driver | Audit subcategory | 4960-4963, 4965, 5478-5485 | - | Low | C S | :material-check: | :material-check: |
+| IPsec Driver | Audit subcategory | 4960-4963, 4965, 5478-5480, 5483-5485 | - | Low | C S | :material-check: | :material-check: |
 | Security State Change | Audit subcategory | 4616 | - | Low | C S Y | :material-check: | :material-check: |
 | Security System Extension | Audit subcategory | 4697, 4610, 4611, 4622 | - | Low | C S Y | :material-check: | :material-check: |
 | System Integrity | Audit subcategory | 4612, 5038, 6281 | - | Low | A C S Y | :material-check: | :material-check: |

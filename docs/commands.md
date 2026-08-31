@@ -76,6 +76,32 @@ timestamped evidence. Locates WELA in `.\WELA\` or an unzipped
 .\Invoke-WELACheck.ps1 [-Download] [-WelaPath <path>] [-Baseline YamatoSecurity|ASD|Microsoft_Client|Microsoft_Server]
 ```
 
+WELA's own commands, for reference (v2.1.0, verified against source; all
+output is CSV, archived per run under `.\Evidence\`):
+
+```text
+.\WELA.ps1 audit-settings -Baseline <YamatoSecurity|ASD|Microsoft_Client|Microsoft_Server> [-OutType std|gui|table]
+.\WELA.ps1 audit-filesize -Baseline YamatoSecurity
+.\WELA.ps1 configure      -Baseline YamatoSecurity [-Auto]     # not used by this kit
+.\WELA.ps1 update-rules
+```
+
+**Expected deviations in WELA output** (WELA disagreeing with the kit is not
+always kit drift):
+
+- *Process Termination, Group Membership, Kernel Object, Registry*: WELA's
+  recommendation table asks for these, but Yamato's own
+  EnableWindowsLogSettings batch leaves all four disabled (noise, and the
+  Kernel Object / Registry subcategories log almost nothing without SACLs).
+  The kit follows the batch, so these rows show as deviations permanently.
+- *Computer Account Management* on non-DCs: WELA's table is role-blind;
+  those events only generate on domain controllers, where the kit applies
+  them.
+- Rows where WELA recommends less than the kit (e.g. Account Lockout
+  `Failure`, Process Creation `Success`): the kit's Success and Failure
+  supersets them, and `Invoke-WELACheck.ps1` compares superset-aware, so
+  these rows are not reported as deviations once the kit is applied.
+
 ## New-IntuneRemediationPack.ps1
 
 Compiles the selection into a self-contained Intune detection + remediation

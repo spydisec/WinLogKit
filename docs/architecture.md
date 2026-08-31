@@ -96,3 +96,35 @@ pack is consumed by **Microsoft Intune** (Scripts and remediations); the
 subscription XML by the **Windows Event Collector** (`wecutil`); the GPO
 pack by **GPMC / LGPO.exe**; and WELA runs as an independent checker
 alongside Test.
+
+## Behaviour category mapping
+
+The kit organises settings by **behaviour category** rather than by channel,
+so a monitoring requirement ("we must see scheduled task abuse") traces to
+the exact settings that satisfy it. "Subcategory" = advanced audit policy
+subcategory (Security log). DC = generated on domain controllers only.
+HV = HighVolume tier.
+
+| Category | Audit subcategories | Channels | Registry | Coverage |
+|---|---|---|---|---|
+| Authentication | Credential Validation; Logon; Logoff; Account Lockout; Other Logon/Logoff; Special Logon; Kerberos Authentication Service (DC); Kerberos Service Ticket Operations (DC) | Security; Microsoft-Windows-NTLM/Operational | MSV1_0 `RestrictSendingNTLMTraffic=1` (audit), `AuditReceivingNTLMTraffic=2`; Netlogon `AuditNTLMInDomain=7` (DC) | Full |
+| Execution | Process Creation (HV) | Security; WMI-Activity/Operational; Bits-Client/Operational; AppLocker x4; Diagnosis-Scripted/Operational | `ProcessCreationIncludeCmdLine_Enabled=1` (HV) | Full via 4688+cmdline; no file hashes or DLL loads natively (accepted gap) |
+| Account and access change | User Account Management; Security Group Management; Other Account Management; Computer Account Management (DC); Distribution Group Management (DC); Authentication Policy Change | Security | - | Full |
+| Privilege use | Special Logon (4672); Sensitive Privilege Use (HV) | Security | - | Full |
+| Logging tampered with | Audit Policy Change (4719); Security State Change; System Integrity; Other System Events (failure) | Security (1100/1102/1104 default); System (104); Defender/Operational (tamper) | - | Full |
+| Software and service install | Security System Extension (4697) | System (7045); Application (MsiInstaller); CodeIntegrity/Operational; PrintService Admin + Operational | - | Full |
+| Remote access | Logon (types 3/10); Other Logon/Logoff (4778/4779); RPC Events | TerminalServices-LocalSessionManager/Operational; SmbClient/Security | - | Full |
+| Scheduled and automated tasks | Other Object Access (4698-4702) | TaskScheduler/Operational; WMI-Activity/Operational | - | Full |
+| Scripting and command line | Process Creation (HV) | PowerShell/Operational (4103/4104); Windows PowerShell; PowerShellCore/Operational; Diagnosis-Scripted | Script block + module logging (HV); cmdline (HV); transcription (Optional) | Full for PowerShell; other interpreters visible only via 4688 command lines |
+| Persistence | Security System Extension; Other Object Access; Directory Service Changes (DC) | System (7045); TaskScheduler; WMI-Activity; Bits-Client | - | **Partial**: registry autoruns (Run keys, IFEO) need the Registry subcategory + per-key SACLs, not in this baseline |
+| Removable and external devices | Plug and Play (6416); Removable Storage (4663) | DriverFrameworks-UserMode/Operational | - | Full |
+| Blocked and denied activity | Account Lockout; Filtering Platform Connection blocks (HV) | Defender/Operational; AppLocker x4; CodeIntegrity; Security-Mitigations x2; Firewall | - | Full (AppLocker channels populate only if AppLocker policy deployed) |
+| Directory and identity store | Directory Service Access (DC); Directory Service Changes (DC); SAM; Kerberos Authentication Service (DC) | Security | - | Full on DCs; standalone = local SAM only (by design) |
+| File and object access | File Share (5140/5142-5144); Removable Storage | Security | - | **Partial**: per-file auditing (4663) needs File System subcategory + SACLs on chosen paths, a per-asset design decision, deliberately not blanket-enabled |
+| Certificates and keys | Certification Services (4898/4899); Other Policy Change (CNG) | Security; Crypto-DPAPI/Debug (Optional) | AD CS `AuditFilter=127` (only when AD CS installed; CertSvc restart) | Full where AD CS present; limited elsewhere (accepted) |
+| Network flow and sessions | Filtering Platform Connection 5156/5157 (HV); RPC Events | Firewall channel; SmbClient/Security | - | **Partial**: no byte counts / flow aggregation natively; true flow telemetry needs network-layer sources, outside host scope |
+
+The partial rows are the recognised gaps of agentless native logging
+(registry autoruns, per-file SACLs, flow statistics, execution depth beyond
+4688 command lines) - do not expect a native setting to close them; see
+[Safety - known limits](safety.md#known-limits-stated-plainly).

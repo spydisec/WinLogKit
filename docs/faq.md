@@ -61,6 +61,30 @@ depend on Group Policy tooling, which Home lacks. The kit's own workstation
 field testing was done on Windows 11 Home: full apply, verify (all 16
 categories PASS) and rollback.
 
+## What's special on Server 2025 and Windows 11 24H2?
+
+Both can audit which SMB peers cannot do signing or encryption (events
+3021/3022 server-side, 31998/31999 client-side; availability per
+Microsoft's
+[SMB feature descriptions](https://learn.microsoft.com/windows-server/storage/file-server/smb-feature-descriptions)).
+The kit enables these audit-only settings and sizes both Audit channels;
+on earlier versions the properties do not exist and the items report
+NOT APPLICABLE. Two related notes:
+
+- **NTLM**: NTLMv1 is removed in Server 2025 and the SMB client supports
+  NTLM blocking. The kit's NTLM values stay audit-only
+  (`RestrictSendingNTLMTraffic = 1`), safe on all supported versions, and
+  feed the evidence you need before turning any blocking on.
+- **Alignment**: Microsoft's own Server 2025 security baseline
+  ([OSConfig](https://learn.microsoft.com/windows-server/security/osconfig/osconfig-overview))
+  audits Success and Failure on nearly all subcategories, captures 4688
+  command lines, and requires the Security log at 192 MB minimum. This kit
+  meets or exceeds all of that (Security at 1 GB).
+
+On workstations generally, volume calibration differs from servers: far
+fewer logons and connections make the HighVolume tier more affordable per
+host, while the 1 GB Security log matters more on small SSDs.
+
 ## Does a "PASS" mean I'm detecting attacks?
 
 No - it means the configured events are being generated and retained.

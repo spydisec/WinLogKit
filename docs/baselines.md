@@ -225,3 +225,21 @@ Notes, stated plainly:
   Benchmarks are governance or licence-restricted comparisons, cited rather
   than vendored; a DISA STIG preset is a roadmap candidate (public domain,
   subcategory-level).
+
+## Deviations from the Yamato sources
+
+A handful of deliberate differences from the upstream scripts, each with a
+reason. Everything else is faithful.
+
+| Item | Yamato/WELA does | This kit does | Why |
+|---|---|---|---|
+| `RestrictSendingNTLMTraffic` | WELA configure sets **2 (Deny all)** | **1 (Audit all)** | 2 blocks outgoing NTLM, which is enforcement and can break connectivity. Logging change only. |
+| `AuditNTLMInDomain` | WELA sets 2 | 7 (audit all, DC only) | 7 is Microsoft's documented "enable all" value for this setting. |
+| PowerShell policy registry paths | Batch writes only `Wow6432Node` | Both native and `Wow6432Node` paths | Group Policy writes the native path; 64-bit PowerShell reads it. Both paths cover both host bitnesses. |
+| PrintService/Operational | Batch sizes it but never enables it | Enabled | The log is disabled by default; sizing a disabled log records nothing. |
+| AD CS AuditFilter | WELA restarts CertSvc automatically | Sets value, warns, never restarts | Service restarts belong in a change window, not a script side effect. |
+| Other Policy Change Events | Guide text says leave off (5447 noise); both Yamato scripts enable it | Enabled (Core), noise note attached | Follows the scripts; drop it if 5447 floods after the pilot week. |
+
+WELA's `configure` command is deliberately never called by the kit: it
+prompts interactively, restarts CertSvc itself, and sets the NTLM deny
+value. All changes go through `Enable-LoggingBaseline.ps1`.

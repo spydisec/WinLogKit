@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose an improvement or a new capability
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that the kit doesn't support?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: >-
+        What should happen instead. Check ROADMAP.md first - it may already
+        be planned.
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Fits the kit's constraints
+      options:
+        - label: Works on Windows PowerShell 5.1 with no external modules or agents
+        - label: Does not require anything on the never-do list (reboots, service restarts, log shrinking, blanket SACLs)
