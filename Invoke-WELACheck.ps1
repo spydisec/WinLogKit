@@ -109,8 +109,8 @@ if ([string]::IsNullOrEmpty($WelaPath) -or -not (Test-Path $WelaPath)) {
     # ever removed, so this cannot downgrade the connection.
     $currentProtocols = [Net.ServicePointManager]::SecurityProtocol
     if ($currentProtocols -ne [Net.SecurityProtocolType]::SystemDefault -and
-        -not ($currentProtocols -band [Net.SecurityProtocolType]::Tls12)) {
-        [Net.ServicePointManager]::SecurityProtocol = $currentProtocols -bor [Net.SecurityProtocolType]::Tls12  # DevSkim: ignore DS440000,DS440020 - additive minimum-version fix, never downgrades
+        -not ($currentProtocols -band [Net.SecurityProtocolType]::Tls12)) {  # DevSkim: ignore DS440001,DS440020 - capability probe, not a protocol pin
+        [Net.ServicePointManager]::SecurityProtocol = $currentProtocols -bor [Net.SecurityProtocolType]::Tls12  # DevSkim: ignore DS440001,DS440020 - additive minimum-version fix, never downgrades
     }
     New-Item -ItemType Directory -Path (Join-Path $welaDir 'config') -Force | Out-Null
     $files = @{
