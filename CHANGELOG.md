@@ -3,7 +3,7 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
-## v0.3.0 - Unreleased
+## v0.3.0 - 2026-08-31
 
 ### Added
 - Windows 10 / 11 workstation support: host profile detection (workstation /
