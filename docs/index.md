@@ -29,8 +29,8 @@ Yamato Security baselines fix that - this kit makes them **operational**:
   [OSSEM-DM](https://github.com/OTRF/OSSEM-DM)) tells you which techniques a
   selection makes observable: the deliberately conservative Core tier covers
   **152 of 362** mapped Windows techniques, and the HighVolume tier (process
-  creation + PowerShell logging) raises that to **320** - the volume decision,
-  quantified.
+  creation + command line, PowerShell logging, WFP connections, sensitive
+  privilege use) raises that to **320** - the volume decision, quantified.
 - **Fleet delivery built in** - Intune remediation packs, WEF/WEC
   subscription generation, and GPO artefacts, all compiled from one
   settings table so nothing can drift.

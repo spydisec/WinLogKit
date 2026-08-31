@@ -342,7 +342,7 @@ if ($WefRole -eq 'Source') {
     if ($smUrls.Count -gt 0) {
         Add-Row @() 'WEF' 'SubscriptionManager policy' 'at least one Server=<collector URL> value' "$($smUrls.Count) collector URL(s) configured" 'PASS'
     } else {
-        Add-Row @() 'WEF' 'SubscriptionManager policy' 'at least one Server=<collector URL> value' 'no valid collector URL' 'FAIL' 'Set via GPO: Event Forwarding > Configure target Subscription Manager (Server=http://<collector>:5985/wsman/SubscriptionManager/WEC,Refresh=60)'
+        Add-Row @() 'WEF' 'SubscriptionManager policy' 'at least one Server=<collector URL> value' 'no valid collector URL' 'FAIL' "Set via GPO: Event Forwarding > Configure target Subscription Manager (Server=http://<collector>:5985/wsman/SubscriptionManager/WEC,Refresh=$($script:BaselineWefDefaults.SubscriptionRefreshSeconds))"  # DevSkim: ignore DS137138 - documented WinRM default; WEF payloads are Kerberos message-level encrypted over HTTP
     }
     $winrm = Get-Service -Name WinRM -ErrorAction SilentlyContinue
     if ($null -ne $winrm -and $winrm.Status -eq 'Running') {
@@ -362,11 +362,15 @@ if ($WefRole -eq 'Collector') {
         Add-Row @() 'WEF' 'Windows Event Collector service' 'Running' $state 'FAIL' 'Run: wecutil qc /q'
     }
     # Wecsvc alone is not enough: sources connect to the WinRM listener.
-    try {
-        Test-WSMan -ErrorAction Stop | Out-Null
-        Add-Row @() 'WEF' 'WinRM listener (collector)' 'responding' 'responding' 'PASS'
-    } catch {
-        Add-Row @() 'WEF' 'WinRM listener (collector)' 'responding' 'not responding' 'FAIL' 'Run: winrm qc -q (sources cannot connect without a WinRM listener)'
+    # Try HTTP first, then HTTPS, so an HTTPS-only listener still passes.
+    $listenerVia = ''
+    try { Test-WSMan -ErrorAction Stop | Out-Null; $listenerVia = 'HTTP' } catch {
+        try { Test-WSMan -UseSSL -ErrorAction Stop | Out-Null; $listenerVia = 'HTTPS' } catch { $listenerVia = '' }
+    }
+    if ($listenerVia -ne '') {
+        Add-Row @() 'WEF' 'WinRM listener (collector)' 'responding (HTTP or HTTPS)' "responding ($listenerVia)" 'PASS'
+    } else {
+        Add-Row @() 'WEF' 'WinRM listener (collector)' 'responding (HTTP or HTTPS)' 'not responding' 'FAIL' 'Run: winrm qc -q (sources cannot connect without a WinRM listener)'
     }
     $fwdMin = $script:BaselineWefDefaults.ForwardedEventsMinBytes
     $fwdRec = [math]::Round($script:BaselineWefDefaults.ForwardedEventsRecommendedBytes / 1MB)

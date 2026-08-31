@@ -137,16 +137,23 @@ foreach ($r in $rows) {
         $status = 'RequiresSysmon'
     } elseif ($sub -eq '' -and $r.channel -eq 'Microsoft-Windows-PowerShell/Operational' -and "$($r.event_id)".Trim() -match '^(4103|4104|4105|4106)$') {
         # PowerShell Operational events need their enabling registry policy,
-        # not just the channel: 4103 = module logging, 4104-4106 = script
-        # block logging (both HighVolume tier).
-        $needReg = 'ModuleLogging64'
-        if ("$($r.event_id)".Trim() -ne '4103') { $needReg = 'ScriptBlock64' }
+        # not just the channel: 4103 = module logging (EnableModuleLogging AND
+        # a ModuleNames wildcard), 4104-4106 = script block logging. Either
+        # registry view (native or Wow6432Node) satisfies the prerequisite.
+        if ("$($r.event_id)".Trim() -eq '4103') {
+            $prereqMet = ($regSelected.ContainsKey('ModuleLogging64') -and $regSelected.ContainsKey('ModuleNames64')) -or
+                         ($regSelected.ContainsKey('ModuleLogging32') -and $regSelected.ContainsKey('ModuleNames32'))
+            $prereqDesc = 'module logging policy (EnableModuleLogging + ModuleNames)'
+        } else {
+            $prereqMet = $regSelected.ContainsKey('ScriptBlock64') -or $regSelected.ContainsKey('ScriptBlock32')
+            $prereqDesc = 'script block logging policy'
+        }
         if (-not $channelSelected.ContainsKey($r.channel)) {
             $status = 'NotSelected'; $via = "Channel: $($r.channel)"
-        } elseif ($regSelected.ContainsKey($needReg)) {
-            $status = 'Observable'; $via = "Channel: $($r.channel) + Registry: $needReg"
+        } elseif ($prereqMet) {
+            $status = 'Observable'; $via = "Channel: $($r.channel) + $prereqDesc"
         } else {
-            $status = 'NotSelected'; $via = "Registry: $needReg (HighVolume tier)"
+            $status = 'NotSelected'; $via = "Registry: $prereqDesc (HighVolume tier)"
         }
     } elseif ($sub -ne '') {
         if ($subcatSelected.ContainsKey($sub))  { $status = 'Observable'; $via = "AuditPolicy: $sub" }

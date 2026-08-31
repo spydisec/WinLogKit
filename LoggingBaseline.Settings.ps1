@@ -498,8 +498,11 @@ $script:BaselineSmbAuditSettings = @(
 )
 
 # -----------------------------------------------------------------------------
-# 3c. WEF SUBSCRIPTION DEFAULTS (consumed by New-WefSubscription.ps1;
-#     every value overridable per-run via that script's parameters)
+# 3c. WEF TRANSPORT DEFAULTS. The subscription-shaping values (ContentFormat,
+#     batching, heartbeat, SDDL) are consumed by New-WefSubscription.ps1 and
+#     overridable per run via its parameters; the refresh interval and the
+#     ForwardedEvents thresholds are guidance/verification values consumed by
+#     the setup output and Test-LoggingBaseline -WefRole (not parameters).
 # -----------------------------------------------------------------------------
 $script:BaselineWefDefaults = @{
     # Events = binary, locale-independent, smaller on the wire (SIEM-friendly).
@@ -515,6 +518,9 @@ $script:BaselineWefDefaults = @{
     # Which computers may forward: Microsoft's documented default grants
     # Domain Computers and Network Service.
     AllowedSourceDomainComputersSddl = 'O:NSG:BAD:P(A;;GA;;;DC)(A;;GA;;;NS)S:'
+    # How often sources re-read the SubscriptionManager policy (seconds).
+    # Lower = faster pickup of subscription changes, more policy chatter.
+    SubscriptionRefreshSeconds = 60
     # ForwardedEvents on the collector: verification floor and the size the
     # kit recommends. A collector aggregates whole fleets; an undersized
     # ForwardedEvents log wraps in minutes and loses forwarded evidence.

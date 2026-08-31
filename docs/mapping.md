@@ -42,8 +42,10 @@ Every mapping row is classified, and every technique verdict comes with a
 | Microsoft_Client preset | 289 |
 
 The Core -> HighVolume jump of **168 techniques** is the quantified value of
-process creation + command line and PowerShell logging - the number to put
-next to the volume cost when that decision is made. (The classifier is
+the HighVolume tier as a whole - process creation + command line, PowerShell
+logging, Filtering Platform Connection and Sensitive Privilege Use (the
+per-setting breakdown is in the detail CSV's `ProvidedBy` column) - the
+number to put next to the volume cost when that decision is made. (The classifier is
 strict: PowerShell 4103/4104 rows count only when their enabling registry
 policy is selected, not merely the channel - which is also why the
 Microsoft_Client preset, which includes process creation, outscores the
@@ -73,8 +75,10 @@ any selection as a tree with per-category coverage counts.
 - OSSEM maps **events, not detections**: "observable" means the raw events
   exist; detection still needs rules (Sigma, your SIEM analytics).
 - PowerShell Operational rows (4103/4104) require their enabling registry
-  policies (module / script block logging); the classifier enforces that
-  prerequisite rather than counting the channel alone.
+  policies - module logging for 4103, script block logging for 4104, per
+  [Microsoft's PowerShell logging documentation](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_logging_windows) -
+  and the classifier enforces the full prerequisite set (including the
+  ModuleNames wildcard for 4103) rather than counting the channel alone.
 - The snapshot is point-in-time (commit and date in
   `data\ossem\README.md`); refresh procedure is documented there.
 - WELA's ATT&CK Navigator layers (`mitre-ttp-navigator-*.json` in its
