@@ -61,11 +61,14 @@ param(
     [ValidateSet('YamatoSecurity', 'ASD', 'Microsoft_Client', 'Microsoft_Server')]
     [string]$Baseline = 'YamatoSecurity',
     [switch]$Download,
-    [string]$EvidenceDir = (Join-Path $PSScriptRoot 'Evidence')
+    # Default resolved in the body: $PSScriptRoot is not reliably available
+    # during param-default evaluation under powershell.exe -File.
+    [string]$EvidenceDir
 )
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrEmpty($EvidenceDir)) { $EvidenceDir = Join-Path $PSScriptRoot 'Evidence' }
 
 function Test-IsAdmin {
     $id = [Security.Principal.WindowsIdentity]::GetCurrent()

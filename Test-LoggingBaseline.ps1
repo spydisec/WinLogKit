@@ -46,11 +46,14 @@ param(
     [switch]$IncludeHighVolume,
     [switch]$IncludeOptional,
     [string]$BaselineFile,
-    [string]$OutputDir = (Join-Path $PSScriptRoot 'Results')
+    # Default resolved in the body: $PSScriptRoot is not reliably available
+    # during param-default evaluation under powershell.exe -File.
+    [string]$OutputDir
 )
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrEmpty($OutputDir)) { $OutputDir = Join-Path $PSScriptRoot 'Results' }
 
 . (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
 
@@ -250,6 +253,37 @@ foreach ($rs in $script:BaselineRegistrySettings) {
         Add-Row $rs.Categories 'Registry' $label $expected "$current" 'PASS'
     } else {
         Add-Row $rs.Categories 'Registry' $label $expected "$current" 'FAIL' 'Value present but wrong data'
+    }
+}
+
+# ------------------- SMB signing/encryption auditing (Server 2025+) ---------
+
+$smbState = @{}
+$srvCfg = $null; $cliCfg = $null
+try { $srvCfg = Get-SmbServerConfiguration -ErrorAction Stop } catch { $srvCfg = $null }
+try { $cliCfg = Get-SmbClientConfiguration -ErrorAction Stop } catch { $cliCfg = $null }
+foreach ($sa in $script:BaselineSmbAuditSettings) {
+    $cfg = $srvCfg
+    if ($sa.Side -eq 'Client') { $cfg = $cliCfg }
+    if ($null -ne $cfg -and ($cfg.PSObject.Properties.Name -contains $sa.Id)) {
+        $smbState[$sa.Id] = [bool]$cfg.($sa.Id)
+    }
+}
+foreach ($sa in $script:BaselineSmbAuditSettings) {
+    $expected = "$($sa.Value)"
+    $skip = Get-SkipReason $sa.Tier 'SmbAudit' $sa.Id
+    if ($null -ne $skip) {
+        Add-Row $sa.Categories 'SmbAudit' $sa.Id $expected '' 'NOT APPLICABLE' $skip
+        continue
+    }
+    if (-not $smbState.ContainsKey($sa.Id)) {
+        Add-Row $sa.Categories 'SmbAudit' $sa.Id $expected 'unsupported' 'NOT APPLICABLE' 'Requires Windows Server 2025 / Windows 11 24H2 or later'
+        continue
+    }
+    if ($smbState[$sa.Id] -eq $sa.Value) {
+        Add-Row $sa.Categories 'SmbAudit' $sa.Id $expected "$($smbState[$sa.Id])" 'PASS'
+    } else {
+        Add-Row $sa.Categories 'SmbAudit' $sa.Id $expected "$($smbState[$sa.Id])" 'FAIL'
     }
 }
 

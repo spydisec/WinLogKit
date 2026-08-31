@@ -1,5 +1,9 @@
 # WinLogKit
 
+[![CI](https://github.com/spydisec/WinLogKit/actions/workflows/ci.yml/badge.svg)](https://github.com/spydisec/WinLogKit/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/spydisec/WinLogKit?include_prereleases)](https://github.com/spydisec/WinLogKit/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **An easy, auditable way to implement the
 [Yamato Security](https://github.com/Yamato-Security) Windows event logging
 baselines with native PowerShell.** Enable the right event channels, advanced
@@ -8,9 +12,11 @@ get an independent second opinion from
 [WELA](https://github.com/Yamato-Security/WELA) - all with plain Windows
 PowerShell 5.1, no modules, no agents.
 
-Current release (v0.1.0) targets **Windows Server 2019 / 2022**, standalone or
-domain joined. Workstation (Windows 10/11 + Intune) and GPO-based fleet
-delivery are on the [roadmap](ROADMAP.md).
+Current release (v0.2.0) targets **Windows Server 2019 / 2022 / 2025**,
+standalone or domain joined. Windows Server 2025-only items (the new SMB
+signing/encryption auditing) are detected at runtime and reported
+NOT APPLICABLE on older versions. Workstation (Windows 10/11 + Intune) and
+GPO-based fleet delivery are on the [roadmap](ROADMAP.md).
 
 **Scope**: native Windows configuration only. No Sysmon, no Sysinternals, no
 third party agents. Where a behaviour category cannot be fully satisfied
@@ -46,6 +52,7 @@ own risk.
 | `Enable-LoggingBaseline.ps1` | Applies the baseline. Idempotent, reports changed vs already-correct, `-WhatIf` for a full diff, `-Rollback` to restore first-run state, never reboots, flags high volume settings for a human decision. Writes a transcript to `.\Logs\`. |
 | `Test-LoggingBaseline.ps1` | Verification only, changes nothing. Per-category PASS / FAIL / NOT APPLICABLE to console, detail + summary CSVs to `.\Results\`, non-zero exit code on any failure so it can gate a pipeline. |
 | `Invoke-WELACheck.ps1` | Locates (or with `-Download` fetches) WELA, runs `audit-settings` and `audit-filesize`, parses the CSVs, reports deviations, archives raw output with a timestamp under `.\Evidence\`. |
+| `tests/Invoke-KitChecks.ps1` | Self-checks (parse, settings consistency, builder round-trip). Safe anywhere, no admin. CI runs it on Windows PowerShell 5.1 and PowerShell 7; run it locally before a PR. |
 
 ## Quick start
 
@@ -135,6 +142,23 @@ Notes:
 | Optional | `-IncludeOptional` | PowerShell transcription (set an output directory for your environment), Crypto-DPAPI debug channel |
 
 ---
+
+## Windows Server 2025 notes
+
+- **New SMB auditing, included**: Server 2025 can audit which SMB peers cannot
+  do signing or encryption (`Set-SmbServerConfiguration
+  -AuditClientDoesNotSupportEncryption/Signing`, client-side equivalents;
+  events 3021/3022 in `SMBServer/Audit`, 31998/31999 in `SmbClient/Audit`).
+  The kit enables these (audit-only) and sizes both Audit channels. On
+  2019/2022 the properties do not exist and the items report NOT APPLICABLE.
+- **NTLM**: NTLMv1 is removed in Server 2025 and the SMB client supports NTLM
+  blocking. The kit's NTLM values stay audit-only (`RestrictSendingNTLMTraffic
+  = 1`), so they are safe on all supported versions and feed the evidence you
+  need before turning any blocking on.
+- **Alignment**: Microsoft's own Server 2025 security baseline (OSConfig)
+  audits Success and Failure on nearly all subcategories, captures 4688 command
+  lines, and requires the Security log at 192 MB minimum - this kit meets or
+  exceeds all of that (Security at 1 GB).
 
 ## Stability safety: what this kit will never do
 
@@ -293,12 +317,29 @@ Outputs (written to the working directory, archived by `Invoke-WELACheck.ps1`):
   scoping those is a per-environment design decision, out of scope for this
   host baseline.
 
-## Contributing
+## Contributing and SDLC
 
 Issues and PRs welcome - especially field reports on event volumes per
-setting, and the roadmap items in [ROADMAP.md](ROADMAP.md). Keep the rules of
-the house: every setting lives in `LoggingBaseline.Settings.ps1` with a
-plain-language purpose, every deviation from upstream gets a documented
+setting, and the roadmap items in [ROADMAP.md](ROADMAP.md).
+
+How changes land:
+
+- **Branch + PR only.** Work on a feature branch, open a pull request; nothing
+  goes straight to `main`.
+- **CI must pass**: PSScriptAnalyzer lint (config in
+  `PSScriptAnalyzerSettings.psd1`), the kit self-checks on both Windows
+  PowerShell 5.1 and PowerShell 7 (`tests/Invoke-KitChecks.ps1` - run it
+  locally first), and a DevSkim security scan (findings surface in the
+  Security tab).
+- **Dependabot** watches the GitHub Actions used by CI and opens update PRs
+  weekly. The kit itself has no package dependencies by design.
+- **Releases** are tags: pushing `vX.Y.Z` triggers the release workflow, which
+  re-runs the checks on the tagged commit, then publishes a GitHub Release
+  with `WinLogKit-vX.Y.Z.zip` and a `SHA256SUMS.txt` to verify the download.
+  Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
+
+Rules of the house: every setting lives in `LoggingBaseline.Settings.ps1` with
+a plain-language purpose, every deviation from upstream gets a documented
 reason, and nothing that requires third party agents.
 
 ## License

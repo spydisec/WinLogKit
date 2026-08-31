@@ -59,7 +59,9 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$OutFile = (Join-Path $PSScriptRoot 'MyBaseline.csv'),
+    # Default resolved in the body: $PSScriptRoot is not reliably available
+    # during param-default evaluation under powershell.exe -File.
+    [string]$OutFile,
     [switch]$AcceptRecommended,
     [switch]$IncludeHighVolume,
     [switch]$IncludeOptional,
@@ -68,6 +70,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrEmpty($OutFile)) { $OutFile = Join-Path $PSScriptRoot 'MyBaseline.csv' }
 
 . (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
 
@@ -134,6 +137,19 @@ foreach ($rs in $script:BaselineRegistrySettings) {
         Categories = ($rs.Categories -join '; ')
     })
 }
+foreach ($sa in $script:BaselineSmbAuditSettings) {
+    $items.Add([pscustomobject]@{
+        Section  = 'SMB audit settings (Windows Server 2025+)'
+        ItemType = 'SmbAudit'
+        Id       = $sa.Id
+        Name     = "$($sa.Side): $($sa.Id) = $($sa.Value)"
+        Tier     = $sa.Tier
+        Scope    = $sa.Scope
+        Purpose  = $sa.Purpose
+        Risk     = 'No effect on OSes before Windows Server 2025 / Windows 11 24H2 (reported NOT APPLICABLE there). Audit-only; nothing is blocked.'
+        Categories = ($sa.Categories -join '; ')
+    })
+}
 $af = $script:BaselineAdcsAuditFilter
 $items.Add([pscustomobject]@{
     Section  = 'Registry settings'
@@ -161,7 +177,7 @@ if ($AcceptRecommended) {
     Write-Host 'Keys: [Enter]=default  [y]=include  [n]=exclude  [a]=defaults for rest of section  [q]=abort'
     Write-Host ''
 
-    foreach ($section in @('Event log channels', 'Advanced audit policy subcategories', 'Registry settings')) {
+    foreach ($section in @('Event log channels', 'Advanced audit policy subcategories', 'Registry settings', 'SMB audit settings (Windows Server 2025+)')) {
         $sectionItems = @($items | Where-Object { $_.Section -eq $section })
         Write-Host "=== $section ($($sectionItems.Count) items) ===" -ForegroundColor White
         $acceptRest = $false

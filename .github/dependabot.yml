@@ -1,0 +1,11 @@
+# Keep the GitHub Actions used by CI/release up to date.
+# The kit itself has no package dependencies (plain PowerShell 5.1, no modules),
+# so github-actions is the only ecosystem to watch.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"

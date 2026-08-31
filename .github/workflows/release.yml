@@ -1,0 +1,43 @@
+# Release: on a version tag (v*), package the kit as a zip with checksums and
+# publish a GitHub Release. Usage:
+#   git tag v0.2.0 && git push origin v0.2.0
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: package and release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Never ship a broken zip: the same checks CI runs, on the tagged commit.
+      - name: Kit checks (Windows PowerShell 5.1)
+        shell: powershell
+        run: .\tests\Invoke-KitChecks.ps1
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $stage = "WinLogKit-$tag"
+          New-Item -ItemType Directory -Path $stage | Out-Null
+          Copy-Item *.ps1, PSScriptAnalyzerSettings.psd1, README.md, ROADMAP.md, CHANGELOG.md, LICENSE $stage
+          Compress-Archive -Path $stage -DestinationPath "WinLogKit-$tag.zip"
+          (Get-FileHash "WinLogKit-$tag.zip" -Algorithm SHA256).Hash.ToLower() + "  WinLogKit-$tag.zip" |
+            Set-Content "SHA256SUMS.txt" -Encoding ascii
+          Get-Content SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ github.ref_name }}'
+          gh release create $tag "WinLogKit-$tag.zip" "SHA256SUMS.txt" --title "WinLogKit $tag" --generate-notes
