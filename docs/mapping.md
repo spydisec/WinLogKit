@@ -30,7 +30,7 @@ Every technique verdict carries a reason:
 
 | Status | Meaning |
 |---|---|
-| Observable | an enabling item is selected - the events will exist |
+| Observable | an enabling item is selected - the mapped events can be produced |
 | NotSelected | the kit has the item, but this selection excludes it |
 | NotInKit | needs a subcategory the kit deliberately excludes (SACL-dependent Registry/File System, DS Replication, ...) |
 | RequiresSysmon | only Sysmon telemetry maps to it - out of kit scope by design |

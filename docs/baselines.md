@@ -83,11 +83,11 @@ settings table's own Risk notes. These are starting points pending pilot
 volume data, not final answers: run the pilot week, check the numbers, and
 adjust your copy.
 
-| Preset | Selection | ATT&CK coverage (native ceiling 284) |
+| Preset | Selection | Observable techniques |
 |---|---|---|
-| `role_Workstation.csv` | Core + process creation/cmdline + script block logging + WFP connections; DC-only items deselected | **265** / 472 (93% of ceiling) |
-| `role_MemberServer.csv` | as Workstation, **without** WFP connections | **263** / 472 (93%) |
-| `role_DomainController.csv` | as MemberServer, plus the DC-scope subcategories | **273** / 472 (96%) |
+| `role_Workstation.csv` | Core + process creation/cmdline + script block logging + WFP connections; DC-only items deselected | **265** of 472 mapped = 93% of the 284 native ceiling |
+| `role_MemberServer.csv` | as Workstation, **without** WFP connections | **263** of 472 = 93% of ceiling |
+| `role_DomainController.csv` | as MemberServer, plus the DC-scope subcategories | **273** of 472 = 96% of ceiling |
 
 The reasoning per decision (volume and behaviour characterisations come from
 the settings table's Risk notes, themselves sourced from

@@ -128,7 +128,7 @@ $detail = New-Object System.Collections.Generic.List[object]
 
 if ($UseOssem) {
     # ------------------- legacy cross-check: OSSEM-DM snapshot join ----------
-    $snapshot = Join-Path $PSScriptRoot 'data\ossem\techniques_to_events_windows.csv'
+    $snapshot = Join-Path (Join-Path (Join-Path $PSScriptRoot 'data') 'ossem') 'techniques_to_events_windows.csv'
     if (-not (Test-Path $snapshot)) { Write-Error "OSSEM snapshot not found at $snapshot"; exit 1 }
     $subcatAlias = @{ 'PNP Activity' = 'Plug and Play'; 'Policy Change' = 'Audit Policy Change' }
     $subcatSelectedByName = @{}; $subcatKnownByName = @{}
@@ -165,8 +165,10 @@ if ($UseOssem) {
     $mappingDesc = 'OSSEM-DM snapshot (cross-check mode)'
 } else {
     # ------------------------ native mapping: ATT&CK v19.2 + kit event map ---
-    $analyticsCsv = Join-Path $PSScriptRoot 'data\attack\windows_analytics.csv'
-    $mapCsv       = Join-Path $PSScriptRoot 'data\attack\event_map.csv'
+    # Nested Join-Path keeps these resolvable on non-Windows PowerShell too.
+    $attackDir    = Join-Path (Join-Path $PSScriptRoot 'data') 'attack'
+    $analyticsCsv = Join-Path $attackDir 'windows_analytics.csv'
+    $mapCsv       = Join-Path $attackDir 'event_map.csv'
     foreach ($p in @($analyticsCsv, $mapCsv)) {
         if (-not (Test-Path $p)) { Write-Error "Mapping data not found: $p (see data\attack\README.md)"; exit 1 }
     }
@@ -185,6 +187,9 @@ if ($UseOssem) {
         if ($eventMap.ContainsKey("$Source|$Code")) { $m = $eventMap["$Source|$Code"] }
         elseif ($eventMap.ContainsKey("$Source|")) { $m = $eventMap["$Source|"] }
         if ($null -eq $m) {
+            if ($Source -match '(?i)sysmon') {
+                return @{ Status = 'RequiresSysmon'; Via = "Source: $Source" }
+            }
             if ($Source -match '^(etw:|ETW:|EDR:|NSM:|m365:|azure:|dns:|Windows:perfmon)') {
                 return @{ Status = 'NotNative'; Via = "Source: $Source" }
             }
@@ -248,7 +253,7 @@ foreach ($rg in ($notObservable | Group-Object Reason | Sort-Object Count -Desce
     Write-Host ("  Not observable ({0,-14}): {1}" -f $rg.Name, $rg.Count) -ForegroundColor Yellow
 }
 Write-Host ''
-Write-Host 'Observable = the enabling events exist with this baseline; detection still needs rules.'
+Write-Host 'Observable = the mapped event sources are enabled, so the events can be produced; detection still needs rules.'
 Write-Host '  NotSelected -> selecting more kit items (often HighVolume) adds these.   NotInKit -> excluded subcategories.'
 Write-Host '  RequiresSysmon / NotNative -> beyond native host logging.   Unmapped -> curation worklist (see data\attack\README.md).'
 

@@ -29,7 +29,8 @@ Yamato Security baselines fix that - this kit makes them **operational**:
   ATT&CK data (v19.2)** joined through a kit-curated event map, tells you
   which techniques a selection makes observable and why the rest are not.
   MITRE's own analytics put the native-logging ceiling at 284 of 472
-  Windows techniques (the rest need Sysmon/EDR/network telemetry); the
+  Windows techniques (the rest need Sysmon, ETW tracing, EDR, network
+  sensors or cloud telemetry); the
   HighVolume tier reaches **279 of that 284** - the volume decision,
   quantified. Approach credit: OTRF's
   [OSSEM-DM](https://github.com/OTRF/OSSEM-DM), retained as a cross-check.

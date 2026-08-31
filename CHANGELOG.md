@@ -25,6 +25,8 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
   so data-dependent scripts (coverage, presets) failed from a zip install
   (field-reported). The zip now carries them.
 
+## v0.5.0 - 2026-08-31
+
 ### Added
 - Per-role presets: `presets/role_Workstation.csv`, `role_MemberServer.csv`
   and `role_DomainController.csv` - the kit's recommended starting point per
