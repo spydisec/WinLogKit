@@ -29,7 +29,8 @@ same `-BaselineFile`.
 
 The split exists so volume decisions are made by a human with the impact in
 front of them - `Export-AttackCoverage.ps1` quantifies what the HighVolume
-tier buys (168 additional ATT&CK techniques over Core: 152 -> 320).
+tier buys (117 additional ATT&CK techniques over Core: 162 -> 279 of the
+284-technique native ceiling; see [the mapping page](mapping.md)).
 
 ## Building a baseline
 
@@ -82,11 +83,11 @@ settings table's own Risk notes. These are starting points pending pilot
 volume data, not final answers: run the pilot week, check the numbers, and
 adjust your copy.
 
-| Preset | Selection | ATT&CK coverage |
+| Preset | Selection | Observable techniques |
 |---|---|---|
-| `role_Workstation.csv` | Core + process creation/cmdline + script block logging + WFP connections; DC-only items deselected | **317** / 362 |
-| `role_MemberServer.csv` | as Workstation, **without** WFP connections | **299** / 362 |
-| `role_DomainController.csv` | as MemberServer, plus the DC-scope subcategories | **302** / 362 |
+| `role_Workstation.csv` | Core + process creation/cmdline + script block logging + WFP connections; DC-only items deselected | **265** of 472 mapped = 93% of the 284 native ceiling |
+| `role_MemberServer.csv` | as Workstation, **without** WFP connections | **263** of 472 = 93% of ceiling |
+| `role_DomainController.csv` | as MemberServer, plus the DC-scope subcategories | **273** of 472 = 96% of ceiling |
 
 The reasoning per decision (volume and behaviour characterisations come from
 the settings table's Risk notes, themselves sourced from

@@ -141,16 +141,30 @@ try {
     if ($auditRows.Count -eq $expectedAudit) { Pass "GPO audit.csv rows ($expectedAudit)" } else { Fail "GPO audit.csv has $($auditRows.Count) rows, expected $expectedAudit" }
     if ((Get-Content (Join-Path $gpoTmp 'registry.txt') -Raw) -match 'EnableScriptBlockLogging') { Pass 'GPO registry.txt contains expected policy value' } else { Fail 'GPO registry.txt missing EnableScriptBlockLogging' }
 
-    # 7b. ATT&CK coverage: joins the OSSEM snapshot, produces sane output
+    # 7b. ATT&CK native mapping: event map integrity, then join sanity
+    $badMap = @()
+    foreach ($m in (Import-Csv (Join-Path $KitRoot 'data\attack\event_map.csv'))) {
+        if ($m.item_type -eq 'AuditPolicy' -and $m.item_id -ne '' -and
+            -not @($BaselineAuditSubcategories | Where-Object { $_.Guid.ToUpper() -eq $m.item_id.ToUpper() }).Count) {
+            $badMap += "GUID $($m.item_id)"
+        }
+        if ($m.item_type -eq 'Channel' -and $m.item_id -ne '' -and
+            -not @($BaselineChannels | Where-Object { $_.Name -eq $m.item_id }).Count) {
+            $badMap += "channel $($m.item_id)"
+        }
+    }
+    if ($badMap) { Fail "event_map.csv references unknown settings items: $($badMap -join ', ')" } else { Pass 'event map item ids valid against settings table' }
+
     $covTmp = Join-Path $tmp 'cov'
     & (Join-Path $KitRoot 'Export-AttackCoverage.ps1') -OutDir $covTmp | Out-Null
     $covDetail = Get-ChildItem $covTmp -Filter 'AttackCoverage_Detail_*.csv' | Select-Object -First 1
     if ($null -eq $covDetail) { Fail 'coverage detail CSV not produced' } else {
         $covRows = Import-Csv $covDetail.FullName
         $obs = @($covRows | Where-Object { $_.Status -eq 'Observable' }).Count
-        # Core-tier sanity: hundreds of observable rows (282 techniques); most
-        # rows are Sysmon-only or HighVolume-tier and correctly not observable.
-        if ($covRows.Count -gt 4000 -and $obs -gt 500) { Pass "ATT&CK coverage joins ($($covRows.Count) rows, $obs observable)" } else { Fail "ATT&CK coverage looks wrong ($($covRows.Count) rows, $obs observable)" }
+        # Core-tier native-mapping sanity: ~1480 analytic rows, ~199 of them
+        # observable at Core (measured at snapshot time); Sysmon-only rows
+        # dominate the non-observable share by design.
+        if ($covRows.Count -gt 1400 -and $obs -ge 150) { Pass "ATT&CK native coverage joins ($($covRows.Count) rows, $obs observable)" } else { Fail "ATT&CK coverage looks wrong ($($covRows.Count) rows, $obs observable)" }
     }
 
     # 7. WEF subscription generation: valid XML, one query per selected channel
