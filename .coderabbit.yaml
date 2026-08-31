@@ -56,6 +56,15 @@ reviews:
           -Rollback still restores everything.
         - Write-Host with colour is the intended console UI here; do not flag
           it.
+        - The run transcript (Start-Transcript into .\Logs) is a deliberate,
+          documented exception to -WhatIf: the dry-run diff is exactly what
+          the transcript should record. Log files are working output, not
+          configuration, so they are outside the rollback contract. Do not
+          flag the -WhatIf:$false on transcript setup.
+        - Log retention policy: 'Retain' (do not overwrite) is the never-do
+          the kit corrects; 'AutoBackup' keeps recording and may be a
+          deliberate archival choice - the kit intentionally does not force
+          it to Circular. Do not flag AutoBackup handling.
     - path: ".github/workflows/**"
       instructions: |
         - Actions pinned to latest major tags (Dependabot maintains them).

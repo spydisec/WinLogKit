@@ -350,6 +350,10 @@ $script:BaselineAuditSubcategories = @(
        Risk = 'Known to flood on hosts running backup agents and monitoring software (backup/restore privileges fire constantly). Test on one host per server role before fleet rollout.' }
 
     # --- System ---
+    @{ Name = 'IPsec Driver';                         Guid = '0CCE9213-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Optional'
+       Categories = @('Network flow and sessions')
+       Purpose = 'IPsec driver events - dropped IPsec packets and driver integrity failures. In Microsoft''s baseline recommendation (and the Microsoft_Client baseline in Yamato''s EventLog-Baseline-Guide) but not in the Yamato set, so Optional: enable where IPsec is actually used.' }
+
     @{ Name = 'Security State Change';                Guid = '0CCE9210-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Core'
        Categories = @('Logging tampered with')
        Purpose = 'System start/shutdown and system time changes (4616). Time tampering breaks forensic timelines.' }

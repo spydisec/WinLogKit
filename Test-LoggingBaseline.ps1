@@ -71,6 +71,14 @@ function Get-DomainRole {
     return 'Standalone'
 }
 
+function Get-OsType {
+    # Win32_OperatingSystem.ProductType: 1 workstation, 2 domain controller, 3 server
+    $pt = (Get-CimInstance -ClassName Win32_OperatingSystem).ProductType
+    if ($pt -eq 1) { return 'Workstation' }
+    if ($pt -eq 2) { return 'Domain Controller' }
+    return 'Server'
+}
+
 function ConvertTo-NetRegPath { param([string]$Path) $Path -replace '^HKLM:\\', 'HKEY_LOCAL_MACHINE\' }
 
 function Get-RegValue {
@@ -152,7 +160,7 @@ if (-not [string]::IsNullOrEmpty($BaselineFile)) {
 
 $domainRole = Get-DomainRole
 Write-Host "Test-LoggingBaseline (verification only, nothing is changed)"
-Write-Host "Host role      : $domainRole"
+Write-Host "Host profile   : $(Get-OsType), $domainRole"
 if ($null -ne $script:Selection) {
     Write-Host "Baseline file  : $BaselineFile (tier switches ignored)"
 } else {

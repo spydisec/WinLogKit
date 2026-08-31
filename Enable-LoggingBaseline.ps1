@@ -108,6 +108,14 @@ function Get-DomainRole {
     return 'Standalone'
 }
 
+function Get-OsType {
+    # Win32_OperatingSystem.ProductType: 1 workstation, 2 domain controller, 3 server
+    $pt = (Get-CimInstance -ClassName Win32_OperatingSystem).ProductType
+    if ($pt -eq 1) { return 'Workstation' }
+    if ($pt -eq 2) { return 'Domain Controller' }
+    return 'Server'
+}
+
 # Registry access uses the .NET API throughout, not *-ItemProperty, because
 # one required value is literally named '*' and the ItemProperty cmdlets
 # treat that as a wildcard.
@@ -242,10 +250,14 @@ if (-not (Test-IsAdmin)) {
     exit 1
 }
 
-if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
+# -WhatIf:$false: the transcript is the record of the run - a -WhatIf diff is
+# exactly what you want written to disk, and without the override
+# Start-Transcript is itself skipped under -WhatIf, leaving the finally-block
+# Stop-Transcript to throw "host is not currently transcribing".
+if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force -WhatIf:$false | Out-Null }
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $transcriptFile = Join-Path $LogDir "Enable-LoggingBaseline_$stamp.log"
-Start-Transcript -Path $transcriptFile | Out-Null
+Start-Transcript -Path $transcriptFile -WhatIf:$false | Out-Null
 
 $exitCode = 0
 try {
@@ -262,7 +274,7 @@ try {
     }
 
     Write-Host ''
-    Write-Host "Host role          : $domainRole"
+    Write-Host "Host profile       : $(Get-OsType), $domainRole"
     if ($null -ne $script:Selection) {
         Write-Host "Baseline file      : $BaselineFile ($(@($script:Selection.Values | Where-Object { $_ }).Count) items selected; tier switches ignored)"
     } else {
@@ -587,6 +599,8 @@ try {
     Write-Host "Transcript saved to $transcriptFile"
 }
 finally {
-    Stop-Transcript | Out-Null
+    # Tolerate a transcript that never started (e.g. transcription disabled by
+    # policy) rather than masking the real result with a Stop-Transcript error.
+    try { Stop-Transcript | Out-Null } catch { Write-Verbose "Stop-Transcript: $($_.Exception.Message)" }
 }
 exit $exitCode

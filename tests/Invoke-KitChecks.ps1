@@ -93,6 +93,23 @@ try {
     $selOther  = @($r1 | Where-Object { $_.Selected -eq 'Y' -and $_.Tier -ne 'Core' }).Count
     if ($selCore -ne $coreCount -or $selOther -ne 0) { Fail "recommended defaults wrong (core=$coreCount selected-core=$selCore selected-noncore=$selOther)" } else { Pass 'recommended defaults select exactly Core' }
     if (@($r2 | Where-Object { $_.Selected -eq 'Y' }).Count -ne $r2.Count) { Fail 'all-tiers run did not select everything' } else { Pass 'all-tiers run selects everything' }
+
+    # 5. Intune pack generation: files parse, placeholders replaced, selection respected
+    $packDir = Join-Path $tmp 'intune'
+    & (Join-Path $KitRoot 'New-IntuneRemediationPack.ps1') -OutDir $packDir | Out-Null
+    foreach ($f in @('Detect-LoggingBaseline.ps1', 'Remediate-LoggingBaseline.ps1')) {
+        $p = Join-Path $packDir $f
+        if (-not (Test-Path $p)) { Fail "Intune pack missing $f"; continue }
+        $tokens = $null; $errors = $null
+        [System.Management.Automation.Language.Parser]::ParseFile($p, [ref]$tokens, [ref]$errors) | Out-Null
+        if ($errors.Count -gt 0) { Fail "generated $f has parse errors: $($errors[0].Message)" } else { Pass "generated $f parses" }
+        if ((Get-Content $p -Raw) -match '__(MODE|ITEMS|COUNT|SOURCE|FILENAME)__') { Fail "generated $f has unreplaced placeholders" }
+    }
+    $packDir2 = Join-Path $tmp 'intune-csv'
+    & (Join-Path $KitRoot 'New-IntuneRemediationPack.ps1') -OutDir $packDir2 -BaselineFile $csv1 | Out-Null
+    $detect2 = Get-Content (Join-Path $packDir2 'Detect-LoggingBaseline.ps1') -Raw
+    # The recommended CSV selects only Core, so no HighVolume item may be embedded.
+    if ($detect2 -match 'EnableModuleLogging') { Fail 'Intune pack from Core-only CSV embedded a HighVolume item' } else { Pass 'Intune pack honours the baseline CSV selection' }
 }
 finally {
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
