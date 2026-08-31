@@ -118,6 +118,26 @@ try {
     $detect2 = Get-Content (Join-Path $packDir2 'Detect-LoggingBaseline.ps1') -Raw
     # The recommended CSV selects only Core, so no HighVolume item may be embedded.
     if ($detect2 -match 'EnableModuleLogging') { Fail 'Intune pack from Core-only CSV embedded a HighVolume item' } else { Pass 'Intune pack honours the baseline CSV selection' }
+
+    # 6. Presets: committed CSVs must match what the generator produces
+    $presetTmp = Join-Path $tmp 'presets'
+    & (Join-Path $KitRoot 'tools\New-PresetBaselines.ps1') -OutDir $presetTmp | Out-Null
+    foreach ($name in @('ASD', 'Microsoft_Client', 'Microsoft_Server')) {
+        $committed = Join-Path $KitRoot "presets\$name.csv"
+        if (-not (Test-Path $committed)) { Fail "presets\$name.csv is missing - run tools\New-PresetBaselines.ps1"; continue }
+        $a = Import-Csv $committed | ForEach-Object { "$($_.ItemType)|$($_.Id)|$($_.Selected)" } | Sort-Object
+        $b = Import-Csv (Join-Path $presetTmp "$name.csv") | ForEach-Object { "$($_.ItemType)|$($_.Id)|$($_.Selected)" } | Sort-Object
+        if (Compare-Object $a $b) { Fail "presets\$name.csv drifted from the generator - rerun tools\New-PresetBaselines.ps1" } else { Pass "preset $name matches generator" }
+    }
+
+    # 7. WEF subscription generation: valid XML, one query per selected channel
+    $wefTmp = Join-Path $tmp 'wef'
+    & (Join-Path $KitRoot 'New-WefSubscription.ps1') -OutDir $wefTmp -BaselineFile (Join-Path $KitRoot 'presets\ASD.csv') -SubscriptionId 'CheckSub' | Out-Null
+    try {
+        [xml]$wx = Get-Content (Join-Path $wefTmp 'CheckSub.xml') -Raw
+        $qCount = [regex]::Matches($wx.Subscription.Query.'#cdata-section', '<Query ').Count
+        if ($qCount -eq 3) { Pass 'WEF subscription XML valid (3 queries for the ASD preset)' } else { Fail "WEF XML has $qCount queries, expected 3 for the ASD preset" }
+    } catch { Fail "WEF subscription XML invalid: $($_.Exception.Message)" }
 }
 finally {
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue

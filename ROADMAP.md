@@ -34,7 +34,21 @@
 - [ ] Per-role recommended CSVs shipped in the repo (workstation / member
   server / DC) once volume data from pilots justifies the defaults
 
-## v0.4 - GPO delivery for fleet scale
+## v0.4 - Fleet collection and reference baselines (in progress)
+
+- [x] **WEF/WEC**: `New-WefSubscription.ps1` generates a source-initiated
+  subscription XML from the settings table or any baseline CSV, with
+  collector/source setup guidance (generate -> transport -> ingest boundary
+  documented; SIEM ingestion stays out of scope)
+- [x] **Reference presets**: `presets/` ships ASD, Microsoft_Client and
+  Microsoft_Server as selection CSVs, faithful to Yamato's
+  EventLog-Baseline-Guide scripts, drift-checked in CI against
+  `tools/New-PresetBaselines.ps1`
+- [ ] Collector-side checks (SubscriptionManager policy and WinRM state on
+  sources, ForwardedEvents sizing) in Test-LoggingBaseline
+- [ ] Remaining GPO items below
+
+### GPO delivery for fleet scale
 
 - Generate a GPO-importable advanced audit policy `audit.csv` directly from
   the settings table, so the GPO can never drift from the tested baseline

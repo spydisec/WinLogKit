@@ -498,6 +498,26 @@ $script:BaselineSmbAuditSettings = @(
 )
 
 # -----------------------------------------------------------------------------
+# 3c. WEF SUBSCRIPTION DEFAULTS (consumed by New-WefSubscription.ps1;
+#     every value overridable per-run via that script's parameters)
+# -----------------------------------------------------------------------------
+$script:BaselineWefDefaults = @{
+    # Events = binary, locale-independent, smaller on the wire (SIEM-friendly).
+    # RenderedText adds human-readable message text at higher transport cost.
+    ContentFormat = 'Events'
+    # Delivery batching: push a batch when either bound is hit. 30s keeps
+    # near-real-time visibility; raise for WAN-constrained sources.
+    MaxLatencySeconds = 30
+    MaxItems = 500
+    # Source heartbeat so silently-dead forwarders are noticeable on the
+    # collector. Low values add chatter fleet-wide.
+    HeartbeatSeconds = 3600
+    # Which computers may forward: Microsoft's documented default grants
+    # Domain Computers and Network Service.
+    AllowedSourceDomainComputersSddl = 'O:NSG:BAD:P(A;;GA;;;DC)(A;;GA;;;NS)S:'
+}
+
+# -----------------------------------------------------------------------------
 # 4. AD CS AUDIT FILTER (conditional - only when Certificate Services installed)
 #
 # Kept separate from plain registry settings because it needs a CertSvc
