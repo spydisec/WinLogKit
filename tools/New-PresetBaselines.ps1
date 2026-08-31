@@ -130,6 +130,27 @@ $rolePresets = @(
     @{ Name = 'role_DomainController'; IncludeDcScope = $true
        ExtraAudit = @('0CCE922B')
        ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32') }
+
+    # spydi blended baselines: the union of ASD, Microsoft Client, Microsoft
+    # Server and Yamato, on two axes (role x volume). Minimal = the
+    # high-signal set every reference agrees on (Core + process creation +
+    # command line + script block logging + IPsec Driver). Heavy = Minimal
+    # plus everything the references ask for at real volume cost: WFP
+    # connections, Sensitive Privilege Use, and ASD's module logging.
+    # The Server variants cover servers, DCs and WEF collectors in one
+    # preset - DC-scope items are runtime-gated NOT APPLICABLE elsewhere.
+    @{ Name = 'spydi_Workstation_Minimal'; IncludeDcScope = $false
+       ExtraAudit = @('0CCE922B', '0CCE9213')
+       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32') }
+    @{ Name = 'spydi_Workstation_Heavy';   IncludeDcScope = $false
+       ExtraAudit = @('0CCE922B', '0CCE9213', '0CCE9226', '0CCE9228')
+       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32', 'ModuleLogging64', 'ModuleNames64', 'ModuleLogging32', 'ModuleNames32') }
+    @{ Name = 'spydi_Server_Minimal';      IncludeDcScope = $true
+       ExtraAudit = @('0CCE922B', '0CCE9213')
+       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32') }
+    @{ Name = 'spydi_Server_Heavy';        IncludeDcScope = $true
+       ExtraAudit = @('0CCE922B', '0CCE9213', '0CCE9226', '0CCE9228')
+       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32', 'ModuleLogging64', 'ModuleNames64', 'ModuleLogging32', 'ModuleNames32') }
 )
 
 # Guard against silent selector drift: every role selector must match at

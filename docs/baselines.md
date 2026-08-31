@@ -115,3 +115,70 @@ Usage is identical to any baseline CSV:
 To customise a role, copy the CSV, flip `Selected` values in Excel, and keep
 your copy in version control - the shipped presets are regenerated from the
 settings table and CI rejects drift, so edit copies, not the originals.
+
+## spydi baselines - the blended recommendation
+
+The `spydi_*` presets blend the four references this kit tracks - ASD,
+Microsoft Client, Microsoft Server and Yamato - into one opinionated pair of
+axes: **role** (Server covers servers, domain controllers and WEF collectors
+in one preset, with DC-only items runtime-gated; Workstation covers
+Windows 10/11) and **volume** (Minimal vs Heavy). The one picture that shows
+what you're choosing between:
+
+```mermaid
+flowchart LR
+    CORE["Kit Core<br/>channels sized + unanimous audit set"]
+    MIN["spydi Minimal<br/>the set every reference agrees on"]
+    HVY["spydi Heavy<br/>everything the references ask for"]
+    CORE -->|"+ 4688 with command line<br/>+ 4104 script block<br/>+ IPsec Driver"| MIN
+    MIN -->|"+ 5156/5157 WFP connections<br/>+ 4673/4674 sensitive privilege<br/>+ 4103 module logging (ASD)"| HVY
+```
+
+| Preset | Observable techniques (native ceiling 284) |
+|---|---|
+| `spydi_Workstation_Minimal.csv` | 263 of 472 = 93% of ceiling |
+| `spydi_Workstation_Heavy.csv` | 269 of 472 = 95% |
+| `spydi_Server_Minimal.csv` | 273 of 472 = 96% |
+| `spydi_Server_Heavy.csv` | **279 of 472 = 98% - the full native reach** |
+
+Every group traced to its sources (A = ASD, C = Microsoft Client,
+S = Microsoft Server, Y = Yamato) and key events:
+
+| Group | Key events | Refs | Minimal | Heavy |
+|---|---|---|---|---|
+| Channels sized + enabled (kit Core set) | 4104, 7045, 104, task/WMI/Defender logs | Y (A sizes Sec/Sys/App) | ✓ | ✓ |
+| Account logon + Kerberos (DC) | 4776, 4768/4769/4771 | A,C,S,Y | ✓ | ✓ |
+| Account and group management | 4720-4767, 4727-4764 | A,C,S,Y | ✓ | ✓ |
+| Logon/logoff set | 4624/4625/4648, 4634, 4672, 4778/4779 | A,C,S,Y | ✓ | ✓ |
+| Policy change + system set | 4719, 4706, 4616, 4697, 5038 | A,C,S,Y | ✓ | ✓ |
+| Process creation + command line | 4688 | A,C,S,Y | ✓ | ✓ |
+| Script block logging | 4104 | A,Y | ✓ | ✓ |
+| IPsec Driver | 4960-4963, 5478+ | C,S | ✓ | ✓ |
+| DS Access/Changes (Server preset; DC-gated) | 4662, 5136 | S,Y | ✓ | ✓ |
+| NTLM + SMB (2025) auditing | 8001-8004, 3021/3022, 31998/31999 | Y, Microsoft docs | ✓ | ✓ |
+| WFP connections | 5156/5157 | Y | - | ✓ |
+| Sensitive privilege use | 4673/4674 | Y | - | ✓ |
+| Module logging | 4103 | A | - | ✓ |
+
+Notes, stated plainly:
+
+- **Minimal** is the deploy-with-confidence set: everything unanimous plus
+  the three highest-signal additions. **Heavy** accepts real volume for the
+  last stretch of coverage and richer content (4103 command output, network
+  flow context) - pilot Heavy on one host per role first, per the
+  [safety page](safety.md).
+- Module logging appears only in Heavy, on ASD's authority - it is the
+  kit's heaviest setting.
+- Selection CSVs carry item choices, not sizes: the Security log stays at
+  the kit's 1 GB (ASD suggests 2 GB; raise it in
+  `LoggingBaseline.Settings.ps1` if you take that view).
+- The ASD subcategories the kit cannot express (Process Termination, Group
+  Membership, SACL-dependent File System/Kernel Object/Registry) are the
+  same ones listed under the ASD reference preset above.
+- Sources beyond the four: ASD's 2024 joint
+  [Best practices for event logging and threat detection](https://www.cyber.gov.au/resources-business-and-government/maintaining-devices-and-systems/system-hardening-and-administration/system-monitoring/best-practices-event-logging-threat-detection)
+  validates this set at the practice level (PowerShell logging, command
+  line capture, centralised collection); NIST SP 800-92 / CSF and CIS
+  Benchmarks are governance or licence-restricted comparisons, cited rather
+  than vendored; a DISA STIG preset is a roadmap candidate (public domain,
+  subcategory-level).

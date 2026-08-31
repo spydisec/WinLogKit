@@ -122,7 +122,7 @@ try {
     # 6. Presets: committed CSVs must match what the generator produces
     $presetTmp = Join-Path $tmp 'presets'
     & (Join-Path $KitRoot 'tools\New-PresetBaselines.ps1') -OutDir $presetTmp | Out-Null
-    foreach ($name in @('ASD', 'Microsoft_Client', 'Microsoft_Server', 'role_Workstation', 'role_MemberServer', 'role_DomainController')) {
+    foreach ($name in @('ASD', 'Microsoft_Client', 'Microsoft_Server', 'role_Workstation', 'role_MemberServer', 'role_DomainController', 'spydi_Workstation_Minimal', 'spydi_Workstation_Heavy', 'spydi_Server_Minimal', 'spydi_Server_Heavy')) {
         $committed = Join-Path $KitRoot "presets\$name.csv"
         if (-not (Test-Path $committed)) { Fail "presets\$name.csv is missing - run tools\New-PresetBaselines.ps1"; continue }
         # Compare ALL columns, so descriptive fields (Purpose, Risk, Tier...)
