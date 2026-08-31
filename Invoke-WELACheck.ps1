@@ -84,7 +84,13 @@ if (-not (Test-IsAdmin)) {
 
 $welaDir = Join-Path $PSScriptRoot 'WELA'
 if ([string]::IsNullOrEmpty($WelaPath)) {
-    $candidates = @((Join-Path $welaDir 'WELA.ps1'), (Join-Path (Get-Location).Path 'WELA.ps1'))
+    # Search order: .\WELA\, any .\WELA-* folder (e.g. an unzipped WELA-2.1.0
+    # release, newest name first), then WELA.ps1 in the current directory.
+    $candidates = @(Join-Path $welaDir 'WELA.ps1')
+    foreach ($d in (Get-ChildItem -Path $PSScriptRoot -Directory -Filter 'WELA-*' -ErrorAction SilentlyContinue | Sort-Object Name -Descending)) {
+        $candidates += Join-Path $d.FullName 'WELA.ps1'
+    }
+    $candidates += Join-Path (Get-Location).Path 'WELA.ps1'
     foreach ($c in $candidates) {
         if (Test-Path $c) { $WelaPath = $c; break }
     }

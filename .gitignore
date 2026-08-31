@@ -5,6 +5,6 @@ Evidence/
 Baseline/
 
 # Downloaded copy of WELA (fetched by Invoke-WELACheck.ps1 -Download)
-WELA/
+WELA*/
 
 *.log

@@ -362,6 +362,20 @@ Outputs (written to the working directory, archived by `Invoke-WELACheck.ps1`):
 `WELA-Audit-Result.csv`, `WELA-FileSize-Result.csv`, `UsableRules.csv`,
 `UnusableRules.csv`. All output is CSV-parseable; there is no JSON output mode.
 
+**Expected deviations in WELA output** (WELA disagreeing with the kit is not
+always kit drift):
+
+- *Process Termination, Group Membership, Kernel Object, Registry*: WELA's
+  recommendation table asks for these, but Yamato's own
+  EnableWindowsLogSettings batch leaves all four disabled (noise, and the
+  Kernel Object / Registry subcategories log almost nothing without SACLs).
+  The kit follows the batch, so these rows show as deviations permanently.
+- *Computer Account Management* on non-DCs: WELA's table is role-blind; those
+  events only generate on domain controllers, where the kit applies them.
+- Rows where WELA recommends less than the kit (e.g. Account Lockout
+  `Failure`, Process Creation `Success`): the kit's Success and Failure
+  supersets them, and WELA reports them as compliant once applied.
+
 ## Assumptions and limitations
 
 - English-language OS assumed for verification: `auditpol /r`

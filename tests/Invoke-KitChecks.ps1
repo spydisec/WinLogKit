@@ -30,7 +30,8 @@ function Pass { param([string]$Msg) Write-Host "PASS: $Msg" -ForegroundColor Gre
 Write-Host "Kit checks on PowerShell $($PSVersionTable.PSVersion) - root: $KitRoot"
 
 # 1. Parse every script -------------------------------------------------------
-foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse | Where-Object { $_.FullName -notmatch '\\(WELA|Baseline|Logs|Results|Evidence)\\' }) {
+# WELA[^\\]* also skips unzipped release folders like WELA-2.1.0 (third-party code).
+foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse | Where-Object { $_.FullName -notmatch '\\(WELA[^\\]*|Baseline|Logs|Results|Evidence|Intune)\\' }) {
     $tokens = $null; $errors = $null
     [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors) | Out-Null
     if ($errors.Count -gt 0) {
