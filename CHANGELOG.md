@@ -6,6 +6,17 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 ## v0.7.0 - Unreleased
 
 ### Added
+- Automatic pre-change snapshots: every real apply after the first now
+  saves a timestamped snapshot of the current state
+  (`Baseline\snapshots\<timestamp>\`: full auditpol backup + channel /
+  registry / SMB state JSON) before changing anything, so moving between
+  baselines leaves a point-in-time record. The protected first-run capture
+  and `-Rollback` semantics are unchanged (rollback = undo the kit
+  entirely; snapshot restore is documented as a manual step).
+- Docs landing page rewritten per a UX copy review (hero with the stake
+  above the fold, verb-first CTAs, outcome-led "Why" cards); enabling
+  `attr_list` also fixed the landing buttons, which previously rendered as
+  literal markup.
 - spydi blended baselines (`presets/spydi_*`): ASD + Microsoft Client +
   Microsoft Server + Yamato blended on two axes - role (Server covering
   servers/DCs/WEF collectors with runtime DC-gating; Workstation for

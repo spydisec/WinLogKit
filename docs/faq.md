@@ -36,6 +36,17 @@ without it.
 restores the audit policy, channel sizes/state and registry values captured
 on the first real run. Nothing in the kit requires a reboot.
 
+Backups are automatic, and always taken **before** any change: the first
+real apply captures the complete pre-kit state to `.\Baseline\` (that is
+what `-Rollback` restores), and every later apply saves a timestamped
+pre-change snapshot to `.\Baseline\snapshots\<timestamp>\` - so stepping
+from, say, Minimal to Heavy leaves a point-in-time record. To return to an
+intermediate state rather than the very beginning:
+`auditpol /restore /file:<snapshot>\auditpol-backup.csv`, plus the channel,
+registry and SMB audit values recorded in that snapshot's `State.json`
+(restore each `SmbAudit` entry with `Set-SmbServerConfiguration` or
+`Set-SmbClientConfiguration` per its `Side`).
+
 ## Can I run this on a domain controller?
 
 Yes - DC-only items (Kerberos, Directory Service subcategories, and more)
