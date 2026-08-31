@@ -130,14 +130,44 @@ in one preset, with DC-only items runtime-gated; Workstation covers
 Windows 10/11) and **volume** (Minimal vs Heavy). The one picture that shows
 what you're choosing between:
 
-```mermaid
-flowchart LR
-    CORE["Kit Core<br/>channels sized + unanimous audit set"]
-    MIN["spydi Minimal<br/>unanimous core + high-signal additions"]
-    HVY["spydi Heavy<br/>everything the references ask for"]
-    CORE -->|"+ 4688 with command line<br/>+ 4104 script block<br/>+ IPsec Driver"| MIN
-    MIN -->|"+ 5156/5157 WFP connections<br/>+ 4673/4674 sensitive privilege<br/>+ 4103 module logging (ASD)"| HVY
-```
+<figure markdown>
+<svg viewBox="0 0 720 190" role="img" aria-label="Kit Core plus process creation with command line, script block logging and IPsec Driver gives spydi Minimal; adding WFP connections, sensitive privilege use and module logging gives spydi Heavy." style="max-width: 720px; width: 100%; height: auto; font-family: inherit;">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g fill="none" stroke="currentColor" stroke-width="1.4">
+    <rect x="10"  y="60" width="170" height="66" rx="6"/>
+    <rect x="280" y="60" width="170" height="66" rx="6" stroke-width="2.5" style="stroke: var(--md-primary-fg-color, #546e7a)"/>
+    <rect x="540" y="60" width="170" height="66" rx="6"/>
+  </g>
+  <g fill="currentColor" font-size="13" text-anchor="middle">
+    <text x="95"  y="88"  font-weight="bold">Kit Core</text>
+    <text x="95"  y="106" font-size="11">channels sized +</text>
+    <text x="95"  y="120" font-size="11">unanimous audit set</text>
+    <text x="365" y="88"  font-weight="bold">spydi Minimal</text>
+    <text x="365" y="106" font-size="11">unanimous core +</text>
+    <text x="365" y="120" font-size="11">high-signal additions</text>
+    <text x="625" y="88"  font-weight="bold">spydi Heavy</text>
+    <text x="625" y="106" font-size="11">everything the</text>
+    <text x="625" y="120" font-size="11">references ask for</text>
+  </g>
+  <g stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#arr2)">
+    <line x1="180" y1="93" x2="278" y2="93"/>
+    <line x1="450" y1="93" x2="538" y2="93"/>
+  </g>
+  <g fill="currentColor" font-size="10.5" text-anchor="middle">
+    <text x="229" y="34">+ 4688 command line</text>
+    <text x="229" y="48">+ 4104 script block</text>
+    <text x="229" y="150">+ IPsec Driver (4960-63, 5478-85)</text>
+    <text x="494" y="34">+ 5156/7 WFP connections</text>
+    <text x="494" y="48">+ 4673/4 sensitive privilege</text>
+    <text x="494" y="150">+ 4103 module logging (ASD)</text>
+  </g>
+</svg>
+<figcaption>Each arrow is the decision: what you add, by event ID, when you step up a tier.</figcaption>
+</figure>
 
 | Preset | Observable techniques (native ceiling 284) |
 |---|---|

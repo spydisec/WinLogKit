@@ -11,8 +11,12 @@ theme:
   icon:
     logo: material/shield-search
     repo: fontawesome/brands/github
+  font:
+    text: Inter
+    code: JetBrains Mono
   features:
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.instant
     - navigation.tracking
     - navigation.top
@@ -42,11 +46,7 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.superfences
   - pymdownx.highlight
 
 # Ordered as a reader journey: try it, pick a baseline, look up commands,
