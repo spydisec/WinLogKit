@@ -15,7 +15,7 @@ jobs:
     name: lint
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: PSScriptAnalyzer
         shell: pwsh
@@ -33,7 +33,7 @@ jobs:
     name: test
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The kit must run on stock Windows PowerShell 5.1 - test that engine first.
       - name: Kit checks (Windows PowerShell 5.1)
@@ -51,13 +51,13 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # DevSkim covers PowerShell; findings appear under the repo's Security tab.
       - name: DevSkim scan
         uses: microsoft/DevSkim-Action@v1
 
       - name: Upload DevSkim results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: devskim-results.sarif

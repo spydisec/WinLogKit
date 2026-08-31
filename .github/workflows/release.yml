@@ -15,7 +15,7 @@ jobs:
     name: package and release
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Never ship a broken zip: the same checks CI runs, on the tagged commit.
       - name: Kit checks (Windows PowerShell 5.1)
