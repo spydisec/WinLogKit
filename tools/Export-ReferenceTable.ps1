@@ -60,9 +60,10 @@ foreach ($m in (Import-Csv (Join-Path (Join-Path (Join-Path $kitRoot 'data') 'at
     }
 }
 
-# Best-effort event IDs mentioned in Purpose text (filters out years/counts;
-# hyphenated ranges like 5478-5485 are kept intact).
-$junk = @('2000', '2008', '2012', '2016', '2019', '2022', '2025')
+# Best-effort event IDs mentioned in Purpose text (filters out years/counts
+# and the AD CS AuditFilter bitmask value 127; hyphenated ranges like
+# 5478-5485 are kept intact).
+$junk = @('2000', '2008', '2012', '2016', '2019', '2022', '2025', '127')
 function Get-PurposeEventText {
     param([string]$Purpose)
     $ids = [regex]::Matches($Purpose, '\b\d{3,5}(-\d{2,5})?\b') | ForEach-Object { $_.Value } |
@@ -70,6 +71,11 @@ function Get-PurposeEventText {
     return @($ids)
 }
 
+# Kit-added items that Yamato's own scripts do not contain: the Server 2025
+# SMB auditing (all SmbAudit rows plus its two channels) and the NTLM audit
+# registry values. They must not carry the Y letter.
+$yExcludedIds = @('NtlmOutboundAudit', 'NtlmInboundAudit', 'NtlmDomainAudit')
+$yExcludedChannels = @('Microsoft-Windows-SMBServer/Audit', 'Microsoft-Windows-SmbClient/Audit')
 function Format-RefText {
     param([string]$ItemType, [string]$Id, [string]$Tier)
     $key = ("$ItemType|$Id").ToUpper()
@@ -77,7 +83,11 @@ function Format-RefText {
     if ($selAsd.ContainsKey($key))    { $refs += 'A' }
     if ($selClient.ContainsKey($key)) { $refs += 'C' }
     if ($selServer.ContainsKey($key)) { $refs += 'S' }
-    if ($Tier -eq 'Core' -or $Tier -eq 'HighVolume') { $refs += 'Y' }
+    $isYamato = ($Tier -eq 'Core' -or $Tier -eq 'HighVolume') -and
+        $ItemType -ne 'SmbAudit' -and
+        ($yExcludedIds -notcontains $Id) -and
+        -not ($ItemType -eq 'Channel' -and $yExcludedChannels -contains $Id)
+    if ($isYamato) { $refs += 'Y' }
     if ($refs.Count -eq 0) { return '-' }
     return ($refs -join ' ')
 }
@@ -108,14 +118,20 @@ $rows = New-Object System.Collections.Generic.List[string]
 foreach ($ch in $script:BaselineChannels) {
     $ev = (Get-PurposeEventText $ch.Purpose) -join ', '
     if ($ev -eq '') { $ev = '-' }
-    $scope = ''
     $rows.Add("| $($ch.Name) | Channel | $ev | $($ch.DefaultSize) -> $(Format-Size $ch.TargetBytes) | $(Format-Volume $ch) | $(Format-RefText 'Channel' $ch.Name $ch.Tier) | $(Format-Tick $selMin 'Channel' $ch.Name) | $(Format-Tick $selHeavy 'Channel' $ch.Name) |")
 }
 foreach ($sub in $script:BaselineAuditSubcategories) {
     $g = $sub.Guid.ToUpper()
-    $ev = ''
-    if ($eventsByGuid.ContainsKey($g)) { $ev = (@($eventsByGuid[$g]) | Sort-Object | Select-Object -Unique) -join ', ' }
-    if ($ev -eq '') { $ev = (Get-PurposeEventText $sub.Purpose) -join ', ' }
+    # Merge both sources: event-map IDs (authoritative) plus any further IDs
+    # documented in the Purpose, deduplicated.
+    $ids = New-Object System.Collections.Generic.List[string]
+    if ($eventsByGuid.ContainsKey($g)) {
+        foreach ($i in (@($eventsByGuid[$g]) | Sort-Object -Unique)) { $ids.Add($i) }
+    }
+    foreach ($i in (Get-PurposeEventText $sub.Purpose)) {
+        if (-not $ids.Contains($i)) { $ids.Add($i) }
+    }
+    $ev = $ids -join ', '
     if ($ev -eq '') { $ev = '-' }
     $name = $sub.Name
     if ($sub.Scope -eq 'DomainController') { $name += ' (DC)' }
@@ -128,6 +144,8 @@ foreach ($rs in $script:BaselineRegistrySettings) {
     if ($rs.Scope -eq 'DomainController') { $name += ' (DC)' }
     $rows.Add("| ``$name`` | Registry | $ev | - | $(Format-Volume $rs) | $(Format-RefText 'Registry' $rs.Id $rs.Tier) | $(Format-Tick $selMin 'Registry' $rs.Id) | $(Format-Tick $selHeavy 'Registry' $rs.Id) |")
 }
+$af = $script:BaselineAdcsAuditFilter
+$rows.Add("| AD CS AuditFilter (needs CertSvc restart) | Registry | $((Get-PurposeEventText $af.Purpose) -join ', ') | - | $(Format-Volume $af) | $(Format-RefText 'Registry' $af.Id $af.Tier) | $(Format-Tick $selMin 'Registry' $af.Id) | $(Format-Tick $selHeavy 'Registry' $af.Id) |")
 foreach ($sa in $script:BaselineSmbAuditSettings) {
     $rows.Add("| $($sa.Side): $($sa.Id) | SMB audit (2025+) | $((Get-PurposeEventText $sa.Purpose) -join ', ') | - | Low | $(Format-RefText 'SmbAudit' $sa.Id $sa.Tier) | $(Format-Tick $selMin 'SmbAudit' $sa.Id) | $(Format-Tick $selHeavy 'SmbAudit' $sa.Id) |")
 }
@@ -167,7 +185,9 @@ Reading the columns:
 |---|---|---|---|---|---|---|---|
 '@
 
-$content = $header + ($rows -join "`n") + "`n"
+# Here-strings drop their final newline: add it, or the first row would
+# concatenate onto the table separator.
+$content = $header + "`n" + ($rows -join "`n") + "`n"
 [System.IO.File]::WriteAllText($OutFile, $content, (New-Object System.Text.UTF8Encoding($false)))
 Write-Host "Reference page written: $OutFile ($($rows.Count) rows)"
 exit 0

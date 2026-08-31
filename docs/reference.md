@@ -27,7 +27,8 @@ Reading the columns:
   deselected in the Workstation variants and inert off domain controllers).
 
 | Setting | Type | Key events | Size | Volume | Refs | Minimal | Heavy |
-|---|---|---|---|---|---|---|---|| Security | Channel | - | 20 MB -> 1 GB | Low | A Y | :material-check: | :material-check: |
+|---|---|---|---|---|---|---|---|
+| Security | Channel | - | 20 MB -> 1 GB | Low | A Y | :material-check: | :material-check: |
 | Microsoft-Windows-PowerShell/Operational | Channel | 4103, 4104 | 15 MB -> 1 GB | Low | Y | :material-check: | :material-check: |
 | Windows PowerShell | Channel | 400, 403, 600 | 15 MB -> 1 GB | Low | Y | :material-check: | :material-check: |
 | PowerShellCore/Operational | Channel | - | 15 MB -> 1 GB | Low | Y | :material-check: | :material-check: |
@@ -52,8 +53,8 @@ Reading the columns:
 | Microsoft-Windows-WMI-Activity/Operational | Channel | - | 1 MB -> 128 MB | Low | Y | :material-check: | :material-check: |
 | Microsoft-Windows-TerminalServices-LocalSessionManager/Operational | Channel | - | 1 MB -> 128 MB | Low | Y | :material-check: | :material-check: |
 | Microsoft-Windows-TaskScheduler/Operational | Channel | - | 1 MB -> 128 MB | Low | Y | :material-check: | :material-check: |
-| Microsoft-Windows-SMBServer/Audit | Channel | 3021, 3022 | 8 MB -> 128 MB | Low | Y | :material-check: | :material-check: |
-| Microsoft-Windows-SmbClient/Audit | Channel | 31998, 31999 | 8 MB -> 128 MB | Low | Y | :material-check: | :material-check: |
+| Microsoft-Windows-SMBServer/Audit | Channel | 3021, 3022 | 8 MB -> 128 MB | Low | - | :material-check: | :material-check: |
+| Microsoft-Windows-SmbClient/Audit | Channel | 31998, 31999 | 8 MB -> 128 MB | Low | - | :material-check: | :material-check: |
 | Microsoft-Windows-Crypto-DPAPI/Debug | Channel | - | 1 MB -> 128 MB | Watch | - | - | - |
 | Credential Validation | Audit subcategory | 4776 | - | Low | C S Y | :material-check: | :material-check: |
 | Kerberos Authentication Service (DC) | Audit subcategory | 4768, 4771 | - | Low | Y | :material-check: | :material-check: |
@@ -61,31 +62,31 @@ Reading the columns:
 | Computer Account Management (DC) | Audit subcategory | 4741-4743, 4742 | - | Low | A C S Y | :material-check: | :material-check: |
 | Distribution Group Management (DC) | Audit subcategory | - | - | Low | Y | :material-check: | :material-check: |
 | Other Account Management Events | Audit subcategory | 4782, 4793 | - | Low | A C S Y | :material-check: | :material-check: |
-| Security Group Management | Audit subcategory | 4728, 4729, 4732, 4733, 4756, 4757, 4799 | - | Low | A C S Y | :material-check: | :material-check: |
-| User Account Management | Audit subcategory | 4720, 4723, 4724, 4726, 4738, 4740, 4798 | - | Low | A C S Y | :material-check: | :material-check: |
-| Plug and Play | Audit subcategory | 6416 | - | Low | Y | :material-check: | :material-check: |
+| Security Group Management | Audit subcategory | 4728, 4729, 4732, 4733, 4756, 4757, 4799, 4727-4764 | - | Low | A C S Y | :material-check: | :material-check: |
+| User Account Management | Audit subcategory | 4720, 4723, 4724, 4726, 4738, 4740, 4798, 4720-4767 | - | Low | A C S Y | :material-check: | :material-check: |
+| Plug and Play | Audit subcategory | 6416, 6419-6424 | - | Low | Y | :material-check: | :material-check: |
 | Process Creation | Audit subcategory | 4688 | - | High | A C S Y | :material-check: | :material-check: |
 | RPC Events | Audit subcategory | 5712 | - | Watch | Y | :material-check: | :material-check: |
-| Directory Service Access (DC) | Audit subcategory | 4662 | - | Low | S Y | :material-check: | :material-check: |
-| Directory Service Changes (DC) | Audit subcategory | 5136 | - | Low | S Y | :material-check: | :material-check: |
+| Directory Service Access (DC) | Audit subcategory | 4662, 4661 | - | Low | S Y | :material-check: | :material-check: |
+| Directory Service Changes (DC) | Audit subcategory | 5136, 5136-5141 | - | Low | S Y | :material-check: | :material-check: |
 | Account Lockout | Audit subcategory | 4625 | - | Low | A Y | :material-check: | :material-check: |
-| Logoff | Audit subcategory | 4634 | - | Low | A C S Y | :material-check: | :material-check: |
+| Logoff | Audit subcategory | 4634, 4647 | - | Low | A C S Y | :material-check: | :material-check: |
 | Logon | Audit subcategory | 4624, 4625, 4648 | - | Low | A C S Y | :material-check: | :material-check: |
-| Other Logon/Logoff Events | Audit subcategory | 4800, 4801 | - | Low | A Y | :material-check: | :material-check: |
+| Other Logon/Logoff Events | Audit subcategory | 4800, 4801, 4778, 4779 | - | Low | A Y | :material-check: | :material-check: |
 | Special Logon | Audit subcategory | 4672 | - | Low | A C S Y | :material-check: | :material-check: |
 | Certification Services | Audit subcategory | 4898, 4899 | - | Low | Y | :material-check: | :material-check: |
-| File Share | Audit subcategory | 5140 | - | Watch | A Y | :material-check: | :material-check: |
+| File Share | Audit subcategory | 5140, 5142-5144 | - | Watch | A Y | :material-check: | :material-check: |
 | Filtering Platform Connection | Audit subcategory | 5156, 5157 | - | High | Y | - | :material-check: |
-| Other Object Access Events | Audit subcategory | 4698, 4702 | - | Low | A Y | :material-check: | :material-check: |
+| Other Object Access Events | Audit subcategory | 4698, 4702, 4698-4702 | - | Low | A Y | :material-check: | :material-check: |
 | Removable Storage | Audit subcategory | 4663 | - | Watch | Y | :material-check: | :material-check: |
 | SAM | Audit subcategory | 4661 | - | Watch | Y | :material-check: | :material-check: |
 | Audit Policy Change | Audit subcategory | 4719, 4715, 4907 | - | Low | A C S Y | :material-check: | :material-check: |
-| Authentication Policy Change | Audit subcategory | 4739 | - | Low | Y | :material-check: | :material-check: |
+| Authentication Policy Change | Audit subcategory | 4739, 4706, 4707, 4717 | - | Low | Y | :material-check: | :material-check: |
 | Other Policy Change Events | Audit subcategory | 5447 | - | Low | A Y | :material-check: | :material-check: |
-| Sensitive Privilege Use | Audit subcategory | 4673 | - | High | Y | - | :material-check: |
+| Sensitive Privilege Use | Audit subcategory | 4673, 4674 | - | High | Y | - | :material-check: |
 | IPsec Driver | Audit subcategory | 4960-4963, 4965, 5478-5485 | - | Low | C S | :material-check: | :material-check: |
 | Security State Change | Audit subcategory | 4616 | - | Low | C S Y | :material-check: | :material-check: |
-| Security System Extension | Audit subcategory | 4697 | - | Low | C S Y | :material-check: | :material-check: |
+| Security System Extension | Audit subcategory | 4697, 4610, 4611, 4622 | - | Low | C S Y | :material-check: | :material-check: |
 | System Integrity | Audit subcategory | 4612, 5038, 6281 | - | Low | A C S Y | :material-check: | :material-check: |
 | Other System Events | Audit subcategory | - | - | Low | Y | :material-check: | :material-check: |
 | `Microsoft\Windows\CurrentVersion\Policies\System\Audit\ProcessCreationIncludeCmdLine_Enabled` | Registry | 4688 | - | High | A C S Y | :material-check: | :material-check: |
@@ -99,10 +100,11 @@ Reading the columns:
 | `Policies\Microsoft\Windows\PowerShell\Transcription\EnableInvocationHeader` | Registry | - | - | Low | - | - | - |
 | `Wow6432Node\Policies\Microsoft\Windows\PowerShell\Transcription\EnableTranscripting` | Registry | - | - | Low | - | - | - |
 | `Wow6432Node\Policies\Microsoft\Windows\PowerShell\Transcription\EnableInvocationHeader` | Registry | - | - | Low | - | - | - |
-| `CurrentControlSet\Control\Lsa\MSV1_0\RestrictSendingNTLMTraffic` | Registry | - | - | Low | Y | :material-check: | :material-check: |
-| `CurrentControlSet\Control\Lsa\MSV1_0\AuditReceivingNTLMTraffic` | Registry | - | - | Low | Y | :material-check: | :material-check: |
-| `CurrentControlSet\Services\Netlogon\Parameters\AuditNTLMInDomain (DC)` | Registry | - | - | Low | Y | :material-check: | :material-check: |
-| Server: AuditClientDoesNotSupportEncryption | SMB audit (2025+) | 3021 | - | Low | Y | :material-check: | :material-check: |
-| Server: AuditClientDoesNotSupportSigning | SMB audit (2025+) | 3022 | - | Low | Y | :material-check: | :material-check: |
-| Client: AuditServerDoesNotSupportEncryption | SMB audit (2025+) | 31998 | - | Low | Y | :material-check: | :material-check: |
-| Client: AuditServerDoesNotSupportSigning | SMB audit (2025+) | 31999 | - | Low | Y | :material-check: | :material-check: |
+| `CurrentControlSet\Control\Lsa\MSV1_0\RestrictSendingNTLMTraffic` | Registry | - | - | Low | - | :material-check: | :material-check: |
+| `CurrentControlSet\Control\Lsa\MSV1_0\AuditReceivingNTLMTraffic` | Registry | - | - | Low | - | :material-check: | :material-check: |
+| `CurrentControlSet\Services\Netlogon\Parameters\AuditNTLMInDomain (DC)` | Registry | - | - | Low | - | :material-check: | :material-check: |
+| AD CS AuditFilter (needs CertSvc restart) | Registry | 4886-4899 | - | Low | Y | :material-check: | :material-check: |
+| Server: AuditClientDoesNotSupportEncryption | SMB audit (2025+) | 3021 | - | Low | - | :material-check: | :material-check: |
+| Server: AuditClientDoesNotSupportSigning | SMB audit (2025+) | 3022 | - | Low | - | :material-check: | :material-check: |
+| Client: AuditServerDoesNotSupportEncryption | SMB audit (2025+) | 31998 | - | Low | - | :material-check: | :material-check: |
+| Client: AuditServerDoesNotSupportSigning | SMB audit (2025+) | 31999 | - | Low | - | :material-check: | :material-check: |
