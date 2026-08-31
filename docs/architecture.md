@@ -7,7 +7,7 @@ with their dates recorded, and events flow out to your collector - the kit
 never talks to the internet at runtime.**
 
 <figure markdown>
-<svg viewBox="0 0 660 620" role="img" aria-label="Data flows from vendored snapshots into one settings table; Enable applies and Test verifies it on the Windows host, generators compile fleet artefacts from it, host events flow to the Windows Event Log, over WEF to a collector, and hand off to the SIEM." style="max-width: 660px; width: 100%; height: auto; font-family: inherit;">
+<svg viewBox="0 0 660 620" role="img" aria-label="Vendored snapshots feed two destinations: Yamato baselines into the settings table, and the ATT&CK snapshot into the coverage report. Enable applies and Test verifies the settings table on the Windows host, generators compile fleet artefacts from it, host events flow to the Windows Event Log, over WEF to a collector, and hand off to the SIEM." style="max-width: 660px; width: 100%; height: auto; font-family: inherit;">
   <defs>
     <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
@@ -21,7 +21,8 @@ never talks to the internet at runtime.**
     <rect x="20"  y="370" width="290" height="44" rx="6"/>
     <rect x="20"  y="468" width="290" height="52" rx="6"/>
     <rect x="20"  y="572" width="290" height="40" rx="6" stroke-dasharray="5 4"/>
-    <!-- right column box -->
+    <!-- right column boxes -->
+    <rect x="360" y="120" width="280" height="50" rx="6"/>
     <rect x="360" y="250" width="280" height="66" rx="6"/>
   </g>
   <g fill="currentColor" font-size="13" text-anchor="middle">
@@ -37,6 +38,8 @@ never talks to the internet at runtime.**
     <text x="165" y="490" font-weight="bold">Event Collector</text>
     <text x="165" y="508" font-size="11.5">ForwardedEvents log</text>
     <text x="165" y="596" font-weight="bold">SIEM</text>
+    <text x="500" y="141" font-weight="bold">Coverage report</text>
+    <text x="500" y="159" font-size="11.5">Export-AttackCoverage</text>
     <text x="500" y="272" font-weight="bold">Fleet artefacts</text>
     <text x="500" y="290" font-size="11.5">Intune pack &#183; WEF XML</text>
     <text x="500" y="306" font-size="11.5">GPO pack</text>
@@ -47,20 +50,23 @@ never talks to the internet at runtime.**
     <line x1="165" y1="316" x2="165" y2="368"/>
     <line x1="165" y1="414" x2="165" y2="466"/>
     <line x1="165" y1="520" x2="165" y2="570"/>
-    <!-- settings -> generators (elbow right) -->
-    <path d="M 310 155 L 500 155 L 500 248"/>
+    <!-- snapshots -> coverage report (ATT&CK data, elbow right) -->
+    <path d="M 310 43 L 500 43 L 500 118"/>
+    <!-- settings -> generators (elbow right, past the coverage box) -->
+    <path d="M 310 168 L 345 168 L 345 210 L 500 210 L 500 248"/>
     <!-- fleet -> host (Intune/GPO apply) -->
     <path d="M 360 283 L 312 283"/>
     <!-- fleet -> collector (WEF subscription, elbow down right) -->
     <path d="M 500 316 L 500 494 L 312 494" stroke-dasharray="5 4"/>
   </g>
   <g fill="currentColor" font-size="11">
-    <text x="175" y="100"  text-anchor="start">extracted once, drift-checked in CI</text>
+    <text x="175" y="100"  text-anchor="start">Yamato: extracted once, drift-checked</text>
+    <text x="405" y="36"   text-anchor="middle">ATT&amp;CK snapshot</text>
     <text x="175" y="212"  text-anchor="start">Enable applies &#183; Test verifies</text>
     <text x="175" y="344"  text-anchor="start">events</text>
     <text x="175" y="442"  text-anchor="start">WEF push (WinRM)</text>
     <text x="175" y="548"  text-anchor="start">handoff &#8212; out of kit scope</text>
-    <text x="405" y="148"  text-anchor="middle">generators compile</text>
+    <text x="422" y="203"  text-anchor="middle">generators compile</text>
     <text x="336" y="276"  text-anchor="middle" font-size="10.5">apply</text>
     <text x="405" y="486"  text-anchor="middle" font-size="10.5">WEF subscription</text>
   </g>

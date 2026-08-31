@@ -160,7 +160,7 @@ what you're choosing between:
   <g fill="currentColor" font-size="10.5" text-anchor="middle">
     <text x="229" y="34">+ 4688 command line</text>
     <text x="229" y="48">+ 4104 script block</text>
-    <text x="229" y="150">+ IPsec Driver</text>
+    <text x="229" y="150">+ IPsec Driver (4960-63, 5478-85)</text>
     <text x="494" y="34">+ 5156/7 WFP connections</text>
     <text x="494" y="48">+ 4673/4 sensitive privilege</text>
     <text x="494" y="150">+ 4103 module logging (ASD)</text>
