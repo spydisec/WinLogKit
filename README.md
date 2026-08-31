@@ -10,8 +10,9 @@
 baselines with native PowerShell.** Enable the right event channels, advanced
 audit policy subcategories and registry settings; verify them repeatably; and
 get an independent second opinion from
-[WELA](https://github.com/Yamato-Security/WELA) - all with plain Windows
-PowerShell 5.1, no modules, no agents, no Sysmon.
+[WELA](https://github.com/Yamato-Security/WELA) - all with plain
+PowerShell: PowerShell 7 or the built-in Windows PowerShell 5.1, no
+modules, no agents, no Sysmon.
 
 Targets **Windows Server 2019 / 2022 / 2025 and Windows 10 / 11**, standalone
 or domain joined. Version-specific items (Server 2025 / Win11 24H2 SMB
@@ -70,7 +71,8 @@ own risk.
 
 ## Quick start
 
-All commands from an elevated Windows PowerShell 5.1 prompt in the kit folder
+All commands from an elevated PowerShell prompt in the kit folder -
+PowerShell 7 or the built-in Windows PowerShell 5.1 both work
 (`New-LoggingBaseline.ps1` alone needs no elevation). If scripts are blocked,
 `Set-ExecutionPolicy -Scope Process RemoteSigned` unblocks the current window
 without persisting anything

@@ -26,8 +26,10 @@ is what tunes the presets. Open an issue with the *Field report* template.
   anywhere else.
 - **Windows PowerShell 5.1 compatible, no external modules, no agents.**
   The design intent is a kit that runs on a bare server with nothing
-  installed. CI tests every change on Windows PowerShell 5.1 and
-  PowerShell 7; 5.1 is the minimum supported engine.
+  installed. PowerShell 7 is fully supported (CI tests every change on
+  both engines), but 5.1 stays the compatibility floor: it is what ships
+  with Windows and what Intune remediations execute under, so nothing
+  5.1-incompatible can be merged.
 - **The never-do list is non-negotiable**: nothing that reboots, restarts
   services, shrinks logs, enables `CrashOnAuditFail`, sets "do not
   overwrite" retention, or applies blanket SACLs

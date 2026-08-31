@@ -4,7 +4,8 @@ Every script, what it does, and the flags you'll actually use. They all
 read the same settings table (`LoggingBaseline.Settings.ps1`), so - given
 the same selection, and regenerating artefacts after any settings change -
 what you apply, what you verify and what you deploy can't disagree.
-All scripts run on stock Windows PowerShell 5.1.
+All scripts run on PowerShell 7 and on stock Windows PowerShell 5.1 -
+use whichever your host has.
 
 ## Enable-LoggingBaseline.ps1
 
