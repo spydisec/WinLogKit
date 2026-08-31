@@ -1,53 +1,66 @@
 # WinLogKit
 
-**An easy, auditable way to implement the
-[Yamato Security](https://github.com/Yamato-Security) Windows event logging
-baselines with native PowerShell.** Enable the right event channels, advanced
-audit policy subcategories and registry settings; verify them repeatably;
-roll them back if needed; and deploy at fleet scale - all with plain Windows
-PowerShell 5.1, **no modules, no agents, no Sysmon**.
+**WinLogKit** turns the
+[Yamato Security](https://github.com/Yamato-Security) logging baselines into
+something you can actually deploy: enable the right Windows events, prove
+they're being recorded, and roll back if you change your mind - plain
+PowerShell, no agents.
 
-[Get the latest release](https://github.com/spydisec/WinLogKit/releases){ .md-button .md-button--primary }
+[Get started in 10 minutes](getting-started.md){ .md-button .md-button--primary }
+[See your ATT&CK coverage](mapping.md){ .md-button }
 [View on GitHub](https://github.com/spydisec/WinLogKit){ .md-button }
 
-## Why
+Out of the box, Windows logs support only 10-20% of Sigma detection rules -
+and overwrite the evidence within hours.
 
-Default Windows logging supports only 10-20% of Sigma detection rules, and
-most logs are capped at 1-20 MB so evidence overwrites itself in hours. The
-Yamato Security baselines fix that - this kit makes them **operational**:
+## Why WinLogKit
 
-- **Tiered enablement** - Core applies safely by default; high-volume
-  settings (process creation, PowerShell logging, WFP connections) require
-  an explicit human decision, with the volume/stability risk shown first.
-- **Idempotent with an exit ramp** - `-WhatIf` previews everything, the
-  first real run captures a rollback baseline, `-Rollback` restores it.
-- **Verification is a first-class citizen** - a read-only test with
-  per-category PASS/FAIL and CSV evidence, plus an independent second
-  opinion from Yamato's [WELA](https://github.com/Yamato-Security/WELA).
-- **Evidence-based selection** - the
-  [ATT&CK coverage mapping](mapping.md), derived from **current MITRE
-  ATT&CK data (v19.2)** joined through a kit-curated event map, tells you
-  which techniques a selection makes observable and why the rest are not.
-  MITRE's own analytics put the native-logging ceiling at 284 of 472
-  Windows techniques (the rest need Sysmon, ETW tracing, EDR, network
-  sensors or cloud telemetry); the
-  HighVolume tier reaches **279 of that 284** - the volume decision,
-  quantified. Approach credit: OTRF's
-  [OSSEM-DM](https://github.com/OTRF/OSSEM-DM), retained as a cross-check.
-- **Fleet delivery built in** - Intune remediation packs, WEF/WEC
-  subscription generation, and GPO artefacts, all compiled from one
-  settings table so nothing can drift.
+<div class="grid cards" markdown>
+
+-   __Deploy with an exit ramp__
+
+    ---
+
+    Preview everything with `-WhatIf`; an automatic pre-change backup means
+    one command rolls it all back.
+
+-   __Prove it, don't assume it__
+
+    ---
+
+    Per-category PASS/FAIL with evidence CSVs, plus Yamato's
+    [WELA](https://github.com/Yamato-Security/WELA) as an independent
+    second opinion.
+
+-   __Decide volume with numbers__
+
+    ---
+
+    The [ATT&CK coverage report](mapping.md) (current MITRE v19.2 data)
+    measures each tier - Heavy buys 98% of the native ceiling.
+
+-   __One table, every target__
+
+    ---
+
+    Intune packs, WEF subscriptions and GPO artefacts all compile from one
+    settings table - deployed config can't drift from the tested baseline.
+
+</div>
 
 ## What it targets
 
 Windows Server 2019 / 2022 / 2025 and Windows 10 / 11 workstations,
 standalone or domain-joined. Version- and role-specific items are detected
-at runtime and reported NOT APPLICABLE where they don't apply.
+at runtime and reported NOT APPLICABLE where they don't apply. Baselines
+ship as reviewable CSVs: reference sets (ASD, Microsoft), per-role starting
+points, and the blended `spydi_*` Minimal/Heavy pairs -
+[all documented with sources and event IDs](baselines.md).
 
 ## Privacy
 
-The kit is a **static snapshot**: the Yamato baselines and the OSSEM-DM
-mappings are vendored with recorded provenance. Nothing is fetched at
+The kit is a **static snapshot**: the Yamato baselines and the MITRE ATT&CK
+mapping data are vendored with recorded provenance. Nothing is fetched at
 runtime, and nothing about your hosts, results or baselines ever leaves
 them. The single optional network action is `Invoke-WELACheck.ps1 -Download`,
 which fetches WELA from GitHub to your machine when you explicitly ask.
@@ -58,11 +71,12 @@ Settings and baselines come from Yamato Security's
 [EnableWindowsLogSettings](https://github.com/Yamato-Security/EnableWindowsLogSettings),
 [WELA](https://github.com/Yamato-Security/WELA) and
 [EventLog-Baseline-Guide](https://github.com/Yamato-Security/EventLog-Baseline-Guide);
-ATT&CK mappings from OTRF's [OSSEM-DM](https://github.com/OTRF/OSSEM-DM).
-This project is affiliated with neither. MIT licensed; deviations from
+ATT&CK mapping data from [MITRE ATT&CK](https://github.com/mitre-attack/attack-stix-data)
+with approach credit to OTRF's [OSSEM-DM](https://github.com/OTRF/OSSEM-DM).
+This project is affiliated with none of them. MIT licensed; deviations from
 upstream are documented with reasons.
 
-!!! warning
-    Same warning as the upstream guide: test every setting on a
-    non-production machine mirroring your environment for at least a week
-    before rolling out. Logging volume is real money and real disk.
+!!! warning "Test before you trust"
+    Logging volume costs disk and money. Run any baseline on a mirror of
+    production for a week, then use the coverage and volume numbers to
+    decide what stays.
