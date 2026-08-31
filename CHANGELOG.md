@@ -3,6 +3,20 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
+## v0.5.0 - Unreleased
+
+### Added
+- Per-role presets: `presets/role_Workstation.csv`, `role_MemberServer.csv`
+  and `role_DomainController.csv` - the kit's recommended starting point per
+  host role (Core plus the high-value items each role can afford), with every
+  hold-back justified by the settings table's Risk metadata and the rationale
+  documented per decision. ATT&CK coverage: Workstation 317/362, MemberServer
+  299/362, DomainController 302/362. Starting points pending pilot volume
+  data. Drift-checked in CI like the reference presets.
+- Getting Started documents the PowerShell execution policy blocker with
+  least-invasive-first fixes (field-reported; per
+  [about_Execution_Policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies)).
+
 ## v0.4.0 - 2026-08-31
 
 ### Added

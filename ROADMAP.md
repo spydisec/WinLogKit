@@ -31,8 +31,9 @@
   the [Policy CSP - Audit](https://learn.microsoft.com/windows/client-management/mdm/policy-csp-audit);
   the kit does not map these yet - the shipped route today is the remediation
   pack, which also covers channel sizing that has no CSP)
-- [ ] Per-role recommended CSVs shipped in the repo (workstation / member
-  server / DC) once volume data from pilots justifies the defaults
+- [x] Per-role recommended CSVs shipped in the repo (workstation / member
+  server / DC) as documented starting points derived from the settings
+  table's Risk metadata; to be refined when pilot volume data lands
 
 ## v0.4 - Fleet collection and reference baselines (in progress)
 

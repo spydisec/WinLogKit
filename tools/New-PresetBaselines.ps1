@@ -6,14 +6,33 @@
 
 .DESCRIPTION
     Each preset is a normal selection CSV (same schema as New-LoggingBaseline
-    output) expressing a published reference baseline as a SELECTION of the
-    kit's items, faithful to the corresponding script in Yamato Security's
-    EventLog-Baseline-Guide repo (bat/ASD.bat, bat/Microsoft_Client.bat,
-    bat/Microsoft_Server.bat, extracted 2026-08-31):
+    output) expressing a baseline as a SELECTION of the kit's items.
+
+    Reference presets - faithful to the corresponding script in Yamato
+    Security's EventLog-Baseline-Guide repo (bat/ASD.bat,
+    bat/Microsoft_Client.bat, bat/Microsoft_Server.bat, extracted 2026-08-31):
 
       ASD.csv                Australian Signals Directorate
       Microsoft_Client.csv   Microsoft client OS baseline recommendation
       Microsoft_Server.csv   Microsoft server OS baseline recommendation
+
+    Role presets - the kit's recommended starting point per host role,
+    derived from the settings table's own Risk metadata and Microsoft's
+    per-role audit recommendations. Starting points pending pilot volume
+    data, not final answers (see docs "Per-role presets" for the rationale
+    per decision):
+
+      role_Workstation.csv        Core + process creation/cmdline + script
+                                  block logging + WFP connections; DC-only
+                                  items deselected
+      role_MemberServer.csv       as Workstation but WITHOUT WFP connections
+                                  (documented High volume on connection-heavy
+                                  servers)
+      role_DomainController.csv   as MemberServer plus the DC-scope
+                                  subcategories
+
+    Module logging and Sensitive Privilege Use stay opt-in in every role
+    preset (extreme volume / backup-agent flood, per their Risk notes).
 
     Faithfulness limits (documented in the README):
       - The kit applies its own Success/Failure flags and channel sizes, which
@@ -96,7 +115,65 @@ foreach ($p in $presets) {
     Write-Host ("{0}  {1} of {2} items selected" -f $outFile, $count, @($outRows).Count)
 }
 
+# ---------------------------------------------------------- role presets ---
+# Base = the builder's recommended (Core) defaults, then per-role deltas.
+# ExtraAudit prefixes: 0CCE922B = Process Creation, 0CCE9226 = Filtering
+# Platform Connection.
+
+$rolePresets = @(
+    @{ Name = 'role_Workstation';      IncludeDcScope = $false
+       ExtraAudit = @('0CCE922B', '0CCE9226')
+       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32') }
+    @{ Name = 'role_MemberServer';     IncludeDcScope = $false
+       ExtraAudit = @('0CCE922B')
+       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32') }
+    @{ Name = 'role_DomainController'; IncludeDcScope = $true
+       ExtraAudit = @('0CCE922B')
+       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32') }
+)
+
+# Guard against silent selector drift: every role selector must match at
+# least one settings-table item, or generation fails (CI runs this on every
+# push via the preset drift check).
+foreach ($rp in $rolePresets) {
+    foreach ($prefix in $rp.ExtraAudit) {
+        if (-not @($rows | Where-Object { $_.ItemType -eq 'AuditPolicy' -and $_.Id.ToUpper().StartsWith($prefix) }).Count) {
+            Write-Error "Role preset $($rp.Name): audit selector '$prefix' matches no settings-table item."
+            exit 1
+        }
+    }
+    foreach ($regId in $rp.ExtraReg) {
+        if (-not @($rows | Where-Object { $_.ItemType -eq 'Registry' -and $_.Id -eq $regId }).Count) {
+            Write-Error "Role preset $($rp.Name): registry selector '$regId' matches no settings-table item."
+            exit 1
+        }
+    }
+}
+
+foreach ($rp in $rolePresets) {
+    $outRows = foreach ($row in $rows) {
+        # Start from the kit recommendation (Core tier selected).
+        $selected = $row.Recommended
+        # Role deltas.
+        if ($row.ItemType -eq 'AuditPolicy') {
+            foreach ($prefix in $rp.ExtraAudit) {
+                if ($row.Id.ToUpper().StartsWith($prefix)) { $selected = 'Y'; break }
+            }
+        }
+        if ($row.ItemType -eq 'Registry' -and $rp.ExtraReg -contains $row.Id) { $selected = 'Y' }
+        # Non-DC roles express intent explicitly rather than relying on
+        # runtime NOT APPLICABLE gating.
+        if ($row.Scope -eq 'DomainController' -and -not $rp.IncludeDcScope) { $selected = 'N' }
+        $row.Selected = $selected
+        $row
+    }
+    $outFile = Join-Path $OutDir "$($rp.Name).csv"
+    $outRows | Export-Csv -Path $outFile -NoTypeInformation -Encoding UTF8
+    $count = @($outRows | Where-Object { $_.Selected -eq 'Y' }).Count
+    Write-Host ("{0}  {1} of {2} items selected" -f $outFile, $count, @($outRows).Count)
+}
+
 Write-Host ''
 Write-Host 'Presets regenerated. Inspect any of them with:'
-Write-Host ("  {0} -Show -BaselineFile {1}" -f (Join-Path $kitRoot 'New-LoggingBaseline.ps1'), (Join-Path $OutDir 'ASD.csv'))
+Write-Host ("  {0} -Show -BaselineFile {1}" -f (Join-Path $kitRoot 'New-LoggingBaseline.ps1'), (Join-Path $OutDir 'role_Workstation.csv'))
 exit 0
