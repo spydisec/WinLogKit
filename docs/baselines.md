@@ -128,7 +128,7 @@ what you're choosing between:
 ```mermaid
 flowchart LR
     CORE["Kit Core<br/>channels sized + unanimous audit set"]
-    MIN["spydi Minimal<br/>the set every reference agrees on"]
+    MIN["spydi Minimal<br/>unanimous core + high-signal additions"]
     HVY["spydi Heavy<br/>everything the references ask for"]
     CORE -->|"+ 4688 with command line<br/>+ 4104 script block<br/>+ IPsec Driver"| MIN
     MIN -->|"+ 5156/5157 WFP connections<br/>+ 4673/4674 sensitive privilege<br/>+ 4103 module logging (ASD)"| HVY
@@ -153,7 +153,7 @@ S = Microsoft Server, Y = Yamato) and key events:
 | Policy change + system set | 4719, 4706, 4616, 4697, 5038 | A,C,S,Y | ✓ | ✓ |
 | Process creation + command line | 4688 | A,C,S,Y | ✓ | ✓ |
 | Script block logging | 4104 | A,Y | ✓ | ✓ |
-| IPsec Driver | 4960-4963, 5478+ | C,S | ✓ | ✓ |
+| IPsec Driver | 4960-4963, 4965, 5478-5485 (per [Microsoft](https://learn.microsoft.com/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/audit-ipsec-driver)) | C,S | ✓ | ✓ |
 | DS Access/Changes (Server preset; DC-gated) | 4662, 5136 | S,Y | ✓ | ✓ |
 | NTLM + SMB (2025) auditing | 8001-8004, 3021/3022, 31998/31999 | Y, Microsoft docs | ✓ | ✓ |
 | WFP connections | 5156/5157 | Y | - | ✓ |
@@ -172,6 +172,12 @@ Notes, stated plainly:
 - Selection CSVs carry item choices, not sizes: the Security log stays at
   the kit's 1 GB (ASD suggests 2 GB; raise it in
   `LoggingBaseline.Settings.ps1` if you take that view).
+- A **GPO pack** generated from a `spydi_Server_*` preset includes the
+  DC-only subcategories. They are inert on member servers and collectors
+  (those events only generate on DCs), but if your GPO hygiene prefers
+  clean scoping, generate per-OU packs from a copy with the DC rows
+  flipped to N. Enable/Test/Intune gate these at runtime automatically;
+  WEF subscriptions are channel-only and unaffected.
 - The ASD subcategories the kit cannot express (Process Termination, Group
   Membership, SACL-dependent File System/Kernel Object/Registry) are the
   same ones listed under the ASD reference preset above.

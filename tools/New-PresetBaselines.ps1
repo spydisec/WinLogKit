@@ -132,9 +132,10 @@ $rolePresets = @(
        ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32') }
 
     # spydi blended baselines: the union of ASD, Microsoft Client, Microsoft
-    # Server and Yamato, on two axes (role x volume). Minimal = the
-    # high-signal set every reference agrees on (Core + process creation +
-    # command line + script block logging + IPsec Driver). Heavy = Minimal
+    # Server and Yamato, on two axes (role x volume). Minimal = the unanimous
+    # core plus three high-signal additions (process creation + command line:
+    # all four refs; script block logging: ASD+Yamato; IPsec Driver: both
+    # Microsoft baselines). Heavy = Minimal
     # plus everything the references ask for at real volume cost: WFP
     # connections, Sensitive Privilege Use, and ASD's module logging.
     # The Server variants cover servers, DCs and WEF collectors in one
