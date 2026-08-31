@@ -161,7 +161,8 @@ The kit runs unchanged on client Windows - the scripts detect the host profile
 - DC-only subcategories report NOT APPLICABLE; channels for absent features
   (e.g. AppLocker logs on unmanaged editions) report NOT APPLICABLE rather
   than failing.
-- On Windows 11 24H2+ the SMB audit items apply just like Server 2025;
+- On Windows 11 24H2+ the SMB audit items apply just like Server 2025
+  (per Microsoft's [SMB feature availability](https://learn.microsoft.com/windows-server/storage/file-server/smb-feature-descriptions));
   earlier builds report them NOT APPLICABLE.
 - **Home edition**: no Group Policy, but everything this kit uses (`auditpol`,
   `wevtutil`, registry) works locally. Note that on any *domain-joined* device

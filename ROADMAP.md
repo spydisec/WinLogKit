@@ -27,8 +27,10 @@
 - [ ] Field-test the pack in a real Intune tenant (assignment, schedule,
   reporting) and fold back findings
 - [ ] Settings-catalog / CSP mappings where they exist (PowerShell logging and
-  command line capture are ADMX-backed; audit policy stays on the
-  remediation route)
+  command line capture are ADMX-backed, and audit subcategories are exposed via
+  the [Policy CSP - Audit](https://learn.microsoft.com/windows/client-management/mdm/policy-csp-audit);
+  the kit does not map these yet - the shipped route today is the remediation
+  pack, which also covers channel sizing that has no CSP)
 - [ ] Per-role recommended CSVs shipped in the repo (workstation / member
   server / DC) once volume data from pilots justifies the defaults
 
