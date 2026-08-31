@@ -387,7 +387,8 @@ always kit drift):
   events only generate on domain controllers, where the kit applies them.
 - Rows where WELA recommends less than the kit (e.g. Account Lockout
   `Failure`, Process Creation `Success`): the kit's Success and Failure
-  supersets them, and WELA reports them as compliant once applied.
+  supersets them, and `Invoke-WELACheck.ps1` compares superset-aware, so
+  these rows are not reported as deviations once the kit is applied.
 
 ## Assumptions and limitations
 

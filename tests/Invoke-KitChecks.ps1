@@ -30,8 +30,13 @@ function Pass { param([string]$Msg) Write-Host "PASS: $Msg" -ForegroundColor Gre
 Write-Host "Kit checks on PowerShell $($PSVersionTable.PSVersion) - root: $KitRoot"
 
 # 1. Parse every script -------------------------------------------------------
+# Exclusions apply to the path RELATIVE to the kit root, so a kit that itself
+# lives under e.g. C:\staging\WELA-2.1.0\kit is not silently skipped entirely.
 # WELA[^\\]* also skips unzipped release folders like WELA-2.1.0 (third-party code).
-foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse | Where-Object { $_.FullName -notmatch '\\(WELA[^\\]*|Baseline|Logs|Results|Evidence|Intune)\\' }) {
+$kitRootFull = (Resolve-Path $KitRoot).Path.TrimEnd('\')
+$parsed = 0
+foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse | Where-Object { $_.FullName.Substring($kitRootFull.Length) -notmatch '\\(WELA[^\\]*|Baseline|Logs|Results|Evidence|Intune)\\' }) {
+    $parsed++
     $tokens = $null; $errors = $null
     [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors) | Out-Null
     if ($errors.Count -gt 0) {
@@ -40,6 +45,8 @@ foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse | Where-Object { $_
         Pass "parse $($f.Name)"
     }
 }
+
+if ($parsed -eq 0) { Fail 'parse loop matched zero files - exclusion filter is over-matching' }
 
 # 2. Settings table consistency -----------------------------------------------
 . (Join-Path $KitRoot 'LoggingBaseline.Settings.ps1')

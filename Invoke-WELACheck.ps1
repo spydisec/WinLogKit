@@ -87,7 +87,12 @@ if ([string]::IsNullOrEmpty($WelaPath)) {
     # Search order: .\WELA\, any .\WELA-* folder (e.g. an unzipped WELA-2.1.0
     # release, newest name first), then WELA.ps1 in the current directory.
     $candidates = @(Join-Path $welaDir 'WELA.ps1')
-    foreach ($d in (Get-ChildItem -Path $PSScriptRoot -Directory -Filter 'WELA-*' -ErrorAction SilentlyContinue | Sort-Object Name -Descending)) {
+    # Sort by parsed version, not name: string sort would put 2.9.0 above 2.10.0.
+    $versionSort = @{ Expression = {
+        $v = $null
+        if ([version]::TryParse(($_.Name -replace '^WELA-', ''), [ref]$v)) { $v } else { [version]'0.0' }
+    }; Descending = $true }
+    foreach ($d in (Get-ChildItem -Path $PSScriptRoot -Directory -Filter 'WELA-*' -ErrorAction SilentlyContinue | Sort-Object -Property $versionSort)) {
         $candidates += Join-Path $d.FullName 'WELA.ps1'
     }
     $candidates += Join-Path (Get-Location).Path 'WELA.ps1'
@@ -173,11 +178,21 @@ $deviations = New-Object System.Collections.Generic.List[object]
 $auditCsv = Join-Path $runDir 'WELA-Audit-Result.csv'
 if (Test-Path $auditCsv) {
     foreach ($row in (Import-Csv $auditCsv)) {
-        # Deviation = current setting differs from the baseline recommendation.
-        # WELA's recommendation strings can carry qualifiers, so normalise before comparing.
+        # Deviation = current setting does not satisfy the recommendation.
+        # Superset-aware for audit flags: if WELA recommends 'Failure' and the
+        # host has 'Success and Failure', that satisfies it (more auditing than
+        # recommended is not drift). Other values compare exactly.
         $cur = ("$($row.CurrentSetting)").Trim()
         $rec = ("$($row.RecommendedSetting)").Trim()
-        if ($rec -ne '' -and $cur -ne $rec) {
+        $satisfied = $false
+        if ($rec -match 'Success|Failure') {
+            $satisfied = $true
+            if ($rec -match 'Success' -and $cur -notmatch 'Success') { $satisfied = $false }
+            if ($rec -match 'Failure' -and $cur -notmatch 'Failure') { $satisfied = $false }
+        } else {
+            $satisfied = ($cur -eq $rec)
+        }
+        if ($rec -ne '' -and -not $satisfied) {
             $deviations.Add([pscustomobject]@{
                 Check       = 'audit-settings'
                 Item        = "$($row.Category) / $($row.SubCategory)"

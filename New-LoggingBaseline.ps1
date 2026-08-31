@@ -236,6 +236,9 @@ if ($Show) {
             exit 1
         }
         Write-Host "Showing selection from: $BaselineFile"
+        # Items absent from the CSV are excluded - matching how Enable/Test
+        # treat unlisted items - so a partial CSV cannot overstate coverage.
+        foreach ($it in $items) { $decided["$($it.ItemType)|$($it.Id)"] = $false }
         foreach ($row in (Import-Csv $BaselineFile)) {
             $decided["$($row.ItemType)|$($row.Id)"] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
         }
