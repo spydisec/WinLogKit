@@ -108,7 +108,7 @@ if ([string]::IsNullOrEmpty($WelaPath) -or -not (Test-Path $WelaPath)) {
     # old Windows PowerShell 5.1 configurations) do we ADD it; nothing is
     # ever removed, so this cannot downgrade the connection.
     $currentProtocols = [Net.ServicePointManager]::SecurityProtocol
-    if ($currentProtocols -ne [Net.SecurityProtocolType]::SystemDefault -and
+    if ($currentProtocols -ne [Net.SecurityProtocolType]::SystemDefault -and <# DevSkim: ignore DS440020 - SystemDefault check preserves OS negotiation #>
         -not ($currentProtocols -band [Net.SecurityProtocolType]::Tls12)) {  # DevSkim: ignore DS440001,DS440020 - capability probe, not a protocol pin
         [Net.ServicePointManager]::SecurityProtocol = $currentProtocols -bor [Net.SecurityProtocolType]::Tls12  # DevSkim: ignore DS440001,DS440020 - additive minimum-version fix, never downgrades
     }
