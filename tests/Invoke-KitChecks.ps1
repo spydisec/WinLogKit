@@ -161,9 +161,11 @@ try {
     # 6b. Reference page: committed docs\reference.md must match the generator
     $refTmp = Join-Path $tmp 'reference.md'
     & (Join-Path $KitRoot 'tools\Export-ReferenceTable.ps1') -OutFile $refTmp | Out-Null
+    # Line-ending-neutral compare: git checkout may normalise the committed
+    # page to CRLF while the generator writes LF.
     $committedRef = Get-Content (Join-Path $KitRoot 'docs\reference.md') -Raw -ErrorAction SilentlyContinue
     if ($null -eq $committedRef) { Fail 'docs\reference.md missing - run tools\Export-ReferenceTable.ps1' }
-    elseif ($committedRef -ne (Get-Content $refTmp -Raw)) { Fail 'docs\reference.md drifted - rerun tools\Export-ReferenceTable.ps1' }
+    elseif (($committedRef -replace "`r`n", "`n") -ne ((Get-Content $refTmp -Raw) -replace "`r`n", "`n")) { Fail 'docs\reference.md drifted - rerun tools\Export-ReferenceTable.ps1' }
     else { Pass 'reference page matches generator' }
 
     # 7a. GPO pack: audit.csv row count matches selection; registry.txt has policy values
