@@ -3,6 +3,19 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
+## v0.7.0 - Unreleased
+
+### Added
+- spydi blended baselines (`presets/spydi_*`): ASD + Microsoft Client +
+  Microsoft Server + Yamato blended on two axes - role (Server covering
+  servers/DCs/WEF collectors with runtime DC-gating; Workstation for
+  Windows 10/11) and volume (Minimal = the unanimous high-signal set +
+  4688/cmdline + 4104 + IPsec Driver; Heavy = Minimal + WFP connections +
+  Sensitive Privilege Use + ASD's module logging). Coverage: Workstation
+  263/269, Server 273/279 of 472 (284 native ceiling; Server Heavy reaches
+  the full native reach). Per-group source-and-events table and a
+  Minimal-vs-Heavy decision diagram in the docs; drift-checked in CI.
+
 ## v0.6.0 - 2026-08-31
 
 ### Added
