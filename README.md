@@ -12,11 +12,13 @@ get an independent second opinion from
 [WELA](https://github.com/Yamato-Security/WELA) - all with plain Windows
 PowerShell 5.1, no modules, no agents.
 
-Current release (v0.2.0) targets **Windows Server 2019 / 2022 / 2025**,
-standalone or domain joined. Windows Server 2025-only items (the new SMB
-signing/encryption auditing) are detected at runtime and reported
-NOT APPLICABLE on older versions. Workstation (Windows 10/11 + Intune) and
-GPO-based fleet delivery are on the [roadmap](ROADMAP.md).
+Targets **Windows Server 2019 / 2022 / 2025 and Windows 10 / 11 workstations**,
+standalone or domain joined. Version-specific items (the Server 2025 / Win11
+24H2 SMB signing/encryption auditing) and role-specific items (domain
+controller subcategories) are detected at runtime and reported NOT APPLICABLE
+where they don't apply. Fleet delivery to workstations via **Intune
+remediations** is built in (`New-IntuneRemediationPack.ps1`); GPO-based
+delivery is on the [roadmap](ROADMAP.md).
 
 **Scope**: native Windows configuration only. No Sysmon, no Sysinternals, no
 third party agents. Where a behaviour category cannot be fully satisfied
@@ -30,6 +32,13 @@ The settings themselves come from Yamato Security's excellent work:
   the configuration guide and batch script this kit operationalises
 - [WELA](https://github.com/Yamato-Security/WELA) v2.1.0 - used here as an
   independent verification tool
+- [EventLog-Baseline-Guide](https://github.com/Yamato-Security/EventLog-Baseline-Guide) -
+  Yamato's comparison app for the Windows Default / YamatoSecurity / ASD /
+  Microsoft Client / Microsoft Server baselines with Sigma detection coverage
+  impact. Useful for justifying the baseline choice: the YamatoSecurity set
+  this kit implements is the broadest of the four, and the Microsoft Client
+  baseline is a strict subset of it, so workstations running this kit exceed
+  Microsoft's client recommendation.
 
 This project is not affiliated with or endorsed by Yamato Security. A handful
 of deliberate deviations from their scripts are documented below, with reasons.
@@ -52,7 +61,8 @@ own risk.
 | `Enable-LoggingBaseline.ps1` | Applies the baseline. Idempotent, reports changed vs already-correct, `-WhatIf` for a full diff, `-Rollback` to restore first-run state, never reboots, flags high volume settings for a human decision. Writes a transcript to `.\Logs\`. |
 | `Test-LoggingBaseline.ps1` | Verification only, changes nothing. Per-category PASS / FAIL / NOT APPLICABLE to console, detail + summary CSVs to `.\Results\`, non-zero exit code on any failure so it can gate a pipeline. |
 | `Invoke-WELACheck.ps1` | Locates (or with `-Download` fetches) WELA, runs `audit-settings` and `audit-filesize`, parses the CSVs, reports deviations, archives raw output with a timestamp under `.\Evidence\`. |
-| `tests/Invoke-KitChecks.ps1` | Self-checks (parse, settings consistency, builder round-trip). Safe anywhere, no admin. CI runs it on Windows PowerShell 5.1 and PowerShell 7; run it locally before a PR. |
+| `New-IntuneRemediationPack.ps1` | Compiles the settings table (optionally filtered by a baseline CSV) into a self-contained Intune remediation pair: `Detect-LoggingBaseline.ps1` (exit 0/1) and `Remediate-LoggingBaseline.ps1`. No admin needed to generate; the pack embeds everything, so endpoints need nothing but the two uploaded scripts. |
+| `tests/Invoke-KitChecks.ps1` | Self-checks (parse, settings consistency, builder round-trip, Intune pack generation). Safe anywhere, no admin. CI runs it on Windows PowerShell 5.1 and PowerShell 7; run it locally before a PR. |
 
 ## Quick start
 
@@ -142,6 +152,51 @@ Notes:
 | Optional | `-IncludeOptional` | PowerShell transcription (set an output directory for your environment), Crypto-DPAPI debug channel |
 
 ---
+
+## Workstations (Windows 10 / 11)
+
+The kit runs unchanged on client Windows - the scripts detect the host profile
+(workstation / server / domain controller) and skip what doesn't apply:
+
+- DC-only subcategories report NOT APPLICABLE; channels for absent features
+  (e.g. AppLocker logs on unmanaged editions) report NOT APPLICABLE rather
+  than failing.
+- On Windows 11 24H2+ the SMB audit items apply just like Server 2025;
+  earlier builds report them NOT APPLICABLE.
+- **Home edition**: no Group Policy, but everything this kit uses (`auditpol`,
+  `wevtutil`, registry) works locally. Note that on any *domain-joined* device
+  a logging GPO/Intune policy can override local settings at refresh - same
+  caveat as servers.
+- Volume calibration differs: workstations see far fewer logons/connections
+  than servers, so the HighVolume tier is usually more affordable per host,
+  while disk headroom (1 GB Security log) matters more on small SSDs.
+
+Per Yamato's [EventLog-Baseline-Guide](https://github.com/Yamato-Security/EventLog-Baseline-Guide),
+Microsoft's client baseline is a strict subset of the set this kit applies,
+so client coverage meets-and-exceeds that reference.
+
+## Intune delivery
+
+`New-IntuneRemediationPack.ps1` turns the settings table (or any baseline CSV
+you built) into a standalone detection + remediation script pair for Intune:
+
+```powershell
+# Recommended (Core) pack:
+.\New-IntuneRemediationPack.ps1
+
+# Role-specific pack from a curated baseline:
+.\New-LoggingBaseline.ps1 -AcceptRecommended -OutFile .\WorkstationBaseline.csv
+.\New-IntuneRemediationPack.ps1 -BaselineFile .\WorkstationBaseline.csv -OutDir .\Intune\Workstation
+```
+
+Upload both files under **Devices > Scripts and remediations > Create**:
+run using logged-on credentials **No** (SYSTEM), run in 64-bit PowerShell
+**Yes**. Detection exits 0 when compliant and 1 with a one-line drift summary
+otherwise; remediation applies only what is below baseline (idempotent, never
+shrinks logs, never restarts anything - the AD CS AuditFilter is excluded
+from packs for exactly that reason). Regenerate the pack whenever the
+settings table or your baseline CSV changes; the generated files say not to
+edit them by hand.
 
 ## Windows Server 2025 notes
 

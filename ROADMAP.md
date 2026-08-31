@@ -13,19 +13,22 @@
   and PS 7, DevSkim security scan), Dependabot, tagged zip releases with
   SHA256 checksums
 
-## v0.3 - Workstation profile (Windows 10 / 11)
+## v0.3 - Workstation profile and Intune delivery (in progress)
 
-- Client-OS settings table: defaults differ from Server (e.g. Credential
-  Validation and Kerberos subcategories are No Auditing on client OS), and the
-  Yamato guide's client recommendations differ in places from the server ones
-- Role profiles in `LoggingBaseline.Settings.ps1` (Server / Workstation / DC)
-  selected automatically from `Win32_OperatingSystem.ProductType` with an
-  override switch
-- **Intune delivery**: package Enable/Test as an Intune remediation pair
-  (detection script = `Test-LoggingBaseline.ps1` logic, remediation script =
-  `Enable-LoggingBaseline.ps1` logic), plus settings-catalog / CSP mappings
-  where one exists (PowerShell logging and command line capture are
-  ADMX-backed; audit policy needs the remediation route)
+- [x] Kit verified applicable to client Windows: host profile detection
+  (workstation / server / DC), runtime NOT APPLICABLE gating, README guidance
+- [x] **Intune delivery**: `New-IntuneRemediationPack.ps1` compiles the
+  settings table (or a baseline CSV) into a self-contained detection +
+  remediation pair (SYSTEM, 64-bit, exit-code contract)
+- [x] IPsec Driver subcategory added (Optional) from the Microsoft baseline
+  via Yamato's EventLog-Baseline-Guide comparison
+- [ ] Field-test the pack in a real Intune tenant (assignment, schedule,
+  reporting) and fold back findings
+- [ ] Settings-catalog / CSP mappings where they exist (PowerShell logging and
+  command line capture are ADMX-backed; audit policy stays on the
+  remediation route)
+- [ ] Per-role recommended CSVs shipped in the repo (workstation / member
+  server / DC) once volume data from pilots justifies the defaults
 
 ## v0.4 - GPO delivery for fleet scale
 

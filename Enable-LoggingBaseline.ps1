@@ -108,6 +108,14 @@ function Get-DomainRole {
     return 'Standalone'
 }
 
+function Get-OsType {
+    # Win32_OperatingSystem.ProductType: 1 workstation, 2 domain controller, 3 server
+    $pt = (Get-CimInstance -ClassName Win32_OperatingSystem).ProductType
+    if ($pt -eq 1) { return 'Workstation' }
+    if ($pt -eq 2) { return 'Domain Controller' }
+    return 'Server'
+}
+
 # Registry access uses the .NET API throughout, not *-ItemProperty, because
 # one required value is literally named '*' and the ItemProperty cmdlets
 # treat that as a wildcard.
@@ -262,7 +270,7 @@ try {
     }
 
     Write-Host ''
-    Write-Host "Host role          : $domainRole"
+    Write-Host "Host profile       : $(Get-OsType), $domainRole"
     if ($null -ne $script:Selection) {
         Write-Host "Baseline file      : $BaselineFile ($(@($script:Selection.Values | Where-Object { $_ }).Count) items selected; tier switches ignored)"
     } else {

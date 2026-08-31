@@ -3,6 +3,23 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
+## v0.3.0 - Unreleased
+
+### Added
+- Windows 10 / 11 workstation support: host profile detection (workstation /
+  server / domain controller) shown by Enable/Test, runtime NOT APPLICABLE
+  gating for role- and version-specific items, README guidance (including
+  Home edition notes).
+- Intune delivery: `New-IntuneRemediationPack.ps1` compiles the settings
+  table, or a New-LoggingBaseline.ps1 selection CSV, into a self-contained
+  detection + remediation script pair (SYSTEM, 64-bit, Intune exit-code
+  contract). AD CS AuditFilter excluded from packs by design (CertSvc
+  restart).
+- IPsec Driver audit subcategory (Optional tier) - present in Microsoft's
+  baseline recommendation but not the Yamato set; surfaced by reviewing
+  Yamato's EventLog-Baseline-Guide comparison app, now credited in the README.
+- Kit self-checks extended to generate and validate the Intune pack.
+
 ## v0.2.0 - 2026-08-31
 
 ### Added
