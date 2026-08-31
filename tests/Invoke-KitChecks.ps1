@@ -125,8 +125,11 @@ try {
     foreach ($name in @('ASD', 'Microsoft_Client', 'Microsoft_Server', 'role_Workstation', 'role_MemberServer', 'role_DomainController')) {
         $committed = Join-Path $KitRoot "presets\$name.csv"
         if (-not (Test-Path $committed)) { Fail "presets\$name.csv is missing - run tools\New-PresetBaselines.ps1"; continue }
-        $a = Import-Csv $committed | ForEach-Object { "$($_.ItemType)|$($_.Id)|$($_.Selected)" } | Sort-Object
-        $b = Import-Csv (Join-Path $presetTmp "$name.csv") | ForEach-Object { "$($_.ItemType)|$($_.Id)|$($_.Selected)" } | Sort-Object
+        # Compare ALL columns, so descriptive fields (Purpose, Risk, Tier...)
+        # in committed presets cannot go stale while the check passes.
+        $rowKey = { ($_.PSObject.Properties | Sort-Object Name | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join '|' }
+        $a = Import-Csv $committed | ForEach-Object $rowKey | Sort-Object
+        $b = Import-Csv (Join-Path $presetTmp "$name.csv") | ForEach-Object $rowKey | Sort-Object
         if (Compare-Object $a $b) { Fail "presets\$name.csv drifted from the generator - rerun tools\New-PresetBaselines.ps1" } else { Pass "preset $name matches generator" }
     }
 

@@ -88,7 +88,10 @@ adjust your copy.
 | `role_MemberServer.csv` | as Workstation, **without** WFP connections | **299** / 362 |
 | `role_DomainController.csv` | as MemberServer, plus the DC-scope subcategories | **302** / 362 |
 
-The reasoning per decision:
+The reasoning per decision (volume and behaviour characterisations come from
+the settings table's Risk notes, themselves sourced from
+[Microsoft's advanced audit policy documentation](https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration)
+and the Yamato guide):
 
 | Item | Wks | Member | DC | Why |
 |---|---|---|---|---|

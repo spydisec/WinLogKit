@@ -132,6 +132,24 @@ $rolePresets = @(
        ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32') }
 )
 
+# Guard against silent selector drift: every role selector must match at
+# least one settings-table item, or generation fails (CI runs this on every
+# push via the preset drift check).
+foreach ($rp in $rolePresets) {
+    foreach ($prefix in $rp.ExtraAudit) {
+        if (-not @($rows | Where-Object { $_.ItemType -eq 'AuditPolicy' -and $_.Id.ToUpper().StartsWith($prefix) }).Count) {
+            Write-Error "Role preset $($rp.Name): audit selector '$prefix' matches no settings-table item."
+            exit 1
+        }
+    }
+    foreach ($regId in $rp.ExtraReg) {
+        if (-not @($rows | Where-Object { $_.ItemType -eq 'Registry' -and $_.Id -eq $regId }).Count) {
+            Write-Error "Role preset $($rp.Name): registry selector '$regId' matches no settings-table item."
+            exit 1
+        }
+    }
+}
+
 foreach ($rp in $rolePresets) {
     $outRows = foreach ($row in $rows) {
         # Start from the kit recommendation (Core tier selected).

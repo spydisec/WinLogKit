@@ -14,7 +14,8 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
   299/362, DomainController 302/362. Starting points pending pilot volume
   data. Drift-checked in CI like the reference presets.
 - Getting Started documents the PowerShell execution policy blocker with
-  least-invasive-first fixes (field-reported).
+  least-invasive-first fixes (field-reported; per
+  [about_Execution_Policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies)).
 
 ## v0.4.0 - 2026-08-31
 
