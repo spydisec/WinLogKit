@@ -48,6 +48,31 @@ foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse | Where-Object { $_
 
 if ($parsed -eq 0) { Fail 'parse loop matched zero files - exclusion filter is over-matching' }
 
+# 1b. Registry-write safety tripwire. WELA issue #243: New-Item -Force on an
+# existing registry key WIPES its other values (it broke Netlogon on DCs).
+# The kit writes registry exclusively via [Microsoft.Win32.Registry]::SetValue.
+# AST-based rule, robust against variable paths: every New-Item invocation in
+# the kit must declare -ItemType Directory (or File) explicitly - a New-Item
+# without it could be a registry key creation and fails the check.
+$badNewItem = @()
+foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse |
+    Where-Object { $_.FullName.Substring($kitRootFull.Length) -notmatch '\\(WELA[^\\]*|Baseline|Logs|Results|Evidence|Intune)\\' }) {
+    $tokens = $null; $errors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors)
+    $calls = $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.CommandAst] -and $n.GetCommandName() -eq 'New-Item' }, $true)
+    foreach ($c in $calls) {
+        $elems = @($c.CommandElements | ForEach-Object { $_.Extent.Text })
+        $itIdx = [array]::IndexOf($elems, '-ItemType')
+        $ok = ($itIdx -ge 0 -and $itIdx + 1 -lt $elems.Count -and $elems[$itIdx + 1] -match '^(Directory|File)$')
+        if (-not $ok) { $badNewItem += "$($f.Name):$($c.Extent.StartLineNumber)" }
+    }
+}
+if ($badNewItem) {
+    Fail "New-Item without explicit -ItemType Directory/File (could create a registry key and wipe sibling values, WELA issue #243 class): $($badNewItem -join ', ')"
+} else {
+    Pass 'every New-Item declares -ItemType Directory/File (WELA issue #243 class fenced)'
+}
+
 # 2. Settings table consistency -----------------------------------------------
 . (Join-Path $KitRoot 'LoggingBaseline.Settings.ps1')
 

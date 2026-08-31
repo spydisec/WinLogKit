@@ -118,15 +118,32 @@ if ([string]::IsNullOrEmpty($WelaPath) -or -not (Test-Path $WelaPath)) {
         [Net.ServicePointManager]::SecurityProtocol = $currentProtocols -bor [Net.SecurityProtocolType]::Tls12  # DevSkim: ignore DS440001,DS440020 - additive minimum-version fix, never downgrades
     }
     New-Item -ItemType Directory -Path (Join-Path $welaDir 'config') -Force | Out-Null
-    $files = @{
-        'WELA.ps1'                            = 'https://raw.githubusercontent.com/Yamato-Security/WELA/main/WELA.ps1'
-        'config\eid_subcategory_mapping.csv'  = 'https://raw.githubusercontent.com/Yamato-Security/WELA/main/config/eid_subcategory_mapping.csv'
-        'config\security_rules.json'          = 'https://raw.githubusercontent.com/Yamato-Security/WELA/main/config/security_rules.json'
-    }
-    foreach ($f in $files.Keys) {
-        $dest = Join-Path $welaDir $f
-        Invoke-WebRequest -Uri $files[$f] -OutFile $dest -UseBasicParsing
-        Write-Host "  fetched $f"
+    # Current WELA needs the first three; Optional covers config files newer
+    # WELA versions may add (e.g. config/baselines.json from WELA PR #358).
+    # Only a clean HTTP 404 counts as "not present" - any other failure
+    # (DNS, timeout, 5xx, disk) aborts rather than leaving a broken install.
+    $files = @(
+        @{ Path = 'WELA.ps1';                           Required = $true }
+        @{ Path = 'config/eid_subcategory_mapping.csv'; Required = $true }
+        @{ Path = 'config/security_rules.json';         Required = $true }
+        @{ Path = 'config/baselines.json';              Required = $false }
+    )
+    foreach ($f in $files) {
+        $dest = Join-Path $welaDir ($f.Path -replace '/', '\')
+        try {
+            Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Yamato-Security/WELA/main/$($f.Path)" -OutFile $dest -UseBasicParsing
+            Write-Host "  fetched $($f.Path)"
+        } catch {
+            $statusCode = 0
+            if ($_.Exception -is [System.Net.WebException] -and $null -ne $_.Exception.Response) {
+                $statusCode = [int]$_.Exception.Response.StatusCode
+            }
+            if (-not $f.Required -and $statusCode -eq 404) {
+                Write-Host "  skipped $($f.Path) (HTTP 404 - not present in current WELA main)" -ForegroundColor DarkGray
+            } else {
+                throw
+            }
+        }
     }
     $WelaPath = Join-Path $welaDir 'WELA.ps1'
 }
