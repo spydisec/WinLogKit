@@ -29,8 +29,10 @@ and [MITRE ATT&CK](https://attack.mitre.org/).*
 - PowerShell: [PowerShell 7](https://learn.microsoft.com/powershell/scripting/whats-new/migrating-from-windows-powershell-51-to-powershell-7)
   where installed, or the stock Windows PowerShell 5.1 that ships with
   every supported Windows version - both work, and CI tests both. 5.1 is
-  the compatibility floor because it is always present (and it is what
-  Intune runs the remediation packs under), not a requirement to use it.
+  the compatibility floor because it is always present (and
+  [Intune remediations run under Windows PowerShell](https://learn.microsoft.com/intune/intune-service/fundamentals/remediations),
+  so the generated packs must stay 5.1-clean), not a requirement to use
+  it.
 - Local Administrator for applying and verifying (the builders and
   generators need no elevation)
 - No modules, no agents, no internet access required
