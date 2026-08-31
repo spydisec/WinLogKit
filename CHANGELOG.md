@@ -3,7 +3,7 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
-## v0.6.0 - Unreleased
+## v0.6.0 - 2026-08-31
 
 ### Added
 - Native ATT&CK mapping: `Export-AttackCoverage.ps1` now joins a snapshot
