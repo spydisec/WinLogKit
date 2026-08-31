@@ -359,7 +359,13 @@ try {
     function Save-StateSnapshot {
         param([string]$Dir, [string]$JsonName)
         New-Item -ItemType Directory -Path $Dir -Force | Out-Null
-        auditpol /backup /file:"$(Join-Path $Dir 'auditpol-backup.csv')" | Out-Null
+        $backupFile = Join-Path $Dir 'auditpol-backup.csv'
+        auditpol /backup /file:"$backupFile" | Out-Null
+        # A snapshot without a working audit backup is worse than no snapshot:
+        # the JSON marker would make later runs (and -Rollback) trust it.
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $backupFile)) {
+            throw "auditpol /backup failed (exit $LASTEXITCODE) - snapshot aborted, nothing was changed."
+        }
 
         $chState = @()
         foreach ($ch in $script:BaselineChannels) {

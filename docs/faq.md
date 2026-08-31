@@ -42,8 +42,10 @@ what `-Rollback` restores), and every later apply saves a timestamped
 pre-change snapshot to `.\Baseline\snapshots\<timestamp>\` - so stepping
 from, say, Minimal to Heavy leaves a point-in-time record. To return to an
 intermediate state rather than the very beginning:
-`auditpol /restore /file:<snapshot>\auditpol-backup.csv`, plus the channel
-and registry values recorded in that snapshot's `State.json`.
+`auditpol /restore /file:<snapshot>\auditpol-backup.csv`, plus the channel,
+registry and SMB audit values recorded in that snapshot's `State.json`
+(restore each `SmbAudit` entry with `Set-SmbServerConfiguration` or
+`Set-SmbClientConfiguration` per its `Side`).
 
 ## Can I run this on a domain controller?
 
