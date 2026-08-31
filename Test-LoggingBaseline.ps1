@@ -34,6 +34,14 @@
     Path to a selection CSV produced by New-LoggingBaseline.ps1. When given,
     tier switches are ignored and only Selected = Y items are assessed.
 
+.PARAMETER WefRole
+    Also check Windows Event Forwarding plumbing for this host's role in a
+    WEF deployment. 'Source' checks the SubscriptionManager policy and the
+    WinRM service; 'Collector' checks the Wecsvc service, ForwardedEvents
+    sizing/retention and that at least one subscription exists. Default:
+    None (no WEF checks). WEF rows appear in the detail CSV and affect the
+    exit code, but not the per-category rollup.
+
 .PARAMETER OutputDir
     Where the CSVs are written. Default: .\Results next to this script.
 
@@ -46,6 +54,8 @@ param(
     [switch]$IncludeHighVolume,
     [switch]$IncludeOptional,
     [string]$BaselineFile,
+    [ValidateSet('None', 'Source', 'Collector')]
+    [string]$WefRole = 'None',
     # Default resolved in the body: $PSScriptRoot is not reliably available
     # during param-default evaluation under powershell.exe -File.
     [string]$OutputDir
@@ -311,6 +321,78 @@ if ($null -ne $afSkip) {
     } else {
         $curText = '<absent>'; if ($null -ne $current) { $curText = "$current" }
         Add-Row $af.Categories 'Registry' "$adcsPath\$($af.Name)" "$($af.Value)" $curText 'FAIL'
+    }
+}
+
+# ------------------------------- WEF plumbing (optional, role-dependent) ----
+# Not part of the behaviour-category model: these verify the transport layer
+# set up per the New-WefSubscription.ps1 guidance.
+
+if ($WefRole -eq 'Source') {
+    # Value data must actually name a collector (Server=...), not merely exist.
+    $smUrls = @()
+    $smKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SOFTWARE\Policies\Microsoft\Windows\EventLog\EventForwarding\SubscriptionManager')
+    if ($null -ne $smKey) {
+        foreach ($vn in $smKey.GetValueNames()) {
+            $vd = "$($smKey.GetValue($vn))"
+            if ($vd -match '(?i)Server\s*=\s*http') { $smUrls += $vd }
+        }
+        $smKey.Close()
+    }
+    if ($smUrls.Count -gt 0) {
+        Add-Row @() 'WEF' 'SubscriptionManager policy' 'at least one Server=<collector URL> value' "$($smUrls.Count) collector URL(s) configured" 'PASS'
+    } else {
+        Add-Row @() 'WEF' 'SubscriptionManager policy' 'at least one Server=<collector URL> value' 'no valid collector URL' 'FAIL' "Set via GPO: Event Forwarding > Configure target Subscription Manager (Server=http://<collector>:5985/wsman/SubscriptionManager/WEC,Refresh=$($script:BaselineWefDefaults.SubscriptionRefreshSeconds))"  # DevSkim: ignore DS137138 - documented WinRM default; WEF payloads are Kerberos message-level encrypted over HTTP
+    }
+    $winrm = Get-Service -Name WinRM -ErrorAction SilentlyContinue
+    if ($null -ne $winrm -and $winrm.Status -eq 'Running') {
+        Add-Row @() 'WEF' 'WinRM service (source)' 'Running' "$($winrm.Status)" 'PASS'
+    } else {
+        $state = 'not installed'; if ($null -ne $winrm) { $state = "$($winrm.Status)" }
+        Add-Row @() 'WEF' 'WinRM service (source)' 'Running' $state 'FAIL' 'Source-initiated forwarding needs WinRM'
+    }
+}
+
+if ($WefRole -eq 'Collector') {
+    $wec = Get-Service -Name Wecsvc -ErrorAction SilentlyContinue
+    if ($null -ne $wec -and $wec.Status -eq 'Running') {
+        Add-Row @() 'WEF' 'Windows Event Collector service' 'Running' "$($wec.Status)" 'PASS'
+    } else {
+        $state = 'not installed'; if ($null -ne $wec) { $state = "$($wec.Status)" }
+        Add-Row @() 'WEF' 'Windows Event Collector service' 'Running' $state 'FAIL' 'Run: wecutil qc /q'
+    }
+    # Wecsvc alone is not enough: sources connect to the WinRM listener.
+    # Try HTTP first, then HTTPS, so an HTTPS-only listener still passes.
+    $listenerVia = ''
+    try { Test-WSMan -ErrorAction Stop | Out-Null; $listenerVia = 'HTTP' } catch {
+        try { Test-WSMan -UseSSL -ErrorAction Stop | Out-Null; $listenerVia = 'HTTPS' } catch { $listenerVia = '' }
+    }
+    if ($listenerVia -ne '') {
+        Add-Row @() 'WEF' 'WinRM listener (collector)' 'responding (HTTP or HTTPS)' "responding ($listenerVia)" 'PASS'
+    } else {
+        Add-Row @() 'WEF' 'WinRM listener (collector)' 'responding (HTTP or HTTPS)' 'not responding' 'FAIL' 'Run: winrm qc -q (sources cannot connect without a WinRM listener)'
+    }
+    $fwdMin = $script:BaselineWefDefaults.ForwardedEventsMinBytes
+    $fwdRec = [math]::Round($script:BaselineWefDefaults.ForwardedEventsRecommendedBytes / 1MB)
+    $fwd = Get-WinEvent -ListLog ForwardedEvents -ErrorAction SilentlyContinue
+    if ($null -ne $fwd) {
+        $fwdMB = [math]::Round($fwd.MaximumSizeInBytes / 1MB)
+        $fwdProblems = @()
+        if ($fwd.MaximumSizeInBytes -lt $fwdMin) { $fwdProblems += "size $fwdMB MB below $([math]::Round($fwdMin/1MB)) MB minimum ($fwdRec MB recommended for collectors)" }
+        if ($fwd.LogMode -eq 'Retain') { $fwdProblems += 'retention set to "do not overwrite"' }
+        if ($fwdProblems.Count -eq 0) {
+            Add-Row @() 'WEF' 'ForwardedEvents log' (">= $([math]::Round($fwdMin/1MB)) MB, circular") "$fwdMB MB, mode=$($fwd.LogMode)" 'PASS'
+        } else {
+            Add-Row @() 'WEF' 'ForwardedEvents log' (">= $([math]::Round($fwdMin/1MB)) MB, circular") "$fwdMB MB, mode=$($fwd.LogMode)" 'FAIL' ($fwdProblems -join '; ')
+        }
+    } else {
+        Add-Row @() 'WEF' 'ForwardedEvents log' (">= $([math]::Round($fwdMin/1MB)) MB, circular") 'not present' 'FAIL' 'Windows Event Collector not configured'
+    }
+    $subs = @(& wecutil es 2>$null | Where-Object { $_ -match '\S' })
+    if ($LASTEXITCODE -eq 0 -and $subs.Count -gt 0) {
+        Add-Row @() 'WEF' 'Collector subscriptions' 'at least one subscription' ($subs -join '; ') 'PASS'
+    } else {
+        Add-Row @() 'WEF' 'Collector subscriptions' 'at least one subscription' 'none' 'FAIL' 'Load one: wecutil cs <subscription.xml> (generate with New-WefSubscription.ps1)'
     }
 }
 

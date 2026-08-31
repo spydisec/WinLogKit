@@ -130,6 +130,26 @@ try {
         if (Compare-Object $a $b) { Fail "presets\$name.csv drifted from the generator - rerun tools\New-PresetBaselines.ps1" } else { Pass "preset $name matches generator" }
     }
 
+    # 7a. GPO pack: audit.csv row count matches selection; registry.txt has policy values
+    $gpoTmp = Join-Path $tmp 'gpo'
+    & (Join-Path $KitRoot 'New-GpoPack.ps1') -OutDir $gpoTmp -IncludeHighVolume | Out-Null
+    $auditRows = @(Import-Csv (Join-Path $gpoTmp 'audit.csv'))
+    $expectedAudit = @($BaselineAuditSubcategories | Where-Object { $_.Tier -eq 'Core' -or $_.Tier -eq 'HighVolume' }).Count
+    if ($auditRows.Count -eq $expectedAudit) { Pass "GPO audit.csv rows ($expectedAudit)" } else { Fail "GPO audit.csv has $($auditRows.Count) rows, expected $expectedAudit" }
+    if ((Get-Content (Join-Path $gpoTmp 'registry.txt') -Raw) -match 'EnableScriptBlockLogging') { Pass 'GPO registry.txt contains expected policy value' } else { Fail 'GPO registry.txt missing EnableScriptBlockLogging' }
+
+    # 7b. ATT&CK coverage: joins the OSSEM snapshot, produces sane output
+    $covTmp = Join-Path $tmp 'cov'
+    & (Join-Path $KitRoot 'Export-AttackCoverage.ps1') -OutDir $covTmp | Out-Null
+    $covDetail = Get-ChildItem $covTmp -Filter 'AttackCoverage_Detail_*.csv' | Select-Object -First 1
+    if ($null -eq $covDetail) { Fail 'coverage detail CSV not produced' } else {
+        $covRows = Import-Csv $covDetail.FullName
+        $obs = @($covRows | Where-Object { $_.Status -eq 'Observable' }).Count
+        # Core-tier sanity: hundreds of observable rows (282 techniques); most
+        # rows are Sysmon-only or HighVolume-tier and correctly not observable.
+        if ($covRows.Count -gt 4000 -and $obs -gt 500) { Pass "ATT&CK coverage joins ($($covRows.Count) rows, $obs observable)" } else { Fail "ATT&CK coverage looks wrong ($($covRows.Count) rows, $obs observable)" }
+    }
+
     # 7. WEF subscription generation: valid XML, one query per selected channel
     $wefTmp = Join-Path $tmp 'wef'
     & (Join-Path $KitRoot 'New-WefSubscription.ps1') -OutDir $wefTmp -BaselineFile (Join-Path $KitRoot 'presets\ASD.csv') -SubscriptionId 'CheckSub' | Out-Null

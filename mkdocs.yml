@@ -1,0 +1,46 @@
+site_name: WinLogKit
+site_description: >-
+  Implement the Yamato Security Windows event logging baselines with native
+  PowerShell - enable, verify, roll back, and deploy at fleet scale.
+site_url: https://spydisec.github.io/WinLogKit/
+repo_url: https://github.com/spydisec/WinLogKit
+repo_name: spydisec/WinLogKit
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.highlight
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Commands: commands.md
+  - Baselines & Presets: baselines.md
+  - Fleet Deployment: deployment.md
+  - ATT&CK Coverage Mapping: mapping.md
+  - Safety & Volume: safety.md
+  - FAQ: faq.md

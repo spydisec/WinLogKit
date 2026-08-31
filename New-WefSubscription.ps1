@@ -210,7 +210,7 @@ Write-Host ''
 Write-Host 'Source setup (via GPO):' -ForegroundColor White
 Write-Host '  Computer Configuration > Administrative Templates > Windows Components > Event Forwarding'
 Write-Host '  > Configure target Subscription Manager:'
-Write-Host '    Server=http://<collector-fqdn>:5985/wsman/SubscriptionManager/WEC,Refresh=60'  # DevSkim: ignore DS137138 - documented WinRM default; WEF payloads are Kerberos message-level encrypted over HTTP
+Write-Host "    Server=http://<collector-fqdn>:5985/wsman/SubscriptionManager/WEC,Refresh=$($wefDefaults.SubscriptionRefreshSeconds)"  # DevSkim: ignore DS137138 - documented WinRM default; WEF payloads are Kerberos message-level encrypted over HTTP
 Write-Host '    (optionally HTTPS: Server=https://<collector-fqdn>:5986/... - needs a server certificate on the collector)'
 Write-Host '  For the Security log: add NETWORK SERVICE to "Event Log Readers" on sources, or Security forwarding silently fails.' -ForegroundColor Yellow
 Write-Host ''

@@ -1,0 +1,49 @@
+# Docs: build the MkDocs Material site and deploy to GitHub Pages (gh-pages
+# branch) on doc changes landing in main.
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# gh-pages is a shared branch: serialize deployments so an older run can
+# never finish last and publish stale docs.
+concurrency:
+  group: docs-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: build and deploy docs
+    runs-on: ubuntu-latest
+    steps:
+      # No persisted credentials: third-party build tooling (pip packages)
+      # runs without a write token in .git/config. Auth happens only in the
+      # deploy step below.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Build (strict, no credentials present)
+        run: |
+          pip install mkdocs-material
+          mkdocs build --strict
+
+      - name: Deploy to gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          mkdocs gh-deploy --force

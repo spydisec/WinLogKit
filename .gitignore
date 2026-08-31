@@ -5,6 +5,10 @@ Evidence/
 Baseline/
 WEF/
 Intune/
+GPO/
+
+# MkDocs build output (deployed by CI, never committed)
+site/
 
 # Downloaded copy of WELA (fetched by Invoke-WELACheck.ps1 -Download)
 WELA*/
