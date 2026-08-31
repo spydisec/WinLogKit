@@ -5,6 +5,11 @@ Evidence/
 Baseline/
 
 # Downloaded copy of WELA (fetched by Invoke-WELACheck.ps1 -Download)
-WELA/
+WELA*/
+
+# WELA output files if WELA is ever run from the repo root by hand
+WELA-*.csv
+UsableRules.csv
+UnusableRules.csv
 
 *.log

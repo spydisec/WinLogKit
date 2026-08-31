@@ -119,6 +119,19 @@ roles need different selections.
 .\Test-LoggingBaseline.ps1   -BaselineFile .\MyBaseline.csv
 ```
 
+During the walk-through, press `t` at any prompt to see the **baseline tree**:
+every item's current include/exclude state ( `?` marks not-yet-confirmed
+defaults) plus a per-behaviour-category coverage count, so you always know
+what the baseline contains so far. The same view works standalone:
+
+```powershell
+# What does the recommendation include?
+.\New-LoggingBaseline.ps1 -Show
+
+# What exactly is inside an existing baseline, and which categories does it cover?
+.\New-LoggingBaseline.ps1 -Show -BaselineFile .\MyBaseline.csv
+```
+
 The baseline CSV is plain text - commit it per server role (file server,
 web, DC) and you get reviewable, versioned logging baselines for free.
 When `-BaselineFile` is used the tier switches are ignored; the file is the
@@ -361,6 +374,21 @@ baseline.
 Outputs (written to the working directory, archived by `Invoke-WELACheck.ps1`):
 `WELA-Audit-Result.csv`, `WELA-FileSize-Result.csv`, `UsableRules.csv`,
 `UnusableRules.csv`. All output is CSV-parseable; there is no JSON output mode.
+
+**Expected deviations in WELA output** (WELA disagreeing with the kit is not
+always kit drift):
+
+- *Process Termination, Group Membership, Kernel Object, Registry*: WELA's
+  recommendation table asks for these, but Yamato's own
+  EnableWindowsLogSettings batch leaves all four disabled (noise, and the
+  Kernel Object / Registry subcategories log almost nothing without SACLs).
+  The kit follows the batch, so these rows show as deviations permanently.
+- *Computer Account Management* on non-DCs: WELA's table is role-blind; those
+  events only generate on domain controllers, where the kit applies them.
+- Rows where WELA recommends less than the kit (e.g. Account Lockout
+  `Failure`, Process Creation `Success`): the kit's Success and Failure
+  supersets them, and `Invoke-WELACheck.ps1` compares superset-aware, so
+  these rows are not reported as deviations once the kit is applied.
 
 ## Assumptions and limitations
 

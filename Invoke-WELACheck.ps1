@@ -84,7 +84,18 @@ if (-not (Test-IsAdmin)) {
 
 $welaDir = Join-Path $PSScriptRoot 'WELA'
 if ([string]::IsNullOrEmpty($WelaPath)) {
-    $candidates = @((Join-Path $welaDir 'WELA.ps1'), (Join-Path (Get-Location).Path 'WELA.ps1'))
+    # Search order: .\WELA\, any .\WELA-* folder (e.g. an unzipped WELA-2.1.0
+    # release, newest name first), then WELA.ps1 in the current directory.
+    $candidates = @(Join-Path $welaDir 'WELA.ps1')
+    # Sort by parsed version, not name: string sort would put 2.9.0 above 2.10.0.
+    $versionSort = @{ Expression = {
+        $v = $null
+        if ([version]::TryParse(($_.Name -replace '^WELA-', ''), [ref]$v)) { $v } else { [version]'0.0' }
+    }; Descending = $true }
+    foreach ($d in (Get-ChildItem -Path $PSScriptRoot -Directory -Filter 'WELA-*' -ErrorAction SilentlyContinue | Sort-Object -Property $versionSort)) {
+        $candidates += Join-Path $d.FullName 'WELA.ps1'
+    }
+    $candidates += Join-Path (Get-Location).Path 'WELA.ps1'
     foreach ($c in $candidates) {
         if (Test-Path $c) { $WelaPath = $c; break }
     }
@@ -97,8 +108,15 @@ if ([string]::IsNullOrEmpty($WelaPath) -or -not (Test-Path $WelaPath)) {
         exit 1
     }
     Write-Host 'Downloading WELA from github.com/Yamato-Security/WELA (main branch)...' -ForegroundColor Yellow
-    # PS 5.1 defaults can exclude TLS 1.2 - enable it explicitly for GitHub.
-    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    # SystemDefault (0) means the OS chooses TLS 1.2/1.3 - leave that alone.
+    # Only when a legacy explicit protocol set excludes TLS 1.2 (possible on
+    # old Windows PowerShell 5.1 configurations) do we ADD it; nothing is
+    # ever removed, so this cannot downgrade the connection.
+    $currentProtocols = [Net.ServicePointManager]::SecurityProtocol
+    if ($currentProtocols -ne [Net.SecurityProtocolType]::SystemDefault -and <# DevSkim: ignore DS440020 - SystemDefault check preserves OS negotiation #>
+        -not ($currentProtocols -band [Net.SecurityProtocolType]::Tls12)) {  # DevSkim: ignore DS440001,DS440020 - capability probe, not a protocol pin
+        [Net.ServicePointManager]::SecurityProtocol = $currentProtocols -bor [Net.SecurityProtocolType]::Tls12  # DevSkim: ignore DS440001,DS440020 - additive minimum-version fix, never downgrades
+    }
     New-Item -ItemType Directory -Path (Join-Path $welaDir 'config') -Force | Out-Null
     $files = @{
         'WELA.ps1'                            = 'https://raw.githubusercontent.com/Yamato-Security/WELA/main/WELA.ps1'
@@ -160,11 +178,21 @@ $deviations = New-Object System.Collections.Generic.List[object]
 $auditCsv = Join-Path $runDir 'WELA-Audit-Result.csv'
 if (Test-Path $auditCsv) {
     foreach ($row in (Import-Csv $auditCsv)) {
-        # Deviation = current setting differs from the baseline recommendation.
-        # WELA's recommendation strings can carry qualifiers, so normalise before comparing.
+        # Deviation = current setting does not satisfy the recommendation.
+        # Superset-aware for audit flags: if WELA recommends 'Failure' and the
+        # host has 'Success and Failure', that satisfies it (more auditing than
+        # recommended is not drift). Other values compare exactly.
         $cur = ("$($row.CurrentSetting)").Trim()
         $rec = ("$($row.RecommendedSetting)").Trim()
-        if ($rec -ne '' -and $cur -ne $rec) {
+        $satisfied = $false
+        if ($rec -match 'Success|Failure') {
+            $satisfied = $true
+            if ($rec -match 'Success' -and $cur -notmatch 'Success') { $satisfied = $false }
+            if ($rec -match 'Failure' -and $cur -notmatch 'Failure') { $satisfied = $false }
+        } else {
+            $satisfied = ($cur -eq $rec)
+        }
+        if ($rec -ne '' -and -not $satisfied) {
             $deviations.Add([pscustomobject]@{
                 Check       = 'audit-settings'
                 Item        = "$($row.Category) / $($row.SubCategory)"
