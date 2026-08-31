@@ -26,8 +26,13 @@ and [MITRE ATT&CK](https://attack.mitre.org/).*
 ## Requirements
 
 - Windows Server 2019 / 2022 / 2025, or Windows 10 / 11
-- Windows PowerShell 5.1 (stock; the kit targets 5.1 - CI additionally
-  parses everything and runs the builders/generators under PowerShell 7)
+- PowerShell: [PowerShell 7](https://learn.microsoft.com/powershell/scripting/whats-new/migrating-from-windows-powershell-51-to-powershell-7)
+  where installed, or the stock Windows PowerShell 5.1 that ships with
+  every supported Windows version - both work, and CI tests both. 5.1 is
+  the compatibility floor because it is always present (and
+  [Intune remediations run under Windows PowerShell](https://learn.microsoft.com/intune/intune-service/fundamentals/remediations),
+  so the generated packs must stay 5.1-clean), not a requirement to use
+  it.
 - Local Administrator for applying and verifying (the builders and
   generators need no elevation)
 - No modules, no agents, no internet access required
