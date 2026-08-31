@@ -19,6 +19,10 @@ Eight terms cover the whole kit - each defined once, in plain English:
 | SIEM | The security platform that ultimately analyses the logs (outside this kit) |
 | ATT&CK technique | A catalogued attacker behaviour - the kit counts how many your logs could see |
 
+*Plain-language shorthand; the formal definitions live in
+[Microsoft's audit policy documentation](https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration)
+and [MITRE ATT&CK](https://attack.mitre.org/).*
+
 ## Requirements
 
 - Windows Server 2019 / 2022 / 2025, or Windows 10 / 11

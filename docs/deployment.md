@@ -1,8 +1,9 @@
 # Fleet Deployment
 
 How to roll a baseline out to many machines - through Intune, Windows
-Event Forwarding, or Group Policy - all generated from the same baseline
-CSV you tested. One mental model for everything on this page:
+Event Forwarding, or Group Policy - all generated from the same tested
+selection (tier switches, or optionally a baseline CSV). One mental model
+for everything on this page:
 
 ```text
 generate (this kit, on each host)  ->  transport (WEF/WEC)  ->  ingest (your SIEM)
