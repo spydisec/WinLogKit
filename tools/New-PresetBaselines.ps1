@@ -93,10 +93,10 @@ foreach ($p in $presets) {
     $outFile = Join-Path $OutDir "$($p.Name).csv"
     $outRows | Export-Csv -Path $outFile -NoTypeInformation -Encoding UTF8
     $count = @($outRows | Where-Object { $_.Selected -eq 'Y' }).Count
-    Write-Host ("presets\{0}.csv  {1} of {2} items selected" -f $p.Name, $count, @($outRows).Count)
+    Write-Host ("{0}  {1} of {2} items selected" -f $outFile, $count, @($outRows).Count)
 }
 
 Write-Host ''
 Write-Host 'Presets regenerated. Inspect any of them with:'
-Write-Host '  ..\New-LoggingBaseline.ps1 -Show -BaselineFile ..\presets\ASD.csv'
+Write-Host ("  {0} -Show -BaselineFile {1}" -f (Join-Path $kitRoot 'New-LoggingBaseline.ps1'), (Join-Path $OutDir 'ASD.csv'))
 exit 0
