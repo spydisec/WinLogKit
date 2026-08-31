@@ -7,7 +7,7 @@ with their dates recorded, and events flow out to your collector - the kit
 never talks to the internet at runtime.**
 
 <figure markdown>
-<svg viewBox="0 0 660 620" role="img" aria-label="Vendored snapshots feed two destinations: Yamato baselines into the settings table, and the ATT&CK snapshot into the coverage report. Enable applies and Test verifies the settings table on the Windows host, generators compile fleet artefacts from it, host events flow to the Windows Event Log, over WEF to a collector, and hand off to the SIEM." style="max-width: 660px; width: 100%; height: auto; font-family: inherit;">
+<svg viewBox="0 0 660 620" role="img" aria-label="Vendored snapshots feed two destinations: Yamato baselines into the settings table, and the ATT&amp;CK snapshot into the coverage report. Enable applies and Test verifies the settings table on the Windows host, generators compile fleet artefacts from it, host events flow to the Windows Event Log, over WEF to a collector, and hand off to the SIEM." style="max-width: 660px; width: 100%; height: auto; font-family: inherit;">
   <defs>
     <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
