@@ -3,7 +3,7 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
-## v0.5.0 - Unreleased
+## v0.5.0 - 2026-08-31
 
 ### Added
 - Per-role presets: `presets/role_Workstation.csv`, `role_MemberServer.csv`
