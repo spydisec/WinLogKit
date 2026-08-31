@@ -27,9 +27,10 @@ your mind - plain PowerShell, no agents.
 <a href="https://github.com/spydisec/WinLogKit/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-14b8a6.svg" alt="MIT License"/></a>
 </p>
 
-<p class="sp-hook">
-Out of the box, Windows logs support only 10-20% of Sigma detection rules -
-and overwrite the evidence within hours.
+<p class="sp-hook" markdown>
+Out of the box, Windows supports only 10-20% of Sigma detection rules, and
+default log sizes of 1-20 MB mean evidence is quickly overwritten
+(<a href="https://github.com/Yamato-Security/EnableWindowsLogSettings">Yamato's guide</a>).
 </p>
 
 </div>

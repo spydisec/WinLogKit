@@ -13,8 +13,9 @@
 }
 
 [data-md-color-accent="custom"] {
-  --md-accent-fg-color:             #14b8a6;
-  --md-accent-fg-color--transparent:#14b8a61a;
+  /* #0f766e keeps >= 4.5:1 contrast with white button text on hover/focus */
+  --md-accent-fg-color:             #0f766e;
+  --md-accent-fg-color--transparent:#0f766e1a;
   --md-accent-bg-color:             #ffffff;
   --md-accent-bg-color--light:      #ffffffb3;
 }
