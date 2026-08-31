@@ -73,3 +73,41 @@ committed CSVs drift from the settings table.
 
 WELA's matching `-Baseline` names (`ASD`, `Microsoft_Client`,
 `Microsoft_Server`) serve as the independent verifier for these presets.
+
+## Per-role presets
+
+The kit's recommended *starting point* per host role - Core plus the
+high-value items that role can afford, with every hold-back justified by the
+settings table's own Risk notes. These are starting points pending pilot
+volume data, not final answers: run the pilot week, check the numbers, and
+adjust your copy.
+
+| Preset | Selection | ATT&CK coverage |
+|---|---|---|
+| `role_Workstation.csv` | Core + process creation/cmdline + script block logging + WFP connections; DC-only items deselected | **317** / 362 |
+| `role_MemberServer.csv` | as Workstation, **without** WFP connections | **299** / 362 |
+| `role_DomainController.csv` | as MemberServer, plus the DC-scope subcategories | **302** / 362 |
+
+The reasoning per decision:
+
+| Item | Wks | Member | DC | Why |
+|---|---|---|---|---|
+| Process creation + command line | ✓ | ✓ | ✓ | Highest single detection value; volume scales with process churn - watch RDS/build hosts in the pilot |
+| Script block logging (4104) | ✓ | ✓ | ✓ | Moderate volume, de-obfuscated code, generally safe fleet-wide per its Risk note |
+| WFP connections (5156/5157) | ✓ | - | - | Client connection volume is modest; documented **High** volume on connection-heavy servers and DCs |
+| Module logging (4103) | - | - | - | The heaviest setting in the kit; opt-in after a pilot, everywhere |
+| Sensitive Privilege Use | - | - | - | Known to flood with backup agents; opt-in per server role after a pilot |
+| DC-scope subcategories | - | - | ✓ | Only generate events on domain controllers |
+| Optional tier (transcription, DPAPI debug, IPsec Driver) | - | - | - | Situational by definition |
+
+Usage is identical to any baseline CSV:
+
+```powershell
+.\New-LoggingBaseline.ps1 -Show -BaselineFile .\presets\role_Workstation.csv
+.\Enable-LoggingBaseline.ps1 -BaselineFile .\presets\role_MemberServer.csv -WhatIf
+.\New-IntuneRemediationPack.ps1 -BaselineFile .\presets\role_Workstation.csv -OutDir .\Intune\Workstation
+```
+
+To customise a role, copy the CSV, flip `Selected` values in Excel, and keep
+your copy in version control - the shipped presets are regenerated from the
+settings table and CI rejects drift, so edit copies, not the originals.
