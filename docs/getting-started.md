@@ -25,6 +25,37 @@ If a downloaded zip is blocked, unblock the files once:
 Get-ChildItem -Recurse | Unblock-File
 ```
 
+## If scripts are blocked: "running scripts is disabled on this system"
+
+PowerShell's execution policy blocks `.ps1` files by default on client
+Windows (`Restricted`; servers default to `RemoteSigned` - see
+[about_Execution_Policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies)).
+Pick the least-invasive option that fits:
+
+```powershell
+# Option 1 - this window only, nothing persisted (recommended for a first look):
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+
+# Option 2 - one-off invocation without touching any policy:
+powershell.exe -ExecutionPolicy Bypass -File .\Enable-LoggingBaseline.ps1 -WhatIf
+
+# Option 3 - persist for your user account:
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+
+Notes:
+
+- Under `RemoteSigned`, files downloaded from the internet still carry the
+  Mark of the Web and stay blocked until the `Unblock-File` step above -
+  the two blockers look identical but have different fixes. `git clone`
+  produces unmarked files, so cloning avoids that half entirely.
+- If the error says the policy is **set by Group Policy**, your organisation
+  enforces it: use Option 2 per invocation, or have the scripts signed per
+  your org's process. The Intune remediation pack is unaffected (Intune
+  executes remediations with its own bypass), and none of this weakens
+  anything the kit configures - execution policy is a usability guardrail,
+  not a security boundary, per Microsoft's own documentation.
+
 ## First run - see everything before changing anything
 
 From an **elevated** Windows PowerShell prompt in the kit folder:

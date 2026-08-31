@@ -80,6 +80,10 @@ own risk.
 
 All commands from an elevated Windows PowerShell 5.1 prompt, in the kit folder
 (`New-LoggingBaseline.ps1` is the one script that does not need elevation).
+If you hit "running scripts is disabled on this system", see
+[Getting Started](https://spydisec.github.io/WinLogKit/getting-started/#if-scripts-are-blocked-running-scripts-is-disabled-on-this-system)
+- `Set-ExecutionPolicy -Scope Process RemoteSigned` unblocks the current
+window without persisting anything.
 
 There are two ways to drive the kit. **Path A** uses the tier switches and is
 the fastest route to the recommended baseline. **Path B** builds a custom
