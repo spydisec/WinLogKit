@@ -29,7 +29,7 @@ same `-BaselineFile`.
 
 The split exists so volume decisions are made by a human with the impact in
 front of them - `Export-AttackCoverage.ps1` quantifies what the HighVolume
-tier buys (38 additional ATT&CK techniques over Core).
+tier buys (168 additional ATT&CK techniques over Core: 152 -> 320).
 
 ## Building a baseline
 

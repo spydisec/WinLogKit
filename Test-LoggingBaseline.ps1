@@ -329,15 +329,20 @@ if ($null -ne $afSkip) {
 # set up per the New-WefSubscription.ps1 guidance.
 
 if ($WefRole -eq 'Source') {
+    # Value data must actually name a collector (Server=...), not merely exist.
+    $smUrls = @()
     $smKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SOFTWARE\Policies\Microsoft\Windows\EventLog\EventForwarding\SubscriptionManager')
     if ($null -ne $smKey) {
-        $smValues = @($smKey.GetValueNames() | Where-Object { $_ -ne '' })
+        foreach ($vn in $smKey.GetValueNames()) {
+            $vd = "$($smKey.GetValue($vn))"
+            if ($vd -match '(?i)Server\s*=\s*http') { $smUrls += $vd }
+        }
         $smKey.Close()
-    } else { $smValues = @() }
-    if ($smValues.Count -gt 0) {
-        Add-Row @() 'WEF' 'SubscriptionManager policy' 'at least one collector URL' "$($smValues.Count) value(s) configured" 'PASS'
+    }
+    if ($smUrls.Count -gt 0) {
+        Add-Row @() 'WEF' 'SubscriptionManager policy' 'at least one Server=<collector URL> value' "$($smUrls.Count) collector URL(s) configured" 'PASS'
     } else {
-        Add-Row @() 'WEF' 'SubscriptionManager policy' 'at least one collector URL' 'not configured' 'FAIL' 'Set via GPO: Event Forwarding > Configure target Subscription Manager'
+        Add-Row @() 'WEF' 'SubscriptionManager policy' 'at least one Server=<collector URL> value' 'no valid collector URL' 'FAIL' 'Set via GPO: Event Forwarding > Configure target Subscription Manager (Server=http://<collector>:5985/wsman/SubscriptionManager/WEC,Refresh=60)'
     }
     $winrm = Get-Service -Name WinRM -ErrorAction SilentlyContinue
     if ($null -ne $winrm -and $winrm.Status -eq 'Running') {
@@ -356,19 +361,28 @@ if ($WefRole -eq 'Collector') {
         $state = 'not installed'; if ($null -ne $wec) { $state = "$($wec.Status)" }
         Add-Row @() 'WEF' 'Windows Event Collector service' 'Running' $state 'FAIL' 'Run: wecutil qc /q'
     }
+    # Wecsvc alone is not enough: sources connect to the WinRM listener.
+    try {
+        Test-WSMan -ErrorAction Stop | Out-Null
+        Add-Row @() 'WEF' 'WinRM listener (collector)' 'responding' 'responding' 'PASS'
+    } catch {
+        Add-Row @() 'WEF' 'WinRM listener (collector)' 'responding' 'not responding' 'FAIL' 'Run: winrm qc -q (sources cannot connect without a WinRM listener)'
+    }
+    $fwdMin = $script:BaselineWefDefaults.ForwardedEventsMinBytes
+    $fwdRec = [math]::Round($script:BaselineWefDefaults.ForwardedEventsRecommendedBytes / 1MB)
     $fwd = Get-WinEvent -ListLog ForwardedEvents -ErrorAction SilentlyContinue
     if ($null -ne $fwd) {
         $fwdMB = [math]::Round($fwd.MaximumSizeInBytes / 1MB)
         $fwdProblems = @()
-        if ($fwd.MaximumSizeInBytes -lt 134217728) { $fwdProblems += "size $fwdMB MB below 128 MB minimum (1 GB recommended for collectors)" }
+        if ($fwd.MaximumSizeInBytes -lt $fwdMin) { $fwdProblems += "size $fwdMB MB below $([math]::Round($fwdMin/1MB)) MB minimum ($fwdRec MB recommended for collectors)" }
         if ($fwd.LogMode -eq 'Retain') { $fwdProblems += 'retention set to "do not overwrite"' }
         if ($fwdProblems.Count -eq 0) {
-            Add-Row @() 'WEF' 'ForwardedEvents log' '>= 128 MB, circular' "$fwdMB MB, mode=$($fwd.LogMode)" 'PASS'
+            Add-Row @() 'WEF' 'ForwardedEvents log' (">= $([math]::Round($fwdMin/1MB)) MB, circular") "$fwdMB MB, mode=$($fwd.LogMode)" 'PASS'
         } else {
-            Add-Row @() 'WEF' 'ForwardedEvents log' '>= 128 MB, circular' "$fwdMB MB, mode=$($fwd.LogMode)" 'FAIL' ($fwdProblems -join '; ')
+            Add-Row @() 'WEF' 'ForwardedEvents log' (">= $([math]::Round($fwdMin/1MB)) MB, circular") "$fwdMB MB, mode=$($fwd.LogMode)" 'FAIL' ($fwdProblems -join '; ')
         }
     } else {
-        Add-Row @() 'WEF' 'ForwardedEvents log' '>= 128 MB, circular' 'not present' 'FAIL' 'Windows Event Collector not configured'
+        Add-Row @() 'WEF' 'ForwardedEvents log' (">= $([math]::Round($fwdMin/1MB)) MB, circular") 'not present' 'FAIL' 'Windows Event Collector not configured'
     }
     $subs = @(& wecutil es 2>$null | Where-Object { $_ -match '\S' })
     if ($LASTEXITCODE -eq 0 -and $subs.Count -gt 0) {

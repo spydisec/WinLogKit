@@ -18,7 +18,7 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
   provenance-recorded [OSSEM-DM](https://github.com/OTRF/OSSEM-DM)
   snapshot (`data/ossem/`, MIT) against any selection and reports
   observable techniques with reasons for the gaps (NotSelected / NotInKit /
-  RequiresSysmon). Reference numbers: Core 282/362, Core+HighVolume
+  RequiresSysmon). Reference numbers: Core 152/362, Core+HighVolume
   320/362 mapped Windows techniques.
 - Documentation site (MkDocs Material, deployed to GitHub Pages by the
   Docs workflow): getting started, commands, baselines and presets, fleet

@@ -515,6 +515,11 @@ $script:BaselineWefDefaults = @{
     # Which computers may forward: Microsoft's documented default grants
     # Domain Computers and Network Service.
     AllowedSourceDomainComputersSddl = 'O:NSG:BAD:P(A;;GA;;;DC)(A;;GA;;;NS)S:'
+    # ForwardedEvents on the collector: verification floor and the size the
+    # kit recommends. A collector aggregates whole fleets; an undersized
+    # ForwardedEvents log wraps in minutes and loses forwarded evidence.
+    ForwardedEventsMinBytes         = 134217728
+    ForwardedEventsRecommendedBytes = 1073741824
 }
 
 # -----------------------------------------------------------------------------

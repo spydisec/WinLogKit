@@ -2,7 +2,7 @@
 
 One mental model for everything on this page:
 
-```
+```text
 generate (this kit, on each host)  ->  transport (WEF/WEC)  ->  ingest (your SIEM)
 ```
 
@@ -51,9 +51,14 @@ Collector:  winrm qc -q            (WinRM listener first)
             wecutil qc /q          (then the collector service)
             wecutil cs .\WEF\WinLogKit-Baseline.xml
             wevtutil sl ForwardedEvents /ms:1073741824
-Sources:    GPO > Event Forwarding > Configure target Subscription Manager
+Sources:    winrm qc -q   (WinRM must be configured on each source too - or
+                           enable the WinRM service via GPO fleet-wide)
+            GPO > Event Forwarding > Configure target Subscription Manager
             Server=http://<collector-fqdn>:5985/wsman/SubscriptionManager/WEC,Refresh=60
 ```
+
+Per [Microsoft's source-initiated subscription procedure](https://learn.microsoft.com/windows/win32/wec/setting-up-a-source-initiated-subscription),
+both ends need WinRM: the collector to listen, the sources to forward.
 
 The classic trap: for the Security log, add NETWORK SERVICE to **Event Log
 Readers** on sources, or Security forwarding silently fails. Verify either
@@ -89,8 +94,20 @@ Printed reminders cover what GPO packs deliberately exclude: channel
 sizing (startup script or Intune pack), NTLM audit values (GPO Security
 Options), SMB auditing (`Set-Smb*Configuration`), AD CS AuditFilter.
 
+!!! warning "Partial selections and apply semantics"
+    A pack generated from a narrow `-BaselineFile` covers only the selected
+    subcategories; how unlisted subcategories fare depends on the applying
+    tool and existing policy. Likewise `LGPO /t` is additive - a smaller
+    pack does not remove previously applied registry values. The generator
+    prints both warnings when they apply. The invariant that protects you
+    either way: **always verify the effective state afterwards** with
+    `Test-LoggingBaseline.ps1`, which reads the live audit policy
+    (`auditpol /get /category:* /r`) and registry, not the files you applied.
+
 !!! note
-    On domain-joined hosts, local audit policy holds only until a GPO that
-    configures audit policy overrides it. For fleets, treat the kit's local
-    apply as the specification and pilot; deliver via the artefacts above.
-    `Test-LoggingBaseline.ps1` verifies the *effective* state either way.
+    On domain-joined hosts, local audit policy holds only until Group Policy
+    reapplies at refresh (see
+    [Group Policy processing](https://learn.microsoft.com/windows-server/identity/ad-ds/manage/group-policy/group-policy-processing)).
+    For fleets, treat the kit's local apply as the specification and pilot;
+    deliver via the artefacts above. `Test-LoggingBaseline.ps1` verifies the
+    *effective* state either way.

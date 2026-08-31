@@ -27,8 +27,10 @@ Yamato Security baselines fix that - this kit makes them **operational**:
 - **Evidence-based selection** - the
   [ATT&CK coverage mapping](mapping.md) (built on
   [OSSEM-DM](https://github.com/OTRF/OSSEM-DM)) tells you which techniques a
-  selection makes observable: the Core tier covers **282 of 362** mapped
-  Windows techniques, and the HighVolume tier raises that to **320**.
+  selection makes observable: the deliberately conservative Core tier covers
+  **152 of 362** mapped Windows techniques, and the HighVolume tier (process
+  creation + PowerShell logging) raises that to **320** - the volume decision,
+  quantified.
 - **Fleet delivery built in** - Intune remediation packs, WEF/WEC
   subscription generation, and GPO artefacts, all compiled from one
   settings table so nothing can drift.
@@ -36,7 +38,7 @@ Yamato Security baselines fix that - this kit makes them **operational**:
 ## What it targets
 
 Windows Server 2019 / 2022 / 2025 and Windows 10 / 11 workstations,
-standalone or domain joined. Version- and role-specific items are detected
+standalone or domain-joined. Version- and role-specific items are detected
 at runtime and reported NOT APPLICABLE where they don't apply.
 
 ## Privacy

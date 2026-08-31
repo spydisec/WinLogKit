@@ -108,6 +108,10 @@ foreach ($ch in $script:BaselineChannels) {
     $channelKnown[$ch.Name] = $true
     if (Test-ItemOn 'Channel' $ch.Name $ch.Tier) { $channelSelected[$ch.Name] = $true }
 }
+$regSelected = @{}
+foreach ($rs in $script:BaselineRegistrySettings) {
+    if (Test-ItemOn 'Registry' $rs.Id $rs.Tier) { $regSelected[$rs.Id] = $true }
+}
 
 # OSSEM subcategory names that differ from the kit's.
 $subcatAlias = @{
@@ -131,6 +135,19 @@ foreach ($r in $rows) {
 
     if ($r.channel -eq 'Microsoft-Windows-Sysmon/Operational') {
         $status = 'RequiresSysmon'
+    } elseif ($sub -eq '' -and $r.channel -eq 'Microsoft-Windows-PowerShell/Operational' -and "$($r.event_id)".Trim() -match '^(4103|4104|4105|4106)$') {
+        # PowerShell Operational events need their enabling registry policy,
+        # not just the channel: 4103 = module logging, 4104-4106 = script
+        # block logging (both HighVolume tier).
+        $needReg = 'ModuleLogging64'
+        if ("$($r.event_id)".Trim() -ne '4103') { $needReg = 'ScriptBlock64' }
+        if (-not $channelSelected.ContainsKey($r.channel)) {
+            $status = 'NotSelected'; $via = "Channel: $($r.channel)"
+        } elseif ($regSelected.ContainsKey($needReg)) {
+            $status = 'Observable'; $via = "Channel: $($r.channel) + Registry: $needReg"
+        } else {
+            $status = 'NotSelected'; $via = "Registry: $needReg (HighVolume tier)"
+        }
     } elseif ($sub -ne '') {
         if ($subcatSelected.ContainsKey($sub))  { $status = 'Observable'; $via = "AuditPolicy: $sub" }
         elseif ($subcatKnown.ContainsKey($sub)) { $status = 'NotSelected'; $via = "AuditPolicy: $sub" }

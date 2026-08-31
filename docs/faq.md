@@ -45,9 +45,10 @@ on one DC first.
 
 ## Windows Home edition?
 
-Works: `auditpol`, `wevtutil` and the registry are edition-independent.
-There is no local Group Policy on Home, which does not matter for the kit's
-mechanisms.
+Works - the kit's mechanisms (`auditpol`, `wevtutil`, registry) do not
+depend on Group Policy tooling, which Home lacks. The kit's own workstation
+field testing was done on Windows 11 Home: full apply, verify (all 16
+categories PASS) and rollback.
 
 ## Does a "PASS" mean I'm detecting attacks?
 

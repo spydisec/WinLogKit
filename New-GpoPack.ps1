@@ -156,4 +156,12 @@ if ($skipped.Count -gt 0) {
     $skipped | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
 }
 Write-Host 'Also not in GPO packs by design: channel sizes/enablement (startup script or Intune pack), SMB auditing (Set-Smb*Configuration), AD CS AuditFilter.' -ForegroundColor Yellow
+$totalAudit = @($script:BaselineAuditSubcategories).Count
+if ($auditCount -lt $totalAudit) {
+    Write-Host ''
+    Write-Host ("PARTIAL SELECTION: audit.csv covers {0} of {1} kit subcategories. Apply semantics for the others depend on the tool " -f $auditCount, $totalAudit) -ForegroundColor Yellow
+    Write-Host 'and existing policy (LGPO /ac and GPO application may not preserve unlisted subcategories). After applying, ALWAYS verify' -ForegroundColor Yellow
+    Write-Host 'the effective result: .\Test-LoggingBaseline.ps1 (it reads the live audit policy, not the file you applied).' -ForegroundColor Yellow
+}
+Write-Host 'Note: LGPO /t is additive - deselected registry values are NOT removed by a smaller pack. Use Enable-LoggingBaseline -Rollback or remove them deliberately.' -ForegroundColor Yellow
 exit 0

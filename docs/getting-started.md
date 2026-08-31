@@ -3,7 +3,8 @@
 ## Requirements
 
 - Windows Server 2019 / 2022 / 2025, or Windows 10 / 11
-- Windows PowerShell 5.1 (stock - PowerShell 7 also works)
+- Windows PowerShell 5.1 (stock; the kit targets 5.1 - CI additionally
+  parses everything and runs the builders/generators under PowerShell 7)
 - Local Administrator for applying and verifying (the builders and
   generators need no elevation)
 - No modules, no agents, no internet access required
