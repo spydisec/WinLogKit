@@ -88,9 +88,10 @@ wildcards with no event-level filtering:
 kit's generator emits. Two structural facts:
 
 - There is **no channel wildcard**. "All channels on the machine" cannot be
-  expressed; every channel must be listed as its own `Select` (Windows
-  caps the number of expressions per query, so an extreme channel list can
-  need splitting across subscriptions - rarely relevant at sane sizes).
+  expressed; every channel must be listed as its own `Select`. Windows
+  [limits a query to 32 expressions](https://learn.microsoft.com/windows/win32/wes/queryschema-querytype-complextype)
+  (`Select`/`Suppress` combined), so a channel list beyond that needs
+  additional `<Query>` elements or subscriptions.
 - Whole-channel forwarding makes the **source configuration the effective
   filter**, which is easy to verify ("every event in channels X, Y, Z
   present on a source = forwarded") but means volume is governed entirely
@@ -123,7 +124,9 @@ criterion is a three-way count:
 > AD group membership = registered sources = sources in state Active.
 
 Machines in the group but never registered have a broken hop (GPO not
-applied, WinRM unreachable, or the Security-log permission below).
+applied, WinRM unreachable, or the Security-log permission below) - but
+first allow the SubscriptionManager refresh interval to elapse, since a
+source does not appear until it has checked in.
 Machines registered but Inactive have not met the subscription's activity
 and heartbeat criteria - the cause can be connectivity, authentication or
 simply nothing to send, so investigate rather than assume. Name the

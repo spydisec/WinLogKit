@@ -82,8 +82,9 @@ Heartbeat
 
 **4. End-to-end tracer.** Generate a known harmless event on a **member
 server** (create and delete a test scheduled task = 4698/4699 in its
-Security log - which requires Success auditing on the *Other Object
-Access Events* subcategory, part of this kit's Core tier; confirm it
+Security log - which
+[requires Success auditing on the *Other Object Access Events* subcategory](https://learn.microsoft.com/windows/security/threat-protection/auditing/audit-other-object-access-events),
+part of this kit's Core tier; confirm it
 first or the tracer reports a false forwarding failure), then watch it
 cross each hop: source Security log -> collector ForwardedEvents ->
 workspace:
@@ -112,19 +113,21 @@ WindowsEvent
 ```
 
 **Agent presence** - a machine with its own AMA heartbeats; a
-forwarded-only source does not. Absence of a heartbeat is conclusive
-(the events can only have arrived via a collector); presence is not a
-proof of path, since an agented machine can be collected directly *and*
-forward through a subscription. Use this to find whether WEF is in play
-at all, then confirm suspected direct collection against the machine's
-own DCR associations:
+forwarded-only source does not. Neither direction is absolute proof of
+path: an agented machine can be collected directly *and* forward through
+a subscription, and a missing heartbeat can also mean a
+[broken agent or ingestion failure](https://learn.microsoft.com/azure/azure-monitor/agents/azure-monitor-agent-troubleshoot-windows-vm)
+rather than no agent. Use this to see whether WEF is likely in play, then
+confirm any suspected path against the machine's own DCR associations:
 
 ```kusto
-let agented = Heartbeat | where TimeGenerated > ago(24h) | distinct Computer;
+let agented = Heartbeat
+    | where TimeGenerated > ago(24h) and Category == "Azure Monitor Agent"
+    | distinct Computer;
 WindowsEvent
 | where TimeGenerated > ago(24h)
 | summarize Events = count(), Channels = dcount(Channel) by Computer
-| extend HasAgent = iff(Computer in (agented), "yes (direct collection possible)", "no (forwarded)")
+| extend HasAgent = iff(Computer in (agented), "heartbeat present (direct collection possible)", "no heartbeat observed (forwarding likely)")
 | order by Events desc
 ```
 
