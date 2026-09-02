@@ -11,10 +11,13 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
   wide-open queries, delivery modes, runtime-status reconciliation,
   ForwardedEvents health, the classic silent failures) and **Sentinel
   KQL** (which table forwarded events land in, the four-layer check that
-  AMA collects ForwardedEvents, and a query pack: fleet inventory,
-  agent-presence split, collector attribution via _ResourceId, a
-  silent-collector triage for collectors attached to a DCR but shipping
-  nothing, silent/never-seen sources, latency, volume attribution,
+  AMA collects ForwardedEvents, and a query pack: fleet inventory, a
+  field-tested collection-method map (Direct AMA vs WEF-via-collector
+  per source, joined on _ResourceId), a silent-collector triage for
+  collectors attached to a DCR but shipping nothing, a domain-controller
+  section covering the three DC paths (WEF -> WindowsEvent, direct
+  Security connector -> SecurityEvent, ASIM DNS -> ASimDnsActivityLogs),
+  silent/never-seen sources, latency, volume attribution,
   collection-policy fingerprinting).
 
 ### Changed
