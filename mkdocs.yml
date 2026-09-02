@@ -65,6 +65,8 @@ nav:
   - Baselines: baselines.md
   - Commands: commands.md
   - Deployment: deployment.md
+  - WEC Collector: wec.md
+  - Sentinel KQL: kql.md
   - Coverage: mapping.md
   - Reference: reference.md
   - Architecture: architecture.md

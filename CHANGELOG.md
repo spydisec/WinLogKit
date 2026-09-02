@@ -3,6 +3,24 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
+## Unreleased
+
+### Added
+- Two docs pages for the collection and SIEM end of the chain: **WEC
+  Collector** (reading an existing collector: subscription anatomy,
+  wide-open queries, delivery modes, runtime-status reconciliation,
+  ForwardedEvents health, the classic silent failures) and **Sentinel
+  KQL** (which table forwarded events land in, the four-layer check that
+  AMA collects ForwardedEvents, and a query pack: fleet inventory,
+  direct-vs-forwarded split, silent/never-seen sources, latency, volume
+  attribution, collection-policy fingerprinting).
+
+### Changed
+- Docs and CONTRIBUTING reworded so PowerShell 7 is explicitly
+  first-class: both engines are supported and CI-tested, Windows
+  PowerShell 5.1 is the compatibility floor (ships with Windows, and
+  Intune remediations execute under it), not the recommended shell.
+
 ## v0.8.0 - 2026-08-31
 
 ### Added
