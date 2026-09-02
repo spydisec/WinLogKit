@@ -8,7 +8,7 @@ safe on a production collector.
 
 Where this sits in the chain:
 
-```
+```text
 Member server                     WEC collector                      SIEM
 [audit policy + channels] --push--> [subscription -> ForwardedEvents] --agent--> [workspace]
         Gate 1                            Gate 2                        Gate 3
@@ -53,19 +53,22 @@ XML is what you keep. Command reference:
 | `<SubscriptionType>` | `SourceInitiated` (sources push to the collector over WinRM, the model that scales) or `CollectorInitiated` (the collector pulls; account-heavy, usually legacy) |
 | `<Query>` | The authoritative "what is forwarded" filter - one `<Select Path="channel">` per channel |
 | `<AllowedSourceDomainComputers>` | SDDL naming which computers may participate (normally an AD group) - the "who sends" control |
-| `<LogFile>` | Where events land on the collector, normally `ForwardedEvents` |
+| `<LogFile>` | Where events land on the collector, normally `ForwardedEvents`. This guide and the [Sentinel KQL](kql.md) page assume `ForwardedEvents`; if a subscription writes to another log, substitute that channel in every downstream step (sizing, DCR XPath) |
 | `<ConfigurationMode>` | The delivery/latency trade-off (table below) |
 | `<ContentFormat>` | `Events` (compact, recommended) or `RenderedText` (adds locale-rendered strings, inflates volume) |
 | `<ReadExistingEvents>` | Whether a newly joined source backfills existing events or starts from now |
 
 Delivery modes set the latency floor for everything downstream - no SIEM
-query can see an event before the source has batched and sent it:
+query can see an event before the source has batched and sent it. The
+values below are the documented approximate defaults (per the
+[wecutil reference](https://learn.microsoft.com/windows-server/administration/windows-commands/wecutil));
+treat them as order-of-magnitude, not guarantees:
 
-| ConfigurationMode | Batching behaviour (approximate) |
+| ConfigurationMode | Batching behaviour (approximate defaults) |
 |---|---|
 | `MinLatency` | ~30 seconds |
-| `Normal` | ~15 minute batches |
-| `MinBandwidth` | ~6 hours |
+| `Normal` | batched delivery, up to ~15 minutes |
+| `MinBandwidth` | up to ~6 hours |
 | `Custom` | Whatever `<Delivery>` specifies |
 
 ## "Wide open" queries
@@ -85,8 +88,9 @@ wildcards with no event-level filtering:
 kit's generator emits. Two structural facts:
 
 - There is **no channel wildcard**. "All channels on the machine" cannot be
-  expressed; channels must be listed (event queries cap out at 256
-  `Select` expressions, far above any sane forwarding list).
+  expressed; every channel must be listed as its own `Select` (Windows
+  caps the number of expressions per query, so an extreme channel list can
+  need splitting across subscriptions - rarely relevant at sane sizes).
 - Whole-channel forwarding makes the **source configuration the effective
   filter**, which is easy to verify ("every event in channels X, Y, Z
   present on a source = forwarded") but means volume is governed entirely
@@ -119,9 +123,11 @@ criterion is a three-way count:
 > AD group membership = registered sources = sources in state Active.
 
 Machines in the group but never registered have a broken hop (GPO not
-applied, WinRM unreachable, or the Security-log permission below). Machines
-registered but Inactive stopped sending. Name the discrepancies; do not
-just record the counts.
+applied, WinRM unreachable, or the Security-log permission below).
+Machines registered but Inactive have not met the subscription's activity
+and heartbeat criteria - the cause can be connectivity, authentication or
+simply nothing to send, so investigate rather than assume. Name the
+discrepancies; do not just record the counts.
 
 ## ForwardedEvents channel health
 
@@ -143,7 +149,7 @@ Get-WinEvent -ListLog ForwardedEvents | Select-Object RecordCount, FileSize, IsL
 
 | Symptom | Cause |
 |---|---|
-| Every channel forwards except Security, no loud error anywhere | NETWORK SERVICE cannot read the Security log on the source. Fix: add it to the **Event Log Readers** group (or grant via channel SDDL). |
+| Every channel forwards except Security, no loud error anywhere | NETWORK SERVICE cannot read the Security log on the source. Fix: add it to the **Event Log Readers** group, or grant read via the channel's SDDL where group membership alone is not honoured (both per [Microsoft's WEF guidance](https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection)). |
 | Sources registered, zero events arriving | Gate 1: the subscribed channels are not enabled/generating on the sources - verify with [`Test-LoggingBaseline.ps1`](commands.md#test-loggingbaselineps1) |
 | Some machines never register | SubscriptionManager GPO scope vs `AllowedSourceDomainComputers` mismatch, or WinRM (5985/5986) blocked |
 | Collection stops after working fine | ForwardedEvents full with non-circular retention |
@@ -161,4 +167,4 @@ Get-WinEvent -ListLog ForwardedEvents | Select-Object RecordCount, FileSize, IsL
 
 Onward: [Sentinel KQL](kql.md) covers Gate 3 - confirming the collector's
 agent ships ForwardedEvents to a workspace, and the queries that prove the
-whole chain end to end.
+whole chain end-to-end.

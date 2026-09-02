@@ -45,6 +45,11 @@ az monitor data-collection rule show --resource-group <rg> --name <dcr> \
   --query "dataSources.windowsEventLogs[].xPathQueries" -o json
 ```
 
+(Depending on CLI version the payload may nest under `properties` - if the
+query returns nothing, retry with
+`properties.dataSources.windowsEventLogs[].xPathQueries`. The portal
+equivalent is the DCR's **Data sources** blade.)
+
 Look for `ForwardedEvents!*`. Only `Security!*` / `System!*` means the DCR
 collects the collector's own logs - the classic looks-healthy failure.
 
@@ -63,9 +68,11 @@ Get-ChildItem "C:\WindowsAzure\Resources\AMADataStore.*\mcs\configchunks" -Recur
     Select-String -Pattern "ForwardedEvents" -List
 ```
 
-(Arc-enabled servers cache under `C:\Resources\Directory\AMADataStore.*`.)
-No hit after 10-15 minutes points at the association or agent
-connectivity, not the DCR definition. Agent liveness from the workspace:
+(Arc-enabled servers cache under `C:\Resources\Directory\AMADataStore`.)
+No hit after 10-15 minutes means the delivered config lacks the data
+source - the fault can sit in the DCR content, the association, or the
+agent's connectivity; work back up the layers. Agent liveness from the
+workspace:
 
 ```kusto
 Heartbeat
@@ -75,8 +82,11 @@ Heartbeat
 
 **4. End-to-end tracer.** Generate a known harmless event on a **member
 server** (create and delete a test scheduled task = 4698/4699 in its
-Security log), then watch it cross each hop: source Security log ->
-collector ForwardedEvents -> workspace:
+Security log - which requires Success auditing on the *Other Object
+Access Events* subcategory, part of this kit's Core tier; confirm it
+first or the tracer reports a false forwarding failure), then watch it
+cross each hop: source Security log -> collector ForwardedEvents ->
+workspace:
 
 ```kusto
 WindowsEvent
@@ -101,16 +111,20 @@ WindowsEvent
 | order by Events desc
 ```
 
-**Direct vs forwarded** - a machine with its own AMA heartbeats; a
-forwarded-only source does not. This splits the inventory into collection
-paths and tells you whether WEF is in play at all:
+**Agent presence** - a machine with its own AMA heartbeats; a
+forwarded-only source does not. Absence of a heartbeat is conclusive
+(the events can only have arrived via a collector); presence is not a
+proof of path, since an agented machine can be collected directly *and*
+forward through a subscription. Use this to find whether WEF is in play
+at all, then confirm suspected direct collection against the machine's
+own DCR associations:
 
 ```kusto
 let agented = Heartbeat | where TimeGenerated > ago(24h) | distinct Computer;
 WindowsEvent
 | where TimeGenerated > ago(24h)
 | summarize Events = count(), Channels = dcount(Channel) by Computer
-| extend Path = iff(Computer in (agented), "direct (AMA on box)", "forwarded (no agent)")
+| extend HasAgent = iff(Computer in (agented), "yes (direct collection possible)", "no (forwarded)")
 | order by Events desc
 ```
 
@@ -149,16 +163,21 @@ WindowsEvent
 | order by LastSeen asc
 ```
 
-**Never-seen sources** - diff the expected fleet against reality:
+**Never-seen sources** - diff the expected fleet against reality.
+`set_difference` compares exact strings and `Computer` usually carries the
+FQDN, so list the expected fleet as FQDNs (or normalise both sides):
 
 ```kusto
-let expected = dynamic(["server1", "server2", "server3"]);
+let expected = dynamic(["server1.corp.example", "server2.corp.example"]);
 let seen = toscalar(WindowsEvent | where TimeGenerated > ago(24h) | summarize make_set(Computer));
 print missing = set_difference(expected, seen)
 ```
 
 **Ingestion latency** - against whatever target applies, remembering the
-subscription delivery mode sets the floor before Azure is involved:
+subscription delivery mode sets the floor before Azure is involved. One
+caveat: if the DCR sets `UseTimeReceivedForForwardedEvents`, AMA stamps
+`TimeGenerated` with the collector's receipt time, so this measures only
+the post-receipt hop; leave that setting off to measure source-to-table:
 
 ```kusto
 WindowsEvent
@@ -174,13 +193,13 @@ WindowsEvent
 
 ```kusto
 WindowsEvent
-| where TimeGenerated > ago(7d)
+| where TimeGenerated > ago(7d) and _IsBillable == true
 | summarize GB = sum(_BilledSize) / 1e9 by bin(TimeGenerated, 1d)
 ```
 
 ```kusto
 WindowsEvent
-| where TimeGenerated > ago(24h)
+| where TimeGenerated > ago(24h) and _IsBillable == true
 | summarize GB = sum(_BilledSize) / 1e9 by Computer, Channel
 | order by GB desc
 ```
@@ -207,5 +226,6 @@ none of the lists comes from a status page:
 2. the collector's registered Active sources (`wecutil gr`),
 3. distinct `Computer` values in `WindowsEvent` over 24 hours.
 
-Equal counts and matching names = the chain works. Every gap has exactly
-one broken hop to find, and the queries above locate which.
+Equal counts and matching names show the chain is delivering for those
+machines. Every gap has at least one broken hop behind it, and the
+queries above narrow down which.

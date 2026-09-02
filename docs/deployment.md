@@ -80,7 +80,7 @@ once you have observed real volume.
 Beyond generating the subscription: the [WEC Collector](wec.md) page covers
 reading and verifying an existing collector (subscription anatomy, runtime
 status, the silent failures), and [Sentinel KQL](kql.md) covers the onward
-hop to a SIEM workspace and the queries that prove the chain end to end.
+hop to a SIEM workspace and the queries that prove the chain end-to-end.
 
 ## GPO (domain-joined fleets)
 

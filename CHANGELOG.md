@@ -19,7 +19,8 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 - Docs and CONTRIBUTING reworded so PowerShell 7 is explicitly
   first-class: both engines are supported and CI-tested, Windows
   PowerShell 5.1 is the compatibility floor (ships with Windows, and
-  Intune remediations execute under it), not the recommended shell.
+  [Intune remediations execute under Windows PowerShell](https://learn.microsoft.com/intune/intune-service/fundamentals/remediations)),
+  not the recommended shell.
 
 ## v0.8.0 - 2026-08-31
 
