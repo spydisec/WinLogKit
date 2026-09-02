@@ -17,22 +17,44 @@ configures: a
 [Data Collection Rule](https://learn.microsoft.com/azure/azure-monitor/agents/data-collection-windows-events)
 whose XPath list reads the `ForwardedEvents` channel.
 
-Three things people trip over:
+An analogy that holds up well: the workspace is a filing cabinet and each
+table is a drawer.
 
-- **`SecurityEvent` is a different table.** The *Windows Security Events
-  via AMA* connector reads a machine's **own** Security channel into
-  `SecurityEvent`. Pointed at a collector, it ingests the collector's own
-  logs - not the forwarded fleet. For WEF you need the DCR reading
-  `ForwardedEvents!*`. A detection written only against `SecurityEvent`
-  will not see WEF-collected events (ASIM parsers union both tables -
-  see [normalisation](https://learn.microsoft.com/azure/sentinel/normalization)).
-- **`Computer` is the original source**, not the collector. Forwarded
-  events keep the generating machine's name, which is what makes fleet
-  verification possible from the workspace end.
-- **`Channel` is the original channel** (e.g. `Security`), not
-  `ForwardedEvents` - you cannot filter on the transport. The payload sits
-  in `EventData` as a dynamic bag (`EventData.CommandLine`), unlike
-  `SecurityEvent`'s flattened columns.
+- **Two drawers look similar.** `SecurityEvent` is a *different* drawer
+  with its own clerk: the *Windows Security Events via AMA* connector
+  files a machine's **own** Security log into `SecurityEvent`. Put that
+  clerk on a collector and it files the collector's own activity - the
+  thousands of forwarded events sitting in its ForwardedEvents log are
+  ignored. Practical consequence: a detection that only searches
+  `SecurityEvent` never sees anything that travelled via WEF (ASIM
+  parsers union both drawers - see
+  [normalisation](https://learn.microsoft.com/azure/sentinel/normalization)).
+- **Every document keeps its original letterhead.** Everything physically
+  passed through the collector, but each event still records the machine
+  that created it: `Computer` is the **original source**, not the
+  collector. That is what makes fleet verification possible from the
+  workspace end - you can list exactly which servers are represented
+  without logging into anything.
+- **The envelope is thrown away; the letter is kept.** ForwardedEvents
+  was only the transport envelope. Once filed, each event shows its
+  *original* log name (`Channel` = `Security` and so on), so "everything
+  that came via forwarding" cannot be filtered for directly - it is
+  inferred from the `Computer` names instead. And the event's details are
+  not split into neat named columns the way `SecurityEvent`'s are; they
+  sit bundled in one `EventData` field that queries unpack
+  (`EventData.CommandLine`).
+- **There is also a stamp saying which clerk filed it.** Every row
+  carries `_ResourceId` - the Azure resource of the machine whose agent
+  shipped the row, i.e. the **collector** - while `Computer` stays the
+  end device. That pair (collector stamp + original letterhead) powers
+  the collector-attribution queries below.
+
+One real-world wrinkle: a single DCR can carry **two data sources** - a
+Custom XPath one reading `ForwardedEvents!*` (those rows go to
+`WindowsEvent`) *and* a Basic one collecting the collector's own
+Application/Security/System logs (those rows go to the `Event` table).
+Finding the collectors' own noise in `Event` rather than `WindowsEvent`
+is the second source doing exactly what its checkboxes say, not a fault.
 
 ## Confirming AMA actually collects ForwardedEvents
 
@@ -130,6 +152,100 @@ WindowsEvent
 | extend HasAgent = iff(Computer in (agented), "heartbeat present (direct collection possible)", "no heartbeat observed (forwarding likely)")
 | order by Events desc
 ```
+
+**Collector attribution: which collector receives from which end
+devices.** `_ResourceId` names the machine whose agent shipped the row
+(the collector); `Computer` is the end device - one query maps the whole
+left half of the pipeline. There is no "DCR name" column in the table, so
+scope by the machines listed on the DCR's **Resources** tab (add
+`| where Collector in ("wec01", "wec02", ...)` when other machines also
+write to `WindowsEvent`):
+
+```kusto
+WindowsEvent
+| where TimeGenerated > ago(24h)
+| extend Collector = tostring(split(_ResourceId, "/")[-1])
+| summarize Events = count(), Channels = dcount(Channel), LastSeen = max(TimeGenerated) by Collector, Computer
+| order by Collector asc, Events desc
+```
+
+Per-collector rollup - how balanced the collectors are, and whether any
+attached collector ships nothing:
+
+```kusto
+WindowsEvent
+| where TimeGenerated > ago(24h)
+| extend Collector = tostring(split(_ResourceId, "/")[-1])
+| summarize Events = count(), EndDevices = dcount(Computer), LastSeen = max(TimeGenerated) by Collector
+| order by Events desc
+```
+
+And if the DCR also carries a Basic data source for the collectors' own
+Application/Security/System logs, those rows are in the `Event` table:
+
+```kusto
+Event
+| where TimeGenerated > ago(24h)
+| extend Collector = tostring(split(_ResourceId, "/")[-1])
+| summarize Events = count() by Collector, EventLog
+| order by Collector asc, Events desc
+```
+
+**Silent collectors: attached to the DCR but forwarding nothing.** The
+rollup above only shows collectors that shipped at least one row - a dead
+collector is invisible in it. This version starts from the machines that
+*should* be shipping (their AMA heartbeats) and left-joins what actually
+arrived, so the silent ones surface with zero counts. Replace the list
+with the names from the DCR's Resources tab:
+
+```kusto
+let window = 24h;
+let expectedCollectors = dynamic(["wec01", "wec02", "wec03", "wec04", "wec05"]);
+let shipping = WindowsEvent
+    | where TimeGenerated > ago(window)
+    | extend Collector = tostring(split(_ResourceId, "/")[-1])
+    | summarize Events = count(), EndDevices = dcount(Computer), LastSeen = max(TimeGenerated) by Collector;
+let alive = Heartbeat
+    | where TimeGenerated > ago(window) and Category == "Azure Monitor Agent"
+    | summarize LastHeartbeat = max(TimeGenerated) by Collector = Computer;
+print Collector = expectedCollectors
+| mv-expand Collector to typeof(string)
+| join kind=leftouter alive on Collector
+| join kind=leftouter shipping on Collector
+| project Collector, LastHeartbeat, Events = coalesce(Events, 0), EndDevices = coalesce(EndDevices, 0), LastSeen
+| order by Events asc
+```
+
+(Heartbeat `Computer` values may be short names or FQDNs depending on the
+environment - match the list to whichever form the table returns.)
+
+Reading the result rows for a silent collector, in order:
+
+1. **No heartbeat either** - the machine or its agent is down; nothing
+   about WEF yet. Start with the
+   [agent troubleshooting](https://learn.microsoft.com/azure/azure-monitor/agents/azure-monitor-agent-troubleshoot-windows-vm).
+2. **Heartbeat yes, events zero** - the agent is fine; the question
+   becomes *which side of the collector is broken*. On that collector,
+   check whether ForwardedEvents itself has recent events:
+
+   ```powershell
+   Get-WinEvent -LogName ForwardedEvents -MaxEvents 5 | Select-Object TimeCreated, MachineName, Id
+   ```
+
+    - **ForwardedEvents has recent events** -> the WEF half works; the
+      workspace hop is broken *for this machine*. Verify the DCR
+      association actually includes it (a five-collector estate where
+      only three were ever associated looks exactly like this) and grep
+      the local config cache for `ForwardedEvents` as in the four-layer
+      check above.
+    - **ForwardedEvents is empty or stale** -> the WEF half is broken:
+      run `wecutil es` / `wecutil gr` on that collector. No subscriptions
+      = it was never set up; subscriptions with zero or Inactive sources
+      = work the [WEC page's](wec.md) reconciliation and silent-failures
+      table (GPO scope, WinRM, the Security-log permission). It is
+      entirely possible for some collectors in an estate to have
+      subscriptions and others none - each collector's subscription store
+      is local to it.
 
 **Channel and event mix** - compare against the subscription query and the
 source baseline (the [Reference page](reference.md) lists what each kit

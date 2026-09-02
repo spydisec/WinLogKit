@@ -12,8 +12,10 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
   ForwardedEvents health, the classic silent failures) and **Sentinel
   KQL** (which table forwarded events land in, the four-layer check that
   AMA collects ForwardedEvents, and a query pack: fleet inventory,
-  direct-vs-forwarded split, silent/never-seen sources, latency, volume
-  attribution, collection-policy fingerprinting).
+  agent-presence split, collector attribution via _ResourceId, a
+  silent-collector triage for collectors attached to a DCR but shipping
+  nothing, silent/never-seen sources, latency, volume attribution,
+  collection-policy fingerprinting).
 
 ### Changed
 - Docs and CONTRIBUTING reworded so PowerShell 7 is explicitly
