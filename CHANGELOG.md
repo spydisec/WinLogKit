@@ -3,7 +3,7 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
-## Unreleased
+## v0.9.0 - 2026-09-02
 
 ### Added
 - Two docs pages for the collection and SIEM end of the chain: **WEC
