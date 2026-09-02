@@ -44,10 +44,14 @@ table is a drawer.
   sit bundled in one `EventData` field that queries unpack
   (`EventData.CommandLine`).
 - **There is also a stamp saying which clerk filed it.** Every row
-  carries `_ResourceId` - the Azure resource of the machine whose agent
-  shipped the row, i.e. the **collector** - while `Computer` stays the
-  end device. That pair (collector stamp + original letterhead) powers
-  the collector-attribution queries below.
+  carries
+  [`_ResourceId`](https://learn.microsoft.com/azure/azure-monitor/logs/log-standard-columns#_resourceid)
+  - the Azure resource the record is associated with, which for
+  agent-collected data is the machine running the agent, i.e. the
+  **collector** - while `Computer` stays the end device. That pair
+  (collector stamp + original letterhead) powers the
+  collector-attribution queries below; sanity-check the mapping in your
+  own workspace by comparing against `Heartbeat._ResourceId`.
 
 One real-world wrinkle: a single DCR can carry **two data sources** - a
 Custom XPath one reading `ForwardedEvents!*` (those rows go to
@@ -165,18 +169,23 @@ write to `WindowsEvent`):
 WindowsEvent
 | where TimeGenerated > ago(24h)
 | extend Collector = tostring(split(_ResourceId, "/")[-1])
-| summarize Events = count(), Channels = dcount(Channel), LastSeen = max(TimeGenerated) by Collector, Computer
+| summarize Events = count(), Channels = dcount(Channel), LastIngested = max(ingestion_time()) by Collector, Computer
 | order by Collector asc, Events desc
 ```
 
-Per-collector rollup - how balanced the collectors are, and whether any
-attached collector ships nothing:
+(`TimeGenerated` is when the event happened on the source;
+`ingestion_time()` is when the workspace received it - use the latter for
+delivery-freshness claims.)
+
+Per-collector rollup of observed events - how balanced the shipping
+collectors are (a collector that shipped nothing cannot appear here; the
+next section finds those):
 
 ```kusto
 WindowsEvent
 | where TimeGenerated > ago(24h)
 | extend Collector = tostring(split(_ResourceId, "/")[-1])
-| summarize Events = count(), EndDevices = dcount(Computer), LastSeen = max(TimeGenerated) by Collector
+| summarize Events = count(), EndDevices = dcount(Computer), LastIngested = max(ingestion_time()) by Collector
 | order by Events desc
 ```
 
@@ -198,34 +207,42 @@ collector is invisible in it. This version starts from the machines that
 arrived, so the silent ones surface with zero counts. Replace the list
 with the names from the DCR's Resources tab:
 
+Both sides derive the collector name from `_ResourceId` (present on
+[both tables](https://learn.microsoft.com/azure/azure-monitor/logs/log-standard-columns#_resourceid))
+so the join key cannot disagree on short name vs FQDN; only the
+`expectedCollectors` list needs to match the resource names from the
+Resources tab:
+
 ```kusto
 let window = 24h;
 let expectedCollectors = dynamic(["wec01", "wec02", "wec03", "wec04", "wec05"]);
 let shipping = WindowsEvent
     | where TimeGenerated > ago(window)
     | extend Collector = tostring(split(_ResourceId, "/")[-1])
-    | summarize Events = count(), EndDevices = dcount(Computer), LastSeen = max(TimeGenerated) by Collector;
+    | summarize Events = count(), EndDevices = dcount(Computer), LastIngested = max(ingestion_time()) by Collector;
 let alive = Heartbeat
     | where TimeGenerated > ago(window) and Category == "Azure Monitor Agent"
-    | summarize LastHeartbeat = max(TimeGenerated) by Collector = Computer;
+    | extend Collector = tostring(split(_ResourceId, "/")[-1])
+    | summarize LastHeartbeat = max(TimeGenerated) by Collector;
 print Collector = expectedCollectors
 | mv-expand Collector to typeof(string)
 | join kind=leftouter alive on Collector
 | join kind=leftouter shipping on Collector
-| project Collector, LastHeartbeat, Events = coalesce(Events, 0), EndDevices = coalesce(EndDevices, 0), LastSeen
+| project Collector, LastHeartbeat, Events = coalesce(Events, 0), EndDevices = coalesce(EndDevices, 0), LastIngested
 | order by Events asc
 ```
 
-(Heartbeat `Computer` values may be short names or FQDNs depending on the
-environment - match the list to whichever form the table returns.)
+Reading the result rows for a silent collector, in order (heartbeat
+presence or absence here means *within this query's window and filters* -
+it is evidence, not proof, of a machine's state):
 
-Reading the result rows for a silent collector, in order:
-
-1. **No heartbeat either** - the machine or its agent is down; nothing
-   about WEF yet. Start with the
+1. **No matching heartbeat** - the machine, its agent, or heartbeat
+   ingestion is not working (or the name in `expectedCollectors` does not
+   match the resource name); nothing about WEF yet. Start with the
    [agent troubleshooting](https://learn.microsoft.com/azure/azure-monitor/agents/azure-monitor-agent-troubleshoot-windows-vm).
-2. **Heartbeat yes, events zero** - the agent is fine; the question
-   becomes *which side of the collector is broken*. On that collector,
+2. **Heartbeat present, events zero** - the agent reports in but ships no
+   forwarded events; the question becomes *which side of the collector is
+   broken*. On that collector,
    check whether ForwardedEvents itself has recent events:
 
    ```powershell
