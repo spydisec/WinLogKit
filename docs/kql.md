@@ -17,22 +17,48 @@ configures: a
 [Data Collection Rule](https://learn.microsoft.com/azure/azure-monitor/agents/data-collection-windows-events)
 whose XPath list reads the `ForwardedEvents` channel.
 
-Three things people trip over:
+An analogy that holds up well: the workspace is a filing cabinet and each
+table is a drawer.
 
-- **`SecurityEvent` is a different table.** The *Windows Security Events
-  via AMA* connector reads a machine's **own** Security channel into
-  `SecurityEvent`. Pointed at a collector, it ingests the collector's own
-  logs - not the forwarded fleet. For WEF you need the DCR reading
-  `ForwardedEvents!*`. A detection written only against `SecurityEvent`
-  will not see WEF-collected events (ASIM parsers union both tables -
-  see [normalisation](https://learn.microsoft.com/azure/sentinel/normalization)).
-- **`Computer` is the original source**, not the collector. Forwarded
-  events keep the generating machine's name, which is what makes fleet
-  verification possible from the workspace end.
-- **`Channel` is the original channel** (e.g. `Security`), not
-  `ForwardedEvents` - you cannot filter on the transport. The payload sits
-  in `EventData` as a dynamic bag (`EventData.CommandLine`), unlike
-  `SecurityEvent`'s flattened columns.
+- **Two drawers look similar.** `SecurityEvent` is a *different* drawer
+  with its own clerk: the *Windows Security Events via AMA* connector
+  files a machine's **own** Security log into `SecurityEvent`. Put that
+  clerk on a collector and it files the collector's own activity - the
+  thousands of forwarded events sitting in its ForwardedEvents log are
+  ignored. Practical consequence: a detection that only searches
+  `SecurityEvent` never sees anything that travelled via WEF (ASIM
+  parsers union both drawers - see
+  [normalisation](https://learn.microsoft.com/azure/sentinel/normalization)).
+- **Every document keeps its original letterhead.** Everything physically
+  passed through the collector, but each event still records the machine
+  that created it: `Computer` is the **original source**, not the
+  collector. That is what makes fleet verification possible from the
+  workspace end - you can list exactly which servers are represented
+  without logging into anything.
+- **The envelope is thrown away; the letter is kept.** ForwardedEvents
+  was only the transport envelope. Once filed, each event shows its
+  *original* log name (`Channel` = `Security` and so on), so "everything
+  that came via forwarding" cannot be filtered for directly - it is
+  inferred from the `Computer` names instead. And the event's details are
+  not split into neat named columns the way `SecurityEvent`'s are; they
+  sit bundled in one `EventData` field that queries unpack
+  (`EventData.CommandLine`).
+- **There is also a stamp saying which clerk filed it.** Every row
+  carries
+  [`_ResourceId`](https://learn.microsoft.com/azure/azure-monitor/logs/log-standard-columns#_resourceid)
+  - the Azure resource the record is associated with, which for
+  agent-collected data is the machine running the agent, i.e. the
+  **collector** - while `Computer` stays the end device. That pair
+  (collector stamp + original letterhead) powers the
+  collector-attribution queries below; sanity-check the mapping in your
+  own workspace by comparing against `Heartbeat._ResourceId`.
+
+One real-world wrinkle: a single DCR can carry **two data sources** - a
+Custom XPath one reading `ForwardedEvents!*` (those rows go to
+`WindowsEvent`) *and* a Basic one collecting the collector's own
+Application/Security/System logs (those rows go to the `Event` table).
+Finding the collectors' own noise in `Event` rather than `WindowsEvent`
+is the second source doing exactly what its checkboxes say, not a fault.
 
 ## Confirming AMA actually collects ForwardedEvents
 
@@ -112,24 +138,150 @@ WindowsEvent
 | order by Events desc
 ```
 
-**Agent presence** - a machine with its own AMA heartbeats; a
-forwarded-only source does not. Neither direction is absolute proof of
-path: an agented machine can be collected directly *and* forward through
-a subscription, and a missing heartbeat can also mean a
-[broken agent or ingestion failure](https://learn.microsoft.com/azure/azure-monitor/agents/azure-monitor-agent-troubleshoot-windows-vm)
-rather than no agent. Use this to see whether WEF is likely in play, then
-confirm any suspected path against the machine's own DCR associations:
+**Collection method map** - for every source, *how* its events reached
+the workspace: direct AMA on the machine itself, or WEF via a named
+collector. The row's `_ResourceId` is the machine whose agent shipped it,
+so when the source's own name matches that resource, the machine shipped
+its own events (direct); when it differs, the events rode a subscription
+through that collector. Joining Heartbeat on the lowercased full
+`_ResourceId` (never on computer names, whose short/FQDN forms differ
+between tables) adds each shipping agent's health. Field-tested against a
+mixed direct-and-forwarded estate:
 
 ```kusto
-let agented = Heartbeat
-    | where TimeGenerated > ago(24h) and Category == "Azure Monitor Agent"
-    | distinct Computer;
+let Lookback = 24h;
+let ActiveAgents =
+    Heartbeat
+    | where TimeGenerated > ago(Lookback) and Category == "Azure Monitor Agent"
+    | extend AgentResourceId = tolower(_ResourceId)
+    | summarize arg_max(TimeGenerated, Version, OSType) by AgentResourceId
+    | project AgentResourceId, LastHeartbeat = TimeGenerated, AgentVersion = Version, OSType;
 WindowsEvent
-| where TimeGenerated > ago(24h)
-| summarize Events = count(), Channels = dcount(Channel) by Computer
-| extend HasAgent = iff(Computer in (agented), "heartbeat present (direct collection possible)", "no heartbeat observed (forwarding likely)")
+| where TimeGenerated > ago(Lookback)
+| extend SourceComputer = tostring(Computer)
+| extend SourceShortName = tolower(tostring(split(Computer, ".")[0]))
+| extend AgentResourceId = tolower(tostring(_ResourceId))
+| extend Collector = extract(@"([^/]+)$", 1, AgentResourceId)
+| extend CollectorShortName = tolower(tostring(split(Collector, ".")[0]))
+| summarize
+    Events = count(),
+    Channels = dcount(Channel),
+    FirstEvent = min(TimeGenerated),
+    LastEvent = max(TimeGenerated)
+    by SourceComputer, SourceShortName, Collector, CollectorShortName, AgentResourceId
+| join kind=leftouter ActiveAgents on AgentResourceId
+| extend CollectionMethod = case(
+    isempty(AgentResourceId), "Unknown - Resource ID unavailable",
+    SourceShortName == CollectorShortName, "Direct AMA",
+    strcat("WEF via collector: ", Collector))
+| extend CollectorHeartbeatStatus =
+    iff(isnotempty(LastHeartbeat), "Active", "No heartbeat in last 24h")
+| project
+    SourceComputer, CollectionMethod, Collector, CollectorHeartbeatStatus,
+    LastHeartbeat, AgentVersion, Events, Channels, FirstEvent, LastEvent
+| order by CollectionMethod asc, Events desc
+```
+
+One row per source, and the `CollectionMethod` column answers the
+question directly; `CollectorHeartbeatStatus` flags a shipping agent that
+has since gone quiet. (Absence of a heartbeat is evidence within the
+window, not proof the machine is down - see the
+[agent troubleshooting](https://learn.microsoft.com/azure/azure-monitor/agents/azure-monitor-agent-troubleshoot-windows-vm).)
+
+**Per-collector rollup of observed events** - how balanced the shipping
+collectors are. There is no "DCR name" column in the table, so scope by
+the machines listed on the DCR's **Resources** tab (add
+`| where Collector in ("wec01", "wec02", ...)` when other machines also
+write to `WindowsEvent`). `TimeGenerated` is when an event happened on
+the source; `ingestion_time()` is when the workspace received it - this
+query windows and reports on the latter, since delivery freshness is the
+claim being made
+([standard columns](https://learn.microsoft.com/azure/azure-monitor/logs/log-standard-columns)).
+A collector that shipped nothing cannot appear here; the next section
+finds those:
+
+```kusto
+WindowsEvent
+| where ingestion_time() > ago(24h)
+| extend Collector = tolower(tostring(split(_ResourceId, "/")[-1]))
+| summarize Events = count(), EndDevices = dcount(Computer), LastIngested = max(ingestion_time()) by Collector
 | order by Events desc
 ```
+
+And if the DCR also carries a Basic data source for the collectors' own
+Application/Security/System logs, those rows are in the `Event` table:
+
+```kusto
+Event
+| where TimeGenerated > ago(24h)
+| extend Collector = tolower(tostring(split(_ResourceId, "/")[-1]))
+| summarize Events = count() by Collector, EventLog
+| order by Collector asc, Events desc
+```
+
+**Silent collectors: attached to the DCR but forwarding nothing.** The
+rollup above only shows collectors that shipped at least one row - a dead
+collector is invisible in it. This version starts from the machines that
+*should* be shipping (their AMA heartbeats) and left-joins what actually
+arrived, so the silent ones surface with zero counts. Replace the list
+with the names from the DCR's Resources tab:
+
+Both sides derive the collector name from `_ResourceId` (present on
+[both tables](https://learn.microsoft.com/azure/azure-monitor/logs/log-standard-columns#_resourceid))
+so the join key cannot disagree on short name vs FQDN; only the
+`expectedCollectors` list needs to match the resource names from the
+Resources tab (lowercase, to match the `tolower` normalisation):
+
+```kusto
+let window = 24h;
+let expectedCollectors = dynamic(["wec01", "wec02", "wec03", "wec04", "wec05"]);
+let shipping = WindowsEvent
+    | where ingestion_time() > ago(window)
+    | extend Collector = tolower(tostring(split(_ResourceId, "/")[-1]))
+    | summarize Events = count(), EndDevices = dcount(Computer), LastIngested = max(ingestion_time()) by Collector;
+let alive = Heartbeat
+    | where TimeGenerated > ago(window) and Category == "Azure Monitor Agent"
+    | extend Collector = tolower(tostring(split(_ResourceId, "/")[-1]))
+    | summarize LastHeartbeat = max(TimeGenerated) by Collector;
+print Collector = expectedCollectors
+| mv-expand Collector to typeof(string)
+| join kind=leftouter alive on Collector
+| join kind=leftouter shipping on Collector
+| project Collector, LastHeartbeat, Events = coalesce(Events, 0), EndDevices = coalesce(EndDevices, 0), LastIngested
+| order by Events asc
+```
+
+Reading the result rows for a silent collector, in order (heartbeat
+presence or absence here means *within this query's window and filters* -
+it is evidence, not proof, of a machine's state):
+
+1. **No matching heartbeat** - the machine, its agent, or heartbeat
+   ingestion is not working (or the name in `expectedCollectors` does not
+   match the resource name); nothing about WEF yet. Start with the
+   [agent troubleshooting](https://learn.microsoft.com/azure/azure-monitor/agents/azure-monitor-agent-troubleshoot-windows-vm).
+2. **Heartbeat present, events zero** - the agent reports in but ships no
+   forwarded events; the question becomes *which side of the collector is
+   broken*. On that collector,
+   check whether ForwardedEvents itself has recent events:
+
+   ```powershell
+   Get-WinEvent -LogName ForwardedEvents -MaxEvents 5 | Select-Object TimeCreated, MachineName, Id
+   ```
+
+    - **ForwardedEvents has recent events** -> the WEF half works; the
+      workspace hop is broken *for this machine*. Verify the DCR
+      association actually includes it (a five-collector estate where
+      only three were ever associated looks exactly like this) and grep
+      the local config cache for `ForwardedEvents` as in the four-layer
+      check above.
+    - **ForwardedEvents is empty or stale** -> the WEF half is broken:
+      run `wecutil es` / `wecutil gr` on that collector. No subscriptions
+      = it was never set up; subscriptions with zero or Inactive sources
+      = work the [WEC page's](wec.md) reconciliation and silent-failures
+      table (GPO scope, WinRM, the Security-log permission). It is
+      entirely possible for some collectors in an estate to have
+      subscriptions and others none - each collector's subscription store
+      is local to it.
 
 **Channel and event mix** - compare against the subscription query and the
 source baseline (the [Reference page](reference.md) lists what each kit
@@ -219,6 +371,72 @@ WindowsEvent
 | project TimeGenerated, Computer, NewProcess, CmdLine
 | take 20
 ```
+
+## Domain controllers: which path are they on?
+
+DCs are usually the highest-value sources and often the messiest to
+trace, because one DC's telemetry can arrive over **three separate
+paths** into **three separate tables**:
+
+| DC telemetry | Path | Table |
+|---|---|---|
+| Security / directory events via WEF | DC -> collector -> AMA | `WindowsEvent` |
+| Security events via direct AMA (the [Security Events connector](https://learn.microsoft.com/azure/sentinel/connect-services-windows-based) on the DC itself) | DC -> AMA | `SecurityEvent` |
+| DNS server activity (the [ASIM DNS via AMA connector](https://learn.microsoft.com/azure/sentinel/dns-normalization-schema)) | DC -> AMA | `ASimDnsActivityLogs` |
+
+The DNS path can never ride WEF - that connector's DCR runs on the DNS
+server (typically the DCs) itself - so DNS rows are always evidence of a
+working *direct* agent on that DC.
+
+Which tables each DC is actually landing in (short names, lowercase):
+
+```kusto
+let DCs = dynamic(["dc01", "dc02"]);
+union isfuzzy=true
+    (WindowsEvent        | where TimeGenerated > ago(24h) | extend Table = "WindowsEvent",        Host = tolower(tostring(split(Computer, ".")[0]))),
+    (SecurityEvent       | where TimeGenerated > ago(24h) | extend Table = "SecurityEvent",       Host = tolower(tostring(split(Computer, ".")[0]))),
+    (ASimDnsActivityLogs | where TimeGenerated > ago(24h) | extend Table = "ASimDnsActivityLogs", Host = tolower(tostring(split(coalesce(DvcHostname, Dvc), ".")[0])))
+| where Host in (DCs)
+| summarize Events = count(), LastIngested = max(ingestion_time()) by Host, Table
+| order by Host asc, Table asc
+```
+
+A DC missing a row for an expected table means **no matching rows were
+observed in the window** - strong evidence, not proof, that the path is
+broken: the path may be deliberately unconfigured for that DC, or a
+[DCR XPath filter](https://learn.microsoft.com/azure/azure-monitor/vm/data-collection-windows-events)
+may exclude the events. Interpret against the intended design, then
+confirm with the tracer-event and configuration checks above before
+declaring it broken. For the `WindowsEvent` rows, *how* each DC arrives
+(WEF via which collector, or direct) is the collection method map above -
+insert `| where SourceShortName in (DCs)` before its `project`.
+
+(`Host` in the DNS leg prefers `DvcHostname` and falls back to `Dvc`,
+which per the
+[ASIM device schema](https://learn.microsoft.com/azure/sentinel/normalization-entity-device)
+can also carry an IP or device ID - rows where the fallback is not a
+hostname will not match the `DCs` list.)
+
+And which machines are shipping DNS activity at all (field-tested; the
+resource ID also says whether each is an Arc-enabled server or an Azure
+VM):
+
+```kusto
+ASimDnsActivityLogs
+| where TimeGenerated > ago(24h)
+| summarize Events = count(), LastIngested = max(ingestion_time()) by _ResourceId
+| extend Machine = tolower(tostring(split(trim_end(@"/", _ResourceId), "/")[-1]))
+| extend HostType = case(
+    _ResourceId has "/microsoft.hybridcompute/machines/", "Arc-enabled server",
+    _ResourceId has "/microsoft.compute/virtualmachines/", "Azure VM",
+    "Other")
+| project Machine, HostType, Events, LastIngested, _ResourceId
+| order by Machine asc
+```
+
+An on-prem DC expected here but absent shipped no matching DNS rows in
+the window - triage it like any silent direct-AMA machine (heartbeat,
+DCR association, config cache), not like a WEF problem.
 
 ## The reconciliation that matters
 
