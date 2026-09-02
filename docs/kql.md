@@ -152,12 +152,10 @@ mixed direct-and-forwarded estate:
 let Lookback = 24h;
 let ActiveAgents =
     Heartbeat
-    | where TimeGenerated > ago(Lookback)
-    | summarize
-        LastHeartbeat = max(TimeGenerated),
-        AgentVersion = any(Version),
-        OSType = any(OSType)
-        by AgentResourceId = tolower(_ResourceId);
+    | where TimeGenerated > ago(Lookback) and Category == "Azure Monitor Agent"
+    | extend AgentResourceId = tolower(_ResourceId)
+    | summarize arg_max(TimeGenerated, Version, OSType) by AgentResourceId
+    | project AgentResourceId, LastHeartbeat = TimeGenerated, AgentVersion = Version, OSType;
 WindowsEvent
 | where TimeGenerated > ago(Lookback)
 | extend SourceComputer = tostring(Computer)
@@ -195,13 +193,16 @@ collectors are. There is no "DCR name" column in the table, so scope by
 the machines listed on the DCR's **Resources** tab (add
 `| where Collector in ("wec01", "wec02", ...)` when other machines also
 write to `WindowsEvent`). `TimeGenerated` is when an event happened on
-the source; `ingestion_time()` is when the workspace received it - use
-the latter for delivery-freshness claims. A collector that shipped
-nothing cannot appear here; the next section finds those:
+the source; `ingestion_time()` is when the workspace received it - this
+query windows and reports on the latter, since delivery freshness is the
+claim being made
+([standard columns](https://learn.microsoft.com/azure/azure-monitor/logs/log-standard-columns)).
+A collector that shipped nothing cannot appear here; the next section
+finds those:
 
 ```kusto
 WindowsEvent
-| where TimeGenerated > ago(24h)
+| where ingestion_time() > ago(24h)
 | extend Collector = tolower(tostring(split(_ResourceId, "/")[-1]))
 | summarize Events = count(), EndDevices = dcount(Computer), LastIngested = max(ingestion_time()) by Collector
 | order by Events desc
@@ -235,7 +236,7 @@ Resources tab (lowercase, to match the `tolower` normalisation):
 let window = 24h;
 let expectedCollectors = dynamic(["wec01", "wec02", "wec03", "wec04", "wec05"]);
 let shipping = WindowsEvent
-    | where TimeGenerated > ago(window)
+    | where ingestion_time() > ago(window)
     | extend Collector = tolower(tostring(split(_ResourceId, "/")[-1]))
     | summarize Events = count(), EndDevices = dcount(Computer), LastIngested = max(ingestion_time()) by Collector;
 let alive = Heartbeat
@@ -394,16 +395,27 @@ let DCs = dynamic(["dc01", "dc02"]);
 union isfuzzy=true
     (WindowsEvent        | where TimeGenerated > ago(24h) | extend Table = "WindowsEvent",        Host = tolower(tostring(split(Computer, ".")[0]))),
     (SecurityEvent       | where TimeGenerated > ago(24h) | extend Table = "SecurityEvent",       Host = tolower(tostring(split(Computer, ".")[0]))),
-    (ASimDnsActivityLogs | where TimeGenerated > ago(24h) | extend Table = "ASimDnsActivityLogs", Host = tolower(tostring(split(Dvc, ".")[0])))
+    (ASimDnsActivityLogs | where TimeGenerated > ago(24h) | extend Table = "ASimDnsActivityLogs", Host = tolower(tostring(split(coalesce(DvcHostname, Dvc), ".")[0])))
 | where Host in (DCs)
 | summarize Events = count(), LastIngested = max(ingestion_time()) by Host, Table
 | order by Host asc, Table asc
 ```
 
-A DC missing a row for an expected table has that whole path broken. For
-the `WindowsEvent` rows, *how* each DC arrives (WEF via which collector,
-or direct) is the collection method map above - insert
-`| where SourceShortName in (DCs)` before its `project`.
+A DC missing a row for an expected table means **no matching rows were
+observed in the window** - strong evidence, not proof, that the path is
+broken: the path may be deliberately unconfigured for that DC, or a
+[DCR XPath filter](https://learn.microsoft.com/azure/azure-monitor/vm/data-collection-windows-events)
+may exclude the events. Interpret against the intended design, then
+confirm with the tracer-event and configuration checks above before
+declaring it broken. For the `WindowsEvent` rows, *how* each DC arrives
+(WEF via which collector, or direct) is the collection method map above -
+insert `| where SourceShortName in (DCs)` before its `project`.
+
+(`Host` in the DNS leg prefers `DvcHostname` and falls back to `Dvc`,
+which per the
+[ASIM device schema](https://learn.microsoft.com/azure/sentinel/normalization-entity-device)
+can also carry an IP or device ID - rows where the fallback is not a
+hostname will not match the `DCs` list.)
 
 And which machines are shipping DNS activity at all (field-tested; the
 resource ID also says whether each is an Arc-enabled server or an Azure
@@ -422,8 +434,8 @@ ASimDnsActivityLogs
 | order by Machine asc
 ```
 
-An on-prem DC expected here but absent means its DNS DCR or agent is not
-delivering - triage it like any silent direct-AMA machine (heartbeat,
+An on-prem DC expected here but absent shipped no matching DNS rows in
+the window - triage it like any silent direct-AMA machine (heartbeat,
 DCR association, config cache), not like a WEF problem.
 
 ## The reconciliation that matters
