@@ -14,7 +14,7 @@
          by Microsoft or the install stops and removes it.
       3. Copies AutorunsToWinEventLog.ps1 (the payload) alongside it.
       4. Creates the "Autoruns" event log and its event source, sized to
-         -LogMaxMB (default 64 MB) with overwrite-as-needed retention.
+         -LogMaxMB (default 128 MB) with overwrite-as-needed retention.
       5. Registers the scheduled task "AutorunsToWinEventLog": daily at
          -DailyAt (default 01:00), as SYSTEM, 60-minute limit, runs when
          next available if the time was missed.
@@ -47,9 +47,11 @@
     Daily run time, 24-hour HH:mm. Default 01:00.
 
 .PARAMETER LogMaxMB
-    Maximum size of the Autoruns event log in MB. Default 64. A workstation
-    writes ~1.5 MB per day (about 1,600 entries), so 64 MB holds roughly a
-    month locally; central collection is the real retention.
+    Maximum size of the Autoruns event log in MB. Default 128 (the kit's
+    standard channel size). Observed on a Windows 11 workstation with
+    autorunsc 14.3: one run = ~1,640 entries = ~4 MB of event log, so
+    128 MB holds about a month locally; central collection is the real
+    retention.
 
 .PARAMETER InstallDir
     Override the install folder. Default: %ProgramFiles%\WinLogKit\AutorunsToWinEventLog.
@@ -90,7 +92,7 @@ param(
     [Parameter(ParameterSetName = 'Install')] [switch]$Download,
     [Parameter(ParameterSetName = 'Install')] [string]$AutorunscPath,
     [Parameter(ParameterSetName = 'Install')] [ValidatePattern('^(?:[01][0-9]|2[0-3]):[0-5][0-9]$')] [string]$DailyAt = '01:00',
-    [Parameter(ParameterSetName = 'Install')] [ValidateRange(8, 4096)] [int]$LogMaxMB = 64,
+    [Parameter(ParameterSetName = 'Install')] [ValidateRange(8, 4096)] [int]$LogMaxMB = 128,
     [Parameter(ParameterSetName = 'Install')] [switch]$RunNow,
     [Parameter(ParameterSetName = 'Status')]  [switch]$Status,
     [Parameter(ParameterSetName = 'Uninstall')] [switch]$Uninstall,
@@ -182,11 +184,36 @@ if (-not (Test-Path $runnerSrc)) { Write-Error "Payload script not found next to
 
 # 1. Folder. Program Files is admin-write-only by default: a task running as
 #    SYSTEM must never execute a script or binary from a location a standard
-#    user can replace. A custom -InstallDir is checked for exactly that: the
-#    only identities allowed to hold write-class rights on it are SYSTEM,
-#    Administrators, TrustedInstaller and CREATOR OWNER. Anyone else with a
-#    write bit (Users, Everyone, a single user's own profile folder...)
-#    refuses the install rather than creating a privilege-escalation path.
+#    user can replace. Two checks enforce that for a custom -InstallDir:
+#      a) it must be a local path under Program Files, Program Files (x86)
+#         or the Windows folder - roots whose every ancestor is admin-only
+#         by OS design, so nobody can delete and recreate the folder from
+#         above (no UNC paths, no reparse points);
+#      b) the folder's own DACL may grant write-class rights only to
+#         SYSTEM, Administrators, TrustedInstaller/service SIDs and
+#         CREATOR OWNER. Anyone else with a write bit refuses the install.
+$trustedRoots = @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:SystemRoot) | Where-Object { -not [string]::IsNullOrEmpty($_) }
+$installFull = [System.IO.Path]::GetFullPath($InstallDir)
+if ($installFull.StartsWith('\\')) { Write-Error "InstallDir must be a local path, not UNC: $installFull"; exit 1 }
+$underTrustedRoot = $false
+foreach ($root in $trustedRoots) {
+    $rootFull = [System.IO.Path]::GetFullPath($root).TrimEnd('\') + '\'
+    if ($installFull.StartsWith($rootFull, [System.StringComparison]::OrdinalIgnoreCase)) { $underTrustedRoot = $true }
+}
+if (-not $underTrustedRoot) {
+    Write-Error "InstallDir must sit under Program Files or the Windows folder (admin-only ancestors): $installFull"
+    exit 1
+}
+# Walk from the trusted root down to the leaf: any existing segment that is
+# a reparse point (junction/symlink) could redirect to an untrusted location.
+$probe = $installFull.TrimEnd('\')
+while ($probe -and (Split-Path $probe -Parent)) {
+    if ((Test-Path $probe) -and ((Get-Item $probe -Force).Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+        Write-Error "InstallDir path contains a reparse point (junction or symlink): $probe"; exit 1
+    }
+    $probe = Split-Path $probe -Parent
+}
+$InstallDir = $installFull
 if (-not (Test-Path $InstallDir)) {
     if ($PSCmdlet.ShouldProcess($InstallDir, 'create folder')) { New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null }
 }
@@ -238,10 +265,12 @@ if (Test-Path $exePath) {
     $sig = Get-AuthenticodeSignature $exePath
     $signer = if ($null -ne $sig.SignerCertificate) { $sig.SignerCertificate.Subject } else { '' }
     if ($sig.Status -ne 'Valid' -or $signer -notmatch 'O=Microsoft Corporation') {
+        $removed = 'File would be removed'
         if ($PSCmdlet.ShouldProcess($exePath, 'remove after failed signature check')) {
             Remove-Item $exePath -Force -ErrorAction SilentlyContinue
+            $removed = 'File removed'
         }
-        Write-Error "autorunsc signature check failed (status $($sig.Status), signer '$signer'). File removed; nothing installed."
+        Write-Error "autorunsc signature check failed (status $($sig.Status), signer '$signer'). $removed; nothing installed."
         exit 1
     }
     Write-Host "autorunsc $((Get-Item $exePath).VersionInfo.ProductVersion): signature Valid, signer Microsoft Corporation."
