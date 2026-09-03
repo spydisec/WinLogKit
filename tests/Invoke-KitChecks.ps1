@@ -210,6 +210,25 @@ try {
         $qCount = [regex]::Matches($wx.Subscription.Query.'#cdata-section', '<Query ').Count
         if ($qCount -eq 3) { Pass 'WEF subscription XML valid (3 queries for the ASD preset)' } else { Fail "WEF XML has $qCount queries, expected 3 for the ASD preset" }
     } catch { Fail "WEF subscription XML invalid: $($_.Exception.Message)" }
+
+    # 8. AutorunsToWinEventLog add-on: the payload parses a fixture CSV under
+    #    -WhatIf (no binary, no event log needed) and preserves UTF-8 text.
+    #    Run in a child process of the same engine so the payload's exit
+    #    codes cannot terminate this harness.
+    $engine = (Get-Process -Id $PID).Path
+    $fixture = Join-Path (Join-Path $KitRoot 'tests') (Join-Path 'fixtures' 'autoruns-sample.csv')
+    $runner = Join-Path (Join-Path $KitRoot 'addons') (Join-Path 'AutorunsToWinEventLog' 'AutorunsToWinEventLog.ps1')
+    $arOut = & $engine -NoProfile -ExecutionPolicy Bypass -File $runner -InputCsv $fixture -WhatIf 2>&1 | Out-String
+    $arExit = $LASTEXITCODE
+    # Built from [char]0xE9 so this file stays pure ASCII: Windows PowerShell
+    # reads a BOM-less script as ANSI, so a literal e-acute here would never
+    # match the UTF-8 fixture text.
+    $eAcute = [string][char]0xE9
+    if ($arExit -eq 0 -and $arOut -match 'would write 5 entries' -and $arOut -match 'Entry Location : HKCU' -and $arOut.Contains('Caf' + $eAcute + ' Sync Updater')) {
+        Pass 'Autoruns add-on parses the fixture (5 entries, UTF-8 intact) under -WhatIf'
+    } else {
+        Fail "Autoruns add-on fixture check failed (exit $arExit). Output: $($arOut.Trim())"
+    }
 }
 finally {
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue

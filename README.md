@@ -67,6 +67,7 @@ own risk.
 | `New-GpoPack.ps1` | Generates GPO delivery artefacts: `audit.csv` (GUID-driven) and LGPO-format `registry.txt`. |
 | `Export-AttackCoverage.ps1` | Reports which ATT&CK techniques a selection makes observable, and why the rest are not. |
 | `presets/` | Ready-made selection CSVs: ASD / Microsoft reference baselines, per-role starting points, and the blended **spydi** baselines (role x volume). |
+| `addons/AutorunsToWinEventLog/` | **Optional add-on** (needs Sysinternals autorunsc): daily task writing every autostart entry to an `Autoruns` event log, a daily inventory over the native Persistence gap. Rewrite of Palantir's tool, MIT. |
 | `tests/Invoke-KitChecks.ps1` | Self-checks CI runs on PowerShell 5.1 and 7; run locally before a PR. |
 
 ## Quick start
