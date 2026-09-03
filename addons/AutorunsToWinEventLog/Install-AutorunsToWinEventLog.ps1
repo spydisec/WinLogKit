@@ -89,7 +89,7 @@
 param(
     [Parameter(ParameterSetName = 'Install')] [switch]$Download,
     [Parameter(ParameterSetName = 'Install')] [string]$AutorunscPath,
-    [Parameter(ParameterSetName = 'Install')] [ValidatePattern('^\d{2}:\d{2}$')] [string]$DailyAt = '01:00',
+    [Parameter(ParameterSetName = 'Install')] [ValidatePattern('^(?:[01][0-9]|2[0-3]):[0-5][0-9]$')] [string]$DailyAt = '01:00',
     [Parameter(ParameterSetName = 'Install')] [ValidateRange(8, 4096)] [int]$LogMaxMB = 64,
     [Parameter(ParameterSetName = 'Install')] [switch]$RunNow,
     [Parameter(ParameterSetName = 'Status')]  [switch]$Status,
@@ -182,9 +182,31 @@ if (-not (Test-Path $runnerSrc)) { Write-Error "Payload script not found next to
 
 # 1. Folder. Program Files is admin-write-only by default: a task running as
 #    SYSTEM must never execute a script or binary from a location a standard
-#    user can replace.
+#    user can replace. A custom -InstallDir is checked for exactly that: the
+#    only identities allowed to hold write-class rights on it are SYSTEM,
+#    Administrators, TrustedInstaller and CREATOR OWNER. Anyone else with a
+#    write bit (Users, Everyone, a single user's own profile folder...)
+#    refuses the install rather than creating a privilege-escalation path.
 if (-not (Test-Path $InstallDir)) {
     if ($PSCmdlet.ShouldProcess($InstallDir, 'create folder')) { New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null }
+}
+if (Test-Path $InstallDir) {
+    $trustedWriterSids = @('S-1-5-18', 'S-1-5-32-544', 'S-1-3-0')   # SYSTEM, BUILTIN\Administrators, CREATOR OWNER
+    # Atomic write-class bits only. Composite rights (Modify, FullControl)
+    # contain these bits and are caught; ReadAndExecute shares none of them.
+    $writeMask = [System.Security.AccessControl.FileSystemRights]'CreateFiles, CreateDirectories, Delete, DeleteSubdirectoriesAndFiles, ChangePermissions, TakeOwnership'
+    $acl = Get-Acl $InstallDir
+    foreach ($ace in $acl.Access) {
+        if ($ace.AccessControlType -ne 'Allow') { continue }
+        if (($ace.FileSystemRights -band $writeMask) -eq 0) { continue }
+        $sid = try { $ace.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value } catch { '' }
+        $trusted = ($trustedWriterSids -contains $sid) -or $sid.StartsWith('S-1-5-80-')   # S-1-5-80-*: service SIDs incl. TrustedInstaller
+        if (-not $trusted) {
+            Write-Error ("Install folder $InstallDir grants $($ace.IdentityReference) '$($ace.FileSystemRights)'. " +
+                         'A SYSTEM task must not run from a folder anyone but administrators can write to. Use the default (Program Files) or an admin-only folder.')
+            exit 1
+        }
+    }
 }
 
 # 2. Binary: local copy, existing install, or explicit download.
@@ -216,7 +238,9 @@ if (Test-Path $exePath) {
     $sig = Get-AuthenticodeSignature $exePath
     $signer = if ($null -ne $sig.SignerCertificate) { $sig.SignerCertificate.Subject } else { '' }
     if ($sig.Status -ne 'Valid' -or $signer -notmatch 'O=Microsoft Corporation') {
-        Remove-Item $exePath -Force -ErrorAction SilentlyContinue
+        if ($PSCmdlet.ShouldProcess($exePath, 'remove after failed signature check')) {
+            Remove-Item $exePath -Force -ErrorAction SilentlyContinue
+        }
         Write-Error "autorunsc signature check failed (status $($sig.Status), signer '$signer'). File removed; nothing installed."
         exit 1
     }

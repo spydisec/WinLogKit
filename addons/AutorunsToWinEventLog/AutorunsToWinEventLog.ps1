@@ -176,7 +176,11 @@ try {
     # its output encoding still parses.
     $fs = [System.IO.File]::OpenRead($csvPath)
     try { $bom = New-Object byte[] 2; $bomLen = $fs.Read($bom, 0, 2) } finally { $fs.Dispose() }
-    $csvEncoding = if ($bomLen -ge 2 -and $bom[0] -eq 0xFF -and $bom[1] -eq 0xFE) { 'Unicode' } else { 'UTF8' }
+    $csvEncoding = 'UTF8'
+    if ($bomLen -ge 2) {
+        if ($bom[0] -eq 0xFF -and $bom[1] -eq 0xFE) { $csvEncoding = 'Unicode' }
+        elseif ($bom[0] -eq 0xFE -and $bom[1] -eq 0xFF) { $csvEncoding = 'BigEndianUnicode' }
+    }
     $rows = @(Import-Csv -Path $csvPath -Encoding $csvEncoding)
     if ($rows.Count -eq 0) { throw "CSV at $csvPath contained no rows" }
     $columns = @($rows[0].PSObject.Properties.Name)
