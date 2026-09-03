@@ -267,8 +267,8 @@ if (Test-Path $exePath) {
     if ($sig.Status -ne 'Valid' -or $signer -notmatch 'O=Microsoft Corporation') {
         $removed = 'File would be removed'
         if ($PSCmdlet.ShouldProcess($exePath, 'remove after failed signature check')) {
-            Remove-Item $exePath -Force -ErrorAction SilentlyContinue
-            $removed = 'File removed'
+            try { Remove-Item $exePath -Force -ErrorAction Stop; $removed = 'File removed' }
+            catch { $removed = "File could NOT be removed ($($_.Exception.Message)) - delete it by hand" }
         }
         Write-Error "autorunsc signature check failed (status $($sig.Status), signer '$signer'). $removed; nothing installed."
         exit 1
