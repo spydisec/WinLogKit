@@ -3,6 +3,25 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
+## Unreleased
+
+### Added
+- **AutorunsToWinEventLog add-on** (`addons/AutorunsToWinEventLog/`), an
+  optional, clearly separated extra that closes the kit's documented
+  Persistence gap: a daily SYSTEM scheduled task runs Sysinternals
+  `autorunsc` and writes every autostart entry to a dedicated `Autoruns`
+  event log (ID 1 per entry, 100 run summary, 101 failure) for WEF/AMA
+  collection. A KISS rewrite of Palantir's MIT-licensed tool with the
+  known problems fixed: UTF-8 CSV handling (the original mangled
+  non-ASCII paths), no VirusTotal lookups, dynamic columns for newer
+  Autoruns versions, Microsoft-signed entries kept (evasion research),
+  Authenticode verification of the downloaded binary, install under
+  Program Files (never a user-writable path for a SYSTEM task), the log
+  sized at install time, and `-WhatIf` / `-Status` / `-Uninstall` /
+  `-RunNow`. PowerShell 7 clean via the .NET EventLog API. Self-checked
+  in CI against a UTF-8 fixture; the binary itself is never vendored.
+  Docs: new **Add-ons** page.
+
 ## v0.9.0 - 2026-09-02
 
 ### Added

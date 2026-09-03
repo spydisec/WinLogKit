@@ -88,3 +88,7 @@
   setting after the pilot week, to make the HighVolume decision evidence-based
 - Optional Windows Event Forwarding (WEC/WEF) subscription templates for the
   agentless collection path
+- AutorunsToWinEventLog add-on, next steps: a diff mode that writes only
+  new or changed entries since the last run (the full daily snapshot is
+  simple and SIEM-diffable, but ~1,600 events/host/day adds up at fleet
+  scale), and an Intune / GPO deployment recipe for the installer

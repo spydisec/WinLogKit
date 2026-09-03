@@ -27,6 +27,13 @@ excellent; if you can run it, run it (the coverage report even tells you
 which techniques are Sysmon-only). The kit covers the ground available
 without it.
 
+The one deliberate exception is the optional
+[AutorunsToWinEventLog add-on](addons.md), which depends on Sysinternals
+`autorunsc` (a command-line tool, not a resident agent) to close the
+registry-autorun Persistence gap. It lives in its own folder, is never
+installed by the baseline scripts, and is documented as the exception it
+is.
+
 ## Something broke / I want out. How do I undo everything?
 
 ```powershell
