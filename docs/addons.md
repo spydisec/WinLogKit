@@ -20,20 +20,12 @@ native configuration only. Registry autostart locations are the one
 [Persistence gap](architecture.md#behaviour-category-mapping) native
 auditing cannot cover without per-key SACLs (the
 [Audit Registry](https://learn.microsoft.com/windows/security/threat-protection/auditing/audit-registry)
-subcategory only records access to keys that carry one), and Autoruns is the
-long-standing answer to it - but it is a Sysinternals binary, so it lives
-here, opt-in, clearly labelled. Be precise about what it gives you: a
-**daily inventory** (what is persisted right now, diffable day to day),
+subcategory only records access to keys that carry one), and Autoruns is
+the long-standing answer to it - but it is a Sysinternals binary, so it
+lives here, opt-in, clearly labelled. Be precise about what it gives you:
+a **daily inventory** (what is persisted right now, diffable day to day),
 not real-time change auditing. A change made and reverted between two
 runs is invisible to it; only a registry SACL sees that.
-
-**Origin and credit:** a rewrite of Palantir's
-[AutorunsToWinEventLog](https://github.com/palantir/windows-event-forwarding/tree/master/AutorunsToWinEventLog)
-(MIT, 2018; the notice is reproduced in the add-on folder). The original is
-still widely deployed but has not moved since 2018; this version keeps its
-event log name, source and message layout so existing content keeps
-working, and fixes the problems its issue tracker and eight years of
-Autoruns releases surfaced.
 
 ### Install, verify, remove
 
@@ -61,14 +53,13 @@ What install does: creates `%ProgramFiles%\WinLogKit\AutorunsToWinEventLog`,
 places `autorunsc64.exe` (or `autorunsc.exe` on 32-bit) and the payload
 script there, creates the `Autoruns` event log sized to 128 MB (about a
 month of daily runs) with overwrite-as-needed retention, and registers
-the task `AutorunsToWinEventLog`
-(daily at 01:00 as SYSTEM, 60-minute limit, runs when next available if
-the time was missed). `-DailyAt` and `-LogMaxMB` adjust the defaults.
-Everything is idempotent. A custom `-InstallDir` must sit under Program
-Files or the Windows folder and grant write rights only to administrators
-and SYSTEM - the installer refuses anything else, because a task running
-as SYSTEM from a folder a standard user can alter is a privilege
-escalation waiting to happen.
+the task `AutorunsToWinEventLog` (daily at 01:00 as SYSTEM, 60-minute
+limit, runs when next available if the time was missed). `-DailyAt` and
+`-LogMaxMB` adjust the defaults. Everything is idempotent. A custom
+`-InstallDir` must sit under Program Files or the Windows folder and grant
+write rights only to administrators and SYSTEM - the installer refuses
+anything else, because a task running as SYSTEM from a folder a standard
+user can alter is a privilege escalation waiting to happen.
 
 A quick look at the result on the host:
 
@@ -116,31 +107,59 @@ WindowsEvent
 | order by Entries desc
 ```
 
-### Deliberate differences from Palantir's original
+### Design choices
 
-| Original | This add-on | Why |
-|---|---|---|
-| `-v -vt` VirusTotal lookups on every run | Not used | Needs internet from every host, slows the run, and sent hashes to a third party by default. Hashes and signature verification are kept, so VT enrichment can happen SIEM-side. |
-| stdout redirected to a CSV, read with the default code page | `-o` to a file, read as UTF-8 (UTF-16 auto-detected by BOM) | Observed with autorunsc 14.3 on Windows 11 24H2: the `-o` file is UTF-8 without a BOM and the original's ANSI read mangled every non-ASCII path or description. Microsoft documents the CSV output but not its encoding, so the payload sniffs for a UTF-16 BOM too. CI proves the parser side with a UTF-8 [fixture](https://github.com/spydisec/WinLogKit/blob/main/tests/fixtures/autoruns-sample.csv) in [check 8](https://github.com/spydisec/WinLogKit/blob/main/tests/Invoke-KitChecks.ps1). |
-| Hard-wired message fields | Every CSV column written dynamically | New Autoruns columns (PESHA-256, IMP) appear without code changes; layout unchanged for existing parsers. |
-| No `-m` (keep Microsoft-signed entries) | Same, and no option to hide them | Attackers persist through Microsoft-signed binaries ([Huntress: evading Autoruns](https://github.com/huntresslabs/evading-autoruns)); Palantir's issue #11 reached the same conclusion. |
-| Local group enumeration as Event ID 2 | Dropped | The kit covers group changes natively (4732/4733/4756 ...); mixing two feeds in one log made parsing ambiguous. |
-| No run health signal | Events 100 and 101 | "Onboarded" means health-monitored: a SIEM can alert when a host stops reporting or a run fails. |
-| Download over HTTPS, no verification | Authenticode must be Valid and signed by Microsoft, or the file is removed | The binary runs as SYSTEM daily. |
-| `PROGRA~1` short path in the task action | Quoted full path under Program Files | Same admin-write-only location, without the 8.3 dependency. Never a user-writable folder for a SYSTEM task. |
-| Event log created on first run at the classic default size | Created and sized at install (128 MB default, host-configurable via `-LogMaxMB`), overwrite-as-needed | A log created through the .NET API defaults to [512 KB](https://learn.microsoft.com/dotnet/api/system.diagnostics.eventlog.maximumkilobytes), which a single run exceeds; and "do not overwrite" retention is on the kit's never-do list. |
-| `Write-EventLog` / `New-EventLog` cmdlets | .NET `System.Diagnostics.EventLog` | Those cmdlets exist only in [Windows PowerShell 5.1](https://learn.microsoft.com/powershell/module/microsoft.powershell.management/write-eventlog?view=powershell-5.1) (the version picker on that page has no PowerShell 7 entry); the .NET API works on both engines. |
-| Install only | `-WhatIf`, `-Status`, `-Uninstall`, `-RunNow` | See before doing, prove it works, leave cleanly. |
+Each of these is a decision with a reason, so you can disagree with eyes
+open:
 
-Not adopted from the original repo's open pull requests: switching the
-download to plain HTTP (PR #55) - the signature check makes the transport
-less critical, but there is no reason to drop HTTPS.
+- **Hashes and signature verification, no VirusTotal.** `autorunsc` runs
+  with `-h -s` so every entry carries its hashes and signer, and nothing
+  leaves the host. VirusTotal or any other enrichment happens SIEM-side,
+  where it belongs, and no host needs internet access to run.
+- **Microsoft-signed entries are kept.** A design decision, not a
+  platform rule: `autorunsc` can hide them (`-m`) and many deployments do
+  for volume, but that hides persistence that rides a signed Microsoft
+  binary (illustrated by
+  [Huntress's evading-Autoruns research](https://github.com/huntresslabs/evading-autoruns)),
+  so this add-on offers no option to do it.
+- **Every CSV column is written, dynamically.** New Autoruns columns
+  appear in the events without a code change, and the `Key : Value`
+  layout keeps existing parsers working.
+- **UTF-8 handled, UTF-16 detected.** The `-o` file from autorunsc 14.3 is
+  UTF-8 without a BOM (observed on Windows 11 24H2; Microsoft documents
+  the CSV output but not its encoding), so non-ASCII paths and descriptions
+  survive intact; a UTF-16 BOM is detected as well. CI proves the parser
+  side with a UTF-8 [fixture](https://github.com/spydisec/WinLogKit/blob/main/tests/fixtures/autoruns-sample.csv)
+  in [check 8](https://github.com/spydisec/WinLogKit/blob/main/tests/Invoke-KitChecks.ps1).
+- **Run health is an event, not a hope.** A summary (100) or failure (101)
+  event every run, a non-zero `autorunsc` exit code treated as failure, and
+  a bounded wait that kills a wedged scan - "onboarded" means
+  health-monitored.
+- **The binary is verified before it runs as SYSTEM.** Whatever its
+  origin, its Authenticode signature must be Valid and Microsoft's, or the
+  install stops. Program Files (or the Windows folder) only, never a
+  user-writable path.
+- **The log is created and sized at install.** A log created through the
+  .NET API defaults to
+  [512 KB](https://learn.microsoft.com/dotnet/api/system.diagnostics.eventlog.maximumkilobytes),
+  which one run exceeds; retention is overwrite-as-needed, per the kit's
+  never-do list.
+- **PowerShell 7 clean.** Events are written through
+  `System.Diagnostics.EventLog`, because the `*-EventLog` cmdlets exist
+  only in [Windows PowerShell 5.1](https://learn.microsoft.com/powershell/module/microsoft.powershell.management/write-eventlog?view=powershell-5.1).
+  The task itself uses `powershell.exe` since it is always present.
+- **`-WhatIf`, `-Status`, `-Uninstall`, `-RunNow`.** See before doing,
+  prove it works, leave cleanly.
 
-### Licences
+### Credits and licences
 
-The add-on scripts are MIT (as is the kit, as was Palantir's original -
-notice reproduced in `addons\AutorunsToWinEventLog\LICENSE-Palantir.md`).
-Autoruns itself is Microsoft software under the
+The idea and the event-log design come from Palantir's
+[AutorunsToWinEventLog](https://github.com/palantir/windows-event-forwarding/tree/master/AutorunsToWinEventLog)
+(MIT, 2018) - this is WinLogKit's own implementation of it, keeping the
+same log name, source and message layout so content written for the
+original keeps working. The MIT notice is reproduced in
+`addons\AutorunsToWinEventLog\LICENSE-Palantir.md`; the add-on itself is
+MIT like the rest of the kit. Autoruns is Microsoft software under the
 [Sysinternals licence terms](https://learn.microsoft.com/sysinternals/license-terms);
 it is never vendored in this repository, and the scheduled task passes
 `-accepteula` on your behalf - read the terms before deploying.

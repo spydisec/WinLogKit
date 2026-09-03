@@ -3,6 +3,15 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
+## v0.10.1 - 2026-09-03
+
+### Changed
+- Autoruns add-on documentation and script headers reframed: the add-on
+  is WinLogKit's own implementation of the idea, with Palantir's
+  AutorunsToWinEventLog credited and its MIT notice kept. Design choices
+  are presented on their own merits; the upstream comparison table and
+  issue/PR references are gone. No functional change.
+
 ## v0.10.0 - 2026-09-03
 
 ### Added
@@ -12,16 +21,15 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
   change auditing): a daily SYSTEM scheduled task runs Sysinternals
   `autorunsc` and writes every autostart entry to a dedicated `Autoruns`
   event log (ID 1 per entry, 100 run summary, 101 failure) for WEF/AMA
-  collection. A KISS rewrite of Palantir's MIT-licensed tool with the
-  known problems fixed: UTF-8 CSV handling (the original mangled
-  non-ASCII paths), no VirusTotal lookups, dynamic columns for newer
-  Autoruns versions, Microsoft-signed entries kept (evasion research),
-  Authenticode verification of the downloaded binary, install under
-  Program Files (never a user-writable path for a SYSTEM task), the log
-  sized at install time, and `-WhatIf` / `-Status` / `-Uninstall` /
-  `-RunNow`. PowerShell 7 clean via the .NET EventLog API. Self-checked
-  in CI against a UTF-8 fixture; the binary itself is never vendored.
-  Docs: new **Add-ons** page.
+  collection. Inspired by Palantir's MIT-licensed tool (credited, log
+  name and message layout kept compatible). Design: hashes and signature
+  verification with no VirusTotal, Microsoft-signed entries kept, UTF-8
+  CSV handling, dynamic columns, run-health events, Authenticode
+  verification of the binary before it runs as SYSTEM, admin-only
+  install folder, log sized at install, `-WhatIf` / `-Status` /
+  `-Uninstall` / `-RunNow`, PowerShell 7 clean. Self-checked in CI
+  against a UTF-8 fixture; the binary itself is never vendored. Docs:
+  new **Add-ons** page.
 
 ## v0.9.0 - 2026-09-02
 

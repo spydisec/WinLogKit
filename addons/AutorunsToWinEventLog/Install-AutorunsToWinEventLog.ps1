@@ -22,13 +22,16 @@
     Nothing here touches the kit's own settings, audit policy or any other
     channel; the add-on is self-contained and -Uninstall removes it cleanly.
 
-    Origin: a rewrite of Palantir's AutorunsToWinEventLog installer (MIT,
-    Copyright (c) 2018 Palantir Technologies Inc., see LICENSE-Palantir.md).
-    Differences from the original: signature verification of the download,
-    Program Files kept but with a quoted path instead of the PROGRA~1 short
-    name, the event log created and sized at install time rather than on
-    first run, -WhatIf, -Status and -Uninstall, and a -RunNow for immediate
-    verification.
+    Design choices: the binary's Authenticode signature is verified before
+    it ever runs as SYSTEM; the install folder must be admin-write-only
+    (Program Files or the Windows folder); the event log is created and
+    sized at install time so the first run cannot fill a default-sized log;
+    and -WhatIf, -Status, -Uninstall and -RunNow let you see before doing,
+    prove it works, and leave cleanly.
+
+    Credit: the idea comes from Palantir's AutorunsToWinEventLog (MIT,
+    Copyright (c) 2018 Palantir Technologies Inc., notice in
+    LICENSE-Palantir.md).
 
     Requires: local Administrator. Windows PowerShell 5.1 or PowerShell 7.
     Sysinternals tools carry their own licence terms (the installer passes
