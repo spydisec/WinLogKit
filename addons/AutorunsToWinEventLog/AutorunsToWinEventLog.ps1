@@ -169,8 +169,19 @@ try {
         # wedged (the scheduled task's own limit is 60). Kill and report
         # rather than hang an interactive run forever.
         if (-not $proc.WaitForExit(30 * 60 * 1000)) {
-            try { $proc.Kill() } catch { Write-Verbose "kill failed: $($_.Exception.Message)" }
-            throw 'autorunsc did not finish within 30 minutes; process killed, output discarded'
+            # Kill, then confirm it actually died: a Kill() that throws or a
+            # process that lingers leaves autorunsc running and its temp CSV
+            # locked, so say exactly that instead of claiming a clean stop.
+            $stopNote = 'process killed'
+            try {
+                $proc.Kill()
+                if (-not $proc.WaitForExit(15000)) {
+                    $stopNote = "Kill issued but PID $($proc.Id) is still running after 15 s; it may hold $csvPath locked"
+                }
+            } catch {
+                $stopNote = "Kill failed ($($_.Exception.Message)); PID $($proc.Id) may still be running and holding $csvPath locked"
+            }
+            throw "autorunsc did not finish within 30 minutes; $stopNote; output discarded"
         }
         # autorunsc 14.3 exits 0 on success and non-zero (-1 observed) on
         # error. A partial CSV after a mid-scan failure must not be written as
@@ -241,7 +252,10 @@ catch {
     exit 1
 }
 finally {
-    if ($ownCsv -and $null -ne $csvPath -and (Test-Path $csvPath)) { Remove-Item $csvPath -Force -ErrorAction SilentlyContinue }
+    if ($ownCsv -and $null -ne $csvPath -and (Test-Path $csvPath)) {
+        try { Remove-Item $csvPath -Force -ErrorAction Stop }
+        catch { Write-Warning "temp CSV not removed ($($_.Exception.Message)): $csvPath" }
+    }
     if ($null -ne $log) { $log.Dispose() }
 }
 exit 0
