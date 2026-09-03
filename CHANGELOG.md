@@ -3,6 +3,15 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
+## v0.10.1 - 2026-09-03
+
+### Changed
+- Autoruns add-on documentation and script headers reframed: the add-on
+  is WinLogKit's own implementation of the idea, with Palantir's
+  AutorunsToWinEventLog credited and its MIT notice kept. Design choices
+  are presented on their own merits; the upstream comparison table and
+  issue/PR references are gone. No functional change.
+
 ## v0.10.0 - 2026-09-03
 
 ### Added
