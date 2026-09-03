@@ -1,9 +1,10 @@
 # Upstream licence notice
 
-The scripts in this folder are a rewrite of **AutorunsToWinEventLog** from
-Palantir's [windows-event-forwarding](https://github.com/palantir/windows-event-forwarding)
-repository (authors Chris Long and Andy Robbins), which is distributed under
-the MIT License reproduced below as that licence requires. The rewrite is
+The scripts in this folder are WinLogKit's own implementation of the idea
+behind **AutorunsToWinEventLog** from Palantir's
+[windows-event-forwarding](https://github.com/palantir/windows-event-forwarding)
+repository (authors Chris Long and Andy Robbins), distributed under the MIT
+License reproduced below as that licence requires. This implementation is
 itself MIT licensed as part of WinLogKit.
 
 Sysinternals Autoruns / autorunsc is a Microsoft tool and is **not** included

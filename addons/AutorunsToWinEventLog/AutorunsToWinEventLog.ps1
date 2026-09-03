@@ -17,33 +17,28 @@
     else this kit configures, so persistence hunting happens in the SIEM
     rather than on the box.
 
-    Origin: a rewrite of Palantir's AutorunsToWinEventLog (MIT licensed,
-    Copyright (c) 2018 Palantir Technologies Inc., see LICENSE-Palantir.md).
-    Deliberate differences from the original, each with a reason:
-      - No VirusTotal lookups (-v / -vt). They need internet from every host,
-        slow the run, and the original's flags submitted hashes to a third
-        party by default. Hashes (-h) and signature verification (-s) are
-        kept, so VT can be done SIEM-side if wanted.
-      - autorunsc writes its CSV with -o instead of stdout redirection, and
-        the file is read as UTF-8 (what autorunsc 14.x writes). The original
-        read the file with the default ANSI code page, mangling any
-        non-ASCII path or description.
-      - Every CSV column is written dynamically, so new Autoruns columns
-        (PESHA-256, IMP, ...) appear without code changes. The message
-        layout is the original's Format-List style ("Key : Value" lines)
-        so existing parsers keep working.
-      - No -m (hide Microsoft-signed entries): attackers abuse Microsoft-
-        signed binaries for persistence (Huntress "evading autoruns"), and
-        the original repo's issue #11 reached the same conclusion.
-      - The original's second job (local group membership, Event ID 2) is
-        not carried over: the kit already covers group changes natively
-        (4732/4733/4756...) and mixing two feeds in one log made parsing
-        ambiguous.
-      - Adds a run-summary event (ID 100) and a failure event (ID 101), so a
-        SIEM can alert when a host stops reporting or the run breaks -
-        "onboarded" means health-monitored, not just configured.
-      - Uses the .NET System.Diagnostics.EventLog API rather than the
-        Write-EventLog cmdlet, which does not exist in PowerShell 7.
+    Design choices, each with its reason:
+      - Hashes (-h) and signature verification (-s), no VirusTotal: every
+        entry carries its hashes and signer, nothing leaves the host, and
+        enrichment happens SIEM-side where it belongs.
+      - Microsoft-signed entries are kept (no -m): attackers persist through
+        Microsoft-signed binaries too (Huntress "evading autoruns").
+      - The CSV is written with -o and read as UTF-8 (what autorunsc 14.3
+        writes), with UTF-16 BOM detection, so non-ASCII paths and
+        descriptions survive intact.
+      - Every CSV column is written dynamically in "Key : Value" lines, so
+        new Autoruns columns appear without code changes and existing
+        parsers keep working.
+      - A run-summary event (ID 100) and a failure event (ID 101) every
+        run, a non-zero autorunsc exit treated as failure, and a bounded
+        wait: a SIEM can alert when a host stops reporting or a run breaks.
+      - Events go through the .NET System.Diagnostics.EventLog API, so the
+        same code runs on Windows PowerShell 5.1 and PowerShell 7.
+
+    Credit: the idea and event-log design come from Palantir's
+    AutorunsToWinEventLog (MIT, Copyright (c) 2018 Palantir Technologies
+    Inc., notice in LICENSE-Palantir.md). Log name, source and message
+    layout are kept compatible with it.
 
     Event IDs in the Autoruns log:
         1   one autostart entry (message = all autorunsc columns)
@@ -65,8 +60,9 @@
     at what a run would write from another machine's output.
 
 .PARAMETER LogName
-    Event log to write to. Default "Autoruns" (matches the original, so any
-    subscription or detection content written for it keeps working).
+    Event log to write to. Default "Autoruns" (the name the community
+    already uses for this feed, so existing subscriptions and detection
+    content keep working).
 
 .PARAMETER Source
     Event source name. Default "AutorunsToWinEventLog" (same reason).
@@ -118,9 +114,8 @@ function Write-AutorunsEvent {
 function ConvertTo-EntryMessage {
     # One "Key : Value" line per CSV column, in CSV column order, keys padded
     # to the widest name so the block lines up like Format-List output. This
-    # is the original tool's message shape; keeping it means anything that
-    # already parses Autoruns events (Splunk extractions, Sigma-derived
-    # rules) keeps parsing.
+    # is the message shape existing Autoruns-log parsers expect (Splunk
+    # extractions, Sigma-derived rules), so keeping it keeps them working.
     param([psobject]$Row, [int]$KeyWidth)
     $lines = foreach ($p in $Row.PSObject.Properties) {
         # A quoted CSV field can legally contain line breaks (a launch
@@ -161,8 +156,8 @@ try {
         #   -s           verify digital signatures ("(Verified) Microsoft Windows")
         #   -o <file>    write the CSV to a file (UTF-8 in 14.x)
         #   *            scan all user profiles, not just the current one
-        # The original noted that Start-Process -Wait misbehaves from scheduled
-        # tasks; -PassThru + WaitForExit() is the reliable form.
+        # Start-Process -Wait is unreliable from scheduled tasks; -PassThru
+        # plus an explicit WaitForExit() is the dependable form.
         $argList = @('-nobanner', '-accepteula', '-a', '*', '-c', '-h', '-s', '-o', "`"$csvPath`"", '*')
         $proc = Start-Process -FilePath $AutorunscPath -ArgumentList $argList -WindowStyle Hidden -PassThru
         # A full scan takes about a minute; 30 minutes means something is

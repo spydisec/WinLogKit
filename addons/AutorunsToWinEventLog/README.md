@@ -21,6 +21,6 @@ From an elevated prompt **in this folder** (`addons\AutorunsToWinEventLog`):
 
 Full documentation: <https://spydisec.github.io/WinLogKit/addons/>
 
-Rewrite of Palantir's AutorunsToWinEventLog (MIT) - see
-[LICENSE-Palantir.md](LICENSE-Palantir.md) for the notice and the list of
-deliberate differences in the script headers.
+Inspired by Palantir's AutorunsToWinEventLog (MIT, notice in
+[LICENSE-Palantir.md](LICENSE-Palantir.md)); log name, source and message
+layout stay compatible with it.
