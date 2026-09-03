@@ -10,6 +10,8 @@ on a Sysinternals binary, which the kit's core deliberately does not. It
 exists because registry autostart locations are the one Persistence gap
 native auditing cannot close without per-key SACLs.
 
+From an elevated prompt **in this folder** (`addons\AutorunsToWinEventLog`):
+
 ```powershell
 .\Install-AutorunsToWinEventLog.ps1 -Download -WhatIf     # see every step
 .\Install-AutorunsToWinEventLog.ps1 -Download -RunNow     # install + first run

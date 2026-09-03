@@ -7,8 +7,9 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
 ### Added
 - **AutorunsToWinEventLog add-on** (`addons/AutorunsToWinEventLog/`), an
-  optional, clearly separated extra that closes the kit's documented
-  Persistence gap: a daily SYSTEM scheduled task runs Sysinternals
+  optional, clearly separated extra that puts a daily inventory over the
+  kit's documented Persistence gap (partial mitigation, not SACL-grade
+  change auditing): a daily SYSTEM scheduled task runs Sysinternals
   `autorunsc` and writes every autostart entry to a dedicated `Autoruns`
   event log (ID 1 per entry, 100 run summary, 101 failure) for WEF/AMA
   collection. A KISS rewrite of Palantir's MIT-licensed tool with the

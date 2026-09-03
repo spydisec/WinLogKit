@@ -162,13 +162,22 @@ try {
         $argList = @('-nobanner', '-accepteula', '-a', '*', '-c', '-h', '-s', '-o', "`"$csvPath`"", '*')
         $proc = Start-Process -FilePath $AutorunscPath -ArgumentList $argList -WindowStyle Hidden -PassThru
         $proc.WaitForExit()
-        if (-not (Test-Path $csvPath)) { throw "autorunsc produced no output (exit code $($proc.ExitCode))" }
+        # autorunsc 14.3 exits 0 on success and non-zero (-1 observed) on
+        # error. A partial CSV after a mid-scan failure must not be written as
+        # a healthy run: fail here so the SIEM sees an ID 101, not an ID 100.
+        if ($proc.ExitCode -ne 0) { throw "autorunsc exited with code $($proc.ExitCode); output discarded" }
+        if (-not (Test-Path $csvPath)) { throw 'autorunsc exited 0 but produced no output file' }
     }
 
     # ---- 2. Parse ------------------------------------------------------------
-    # UTF-8 is what autorunsc 14.x writes with -o. Reading it as anything else
-    # mangles non-ASCII descriptions and paths (the original's bug).
-    $rows = @(Import-Csv -Path $csvPath -Encoding UTF8)
+    # autorunsc 14.3 writes the -o file as UTF-8 without a BOM (observed; the
+    # original tool read it with the ANSI code page and mangled non-ASCII
+    # paths). Sniff for a UTF-16 BOM anyway so a future version that changes
+    # its output encoding still parses.
+    $fs = [System.IO.File]::OpenRead($csvPath)
+    try { $bom = New-Object byte[] 2; $bomLen = $fs.Read($bom, 0, 2) } finally { $fs.Dispose() }
+    $csvEncoding = if ($bomLen -ge 2 -and $bom[0] -eq 0xFF -and $bom[1] -eq 0xFE) { 'Unicode' } else { 'UTF8' }
+    $rows = @(Import-Csv -Path $csvPath -Encoding $csvEncoding)
     if ($rows.Count -eq 0) { throw "CSV at $csvPath contained no rows" }
     $columns = @($rows[0].PSObject.Properties.Name)
     if ($columns -notcontains 'Entry Location') {

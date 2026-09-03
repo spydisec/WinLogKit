@@ -18,9 +18,12 @@ yesterday's, alert on an unsigned binary in a Run key, pivot on a hash.
 **Why it is an add-on and not a baseline setting:** the kit's core is
 native configuration only. Registry autostart locations are the one
 [Persistence gap](architecture.md#behaviour-category-mapping) native
-auditing cannot close without per-key SACLs, and Autoruns is the
+auditing cannot cover without per-key SACLs, and Autoruns is the
 long-standing answer to it - but it is a Sysinternals binary, so it lives
-here, opt-in, clearly labelled.
+here, opt-in, clearly labelled. Be precise about what it gives you: a
+**daily inventory** (what is persisted right now, diffable day to day),
+not real-time change auditing. A change made and reverted between two
+runs is invisible to it; only a registry SACL sees that.
 
 **Origin and credit:** a rewrite of Palantir's
 [AutorunsToWinEventLog](https://github.com/palantir/windows-event-forwarding/tree/master/AutorunsToWinEventLog)
@@ -75,18 +78,23 @@ Get-WinEvent -FilterHashtable @{ LogName = 'Autoruns'; Id = 100 } -MaxEvents 1  
 | 100 | Run summary | Entries written, duration, autorunsc version, host - alert when a host stops producing this daily |
 | 101 | Run failure | The error text - alert on any occurrence |
 
-Volume: a Windows 11 workstation produces roughly 1,600 entries (about
-1.5 MB) per daily run. Multiply by fleet size before pointing it at a
+Volume, observed on one Windows 11 24H2 workstation with autorunsc 14.3
+(2026-09-03): 1,589 entries, a 0.96 MB CSV, so roughly 1-1.5 MB of event
+data per daily run. Servers and hosts with many installed products will
+differ; measure your own. Multiply by fleet size before pointing it at a
 billable table; the roadmap has a diff mode for exactly that reason.
 
 ### Collecting it centrally
 
-- **WEF**: add the channel to the subscription query -
-  `<Select Path="Autoruns">*</Select>` - or regenerate with the kit's
-  generator once the channel is in your baseline selection. Sources need
-  nothing extra: it is a classic log readable by the forwarding service.
-- **AMA**: add `Autoruns!*` to the DCR's Windows event log XPath list (or
-  `ForwardedEvents!*` already covers it when forwarded via WEF).
+- **WEF**: add the channel to the
+  [subscription](https://learn.microsoft.com/windows/win32/wec/setting-up-a-source-initiated-subscription)
+  query - `<Select Path="Autoruns">*</Select>` - or regenerate with the
+  kit's generator once the channel is in your baseline selection. Sources
+  need nothing extra: it is a classic log readable by the forwarding
+  service.
+- **AMA**: add `Autoruns!*` to the
+  [DCR's Windows event log XPath list](https://learn.microsoft.com/azure/azure-monitor/agents/data-collection-windows-events)
+  (or `ForwardedEvents!*` already covers it when forwarded via WEF).
 - **Sentinel**: the events land in `WindowsEvent` with `Channel ==
   "Autoruns"`. Inspect a few rows to see where AMA placed the message text
   for classic-log events in your workspace, then parse the `Key : Value`
@@ -104,15 +112,15 @@ WindowsEvent
 | Original | This add-on | Why |
 |---|---|---|
 | `-v -vt` VirusTotal lookups on every run | Not used | Needs internet from every host, slows the run, and sent hashes to a third party by default. Hashes and signature verification are kept, so VT enrichment can happen SIEM-side. |
-| stdout redirected to a CSV, read with the default code page | `-o` to a file, read as UTF-8 | autorunsc 14.x writes UTF-8; the original mangled any non-ASCII path or description (a real portion of real fleets). CI checks this with a fixture. |
+| stdout redirected to a CSV, read with the default code page | `-o` to a file, read as UTF-8 (UTF-16 auto-detected by BOM) | Observed with autorunsc 14.3 on Windows 11 24H2: the `-o` file is UTF-8 without a BOM and the original's ANSI read mangled every non-ASCII path or description. Microsoft documents the CSV output but not its encoding, so the payload sniffs for a UTF-16 BOM too. CI proves the parser side with a UTF-8 [fixture](https://github.com/spydisec/WinLogKit/blob/main/tests/fixtures/autoruns-sample.csv) in [check 8](https://github.com/spydisec/WinLogKit/blob/main/tests/Invoke-KitChecks.ps1). |
 | Hard-wired message fields | Every CSV column written dynamically | New Autoruns columns (PESHA-256, IMP) appear without code changes; layout unchanged for existing parsers. |
 | No `-m` (keep Microsoft-signed entries) | Same, and no option to hide them | Attackers persist through Microsoft-signed binaries ([Huntress: evading Autoruns](https://github.com/huntresslabs/evading-autoruns)); Palantir's issue #11 reached the same conclusion. |
 | Local group enumeration as Event ID 2 | Dropped | The kit covers group changes natively (4732/4733/4756 ...); mixing two feeds in one log made parsing ambiguous. |
 | No run health signal | Events 100 and 101 | "Onboarded" means health-monitored: a SIEM can alert when a host stops reporting or a run fails. |
 | Download over HTTPS, no verification | Authenticode must be Valid and signed by Microsoft, or the file is removed | The binary runs as SYSTEM daily. |
 | `PROGRA~1` short path in the task action | Quoted full path under Program Files | Same admin-write-only location, without the 8.3 dependency. Never a user-writable folder for a SYSTEM task. |
-| Event log created on first run at the classic 512 KB default | Created and sized at install, overwrite-as-needed | The first run alone exceeds 512 KB; and "do not overwrite" retention is on the kit's never-do list. |
-| `Write-EventLog` / `New-EventLog` cmdlets | .NET `System.Diagnostics.EventLog` | Those cmdlets do not exist in PowerShell 7; the .NET API works on both engines. |
+| Event log created on first run at the classic default size | Created and sized at install (64 MB default, host-configurable via `-LogMaxMB`), overwrite-as-needed | A log created through the .NET API defaults to [512 KB](https://learn.microsoft.com/dotnet/api/system.diagnostics.eventlog.maximumkilobytes), which a single run exceeds; and "do not overwrite" retention is on the kit's never-do list. |
+| `Write-EventLog` / `New-EventLog` cmdlets | .NET `System.Diagnostics.EventLog` | Those cmdlets exist only in [Windows PowerShell 5.1](https://learn.microsoft.com/powershell/module/microsoft.powershell.management/write-eventlog?view=powershell-5.1) (the version picker on that page has no PowerShell 7 entry); the .NET API works on both engines. |
 | Install only | `-WhatIf`, `-Status`, `-Uninstall`, `-RunNow` | See before doing, prove it works, leave cleanly. |
 
 Not adopted from the original repo's open pull requests: switching the

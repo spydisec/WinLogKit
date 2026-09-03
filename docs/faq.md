@@ -5,9 +5,12 @@
 No. The kit is a static snapshot: the Yamato baselines and the OSSEM-DM
 ATT&CK mappings are vendored with recorded provenance (source, commit,
 date). Nothing is fetched at runtime, and nothing about your hosts,
-results or baselines leaves them. The single optional network action is
-`Invoke-WELACheck.ps1 -Download`, which fetches WELA from GitHub to your
-machine when you explicitly ask.
+results or baselines leaves them. The baseline has one optional network
+action, `Invoke-WELACheck.ps1 -Download`, which fetches WELA from GitHub
+when you explicitly ask; the optional [Autoruns add-on](addons.md) adds a
+second, `Install-AutorunsToWinEventLog.ps1 -Download`, which fetches
+`autorunsc` from live.sysinternals.com. Both have an offline alternative
+(bring the files yourself), so air-gapped estates need no network at all.
 
 ## How is this different from just running Yamato's batch script?
 
@@ -29,8 +32,9 @@ without it.
 
 The one deliberate exception is the optional
 [AutorunsToWinEventLog add-on](addons.md), which depends on Sysinternals
-`autorunsc` (a command-line tool, not a resident agent) to close the
-registry-autorun Persistence gap. It lives in its own folder, is never
+`autorunsc` (a command-line tool, not a resident agent) to add a daily
+inventory over the registry-autorun Persistence gap - partial mitigation,
+not SACL-grade change auditing. It lives in its own folder, is never
 installed by the baseline scripts, and is documented as the exception it
 is.
 

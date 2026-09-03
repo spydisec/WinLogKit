@@ -40,8 +40,9 @@ decision.
 - **English-language OS assumed for verification**: `auditpol` output text
   is localised; setting uses GUIDs and is locale-safe. Locale-neutral
   verification is a roadmap item.
-- **Native gaps**: registry autoruns need SACLs (the optional
-  [Autoruns add-on](addons.md) covers them); no file hashes or DLL
+- **Native gaps**: registry autoruns need SACLs for change auditing (the
+  optional [Autoruns add-on](addons.md) adds a daily inventory of them,
+  which is a partial mitigation, not SACL coverage); no file hashes or DLL
   loads without agents; no flow statistics. These are the recognised limits
   of agentless native logging - the docs say so instead of pretending.
 - **Domain-joined hosts**: GPO reapplies audit policy at refresh; deliver
