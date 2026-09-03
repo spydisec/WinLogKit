@@ -18,7 +18,9 @@ yesterday's, alert on an unsigned binary in a Run key, pivot on a hash.
 **Why it is an add-on and not a baseline setting:** the kit's core is
 native configuration only. Registry autostart locations are the one
 [Persistence gap](architecture.md#behaviour-category-mapping) native
-auditing cannot cover without per-key SACLs, and Autoruns is the
+auditing cannot cover without per-key SACLs (the
+[Audit Registry](https://learn.microsoft.com/windows/security/threat-protection/auditing/audit-registry)
+subcategory only records access to keys that carry one), and Autoruns is the
 long-standing answer to it - but it is a Sysinternals binary, so it lives
 here, opt-in, clearly labelled. Be precise about what it gives you: a
 **daily inventory** (what is persisted right now, diffable day to day),
@@ -95,10 +97,10 @@ exactly that reason.
 
 - **WEF**: add the channel to the
   [subscription](https://learn.microsoft.com/windows/win32/wec/setting-up-a-source-initiated-subscription)
-  query - `<Select Path="Autoruns">*</Select>` - or regenerate with the
-  kit's generator once the channel is in your baseline selection. Sources
-  need nothing extra: it is a classic log readable by the forwarding
-  service.
+  query - `<Select Path="Autoruns">*</Select>`. This is a manual addition:
+  the kit's subscription generator only knows the channels in the settings
+  table, and the add-on deliberately is not one of them. Sources need
+  nothing extra: it is a classic log readable by the forwarding service.
 - **AMA**: add `Autoruns!*` to the
   [DCR's Windows event log XPath list](https://learn.microsoft.com/azure/azure-monitor/agents/data-collection-windows-events)
   (or `ForwardedEvents!*` already covers it when forwarded via WEF).

@@ -219,14 +219,15 @@ try {
     $fixture = Join-Path (Join-Path $KitRoot 'tests') (Join-Path 'fixtures' 'autoruns-sample.csv')
     $runner = Join-Path (Join-Path $KitRoot 'addons') (Join-Path 'AutorunsToWinEventLog' 'AutorunsToWinEventLog.ps1')
     $arOut = & $engine -NoProfile -ExecutionPolicy Bypass -File $runner -InputCsv $fixture -WhatIf 2>&1 | Out-String
+    $arExit = $LASTEXITCODE
     # Built from [char]0xE9 so this file stays pure ASCII: Windows PowerShell
     # reads a BOM-less script as ANSI, so a literal e-acute here would never
     # match the UTF-8 fixture text.
     $eAcute = [string][char]0xE9
-    if ($arOut -match 'would write 5 entries' -and $arOut -match 'Entry Location : HKCU' -and $arOut.Contains('Caf' + $eAcute + ' Sync Updater')) {
+    if ($arExit -eq 0 -and $arOut -match 'would write 5 entries' -and $arOut -match 'Entry Location : HKCU' -and $arOut.Contains('Caf' + $eAcute + ' Sync Updater')) {
         Pass 'Autoruns add-on parses the fixture (5 entries, UTF-8 intact) under -WhatIf'
     } else {
-        Fail "Autoruns add-on fixture check failed. Output: $($arOut.Trim())"
+        Fail "Autoruns add-on fixture check failed (exit $arExit). Output: $($arOut.Trim())"
     }
 }
 finally {

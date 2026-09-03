@@ -123,7 +123,11 @@ function ConvertTo-EntryMessage {
     # rules) keeps parsing.
     param([psobject]$Row, [int]$KeyWidth)
     $lines = foreach ($p in $Row.PSObject.Properties) {
-        ('{0,-' + $KeyWidth + '} : {1}') -f $p.Name, $p.Value
+        # A quoted CSV field can legally contain line breaks (a launch
+        # string, say). Escape them so every line of the message still
+        # starts with a key and parsers never see a stray continuation line.
+        $value = [string]$p.Value -replace "`r", '\r' -replace "`n", '\n'
+        ('{0,-' + $KeyWidth + '} : {1}') -f $p.Name, $value
     }
     return ($lines -join "`r`n")
 }
@@ -161,7 +165,13 @@ try {
         # tasks; -PassThru + WaitForExit() is the reliable form.
         $argList = @('-nobanner', '-accepteula', '-a', '*', '-c', '-h', '-s', '-o', "`"$csvPath`"", '*')
         $proc = Start-Process -FilePath $AutorunscPath -ArgumentList $argList -WindowStyle Hidden -PassThru
-        $proc.WaitForExit()
+        # A full scan takes about a minute; 30 minutes means something is
+        # wedged (the scheduled task's own limit is 60). Kill and report
+        # rather than hang an interactive run forever.
+        if (-not $proc.WaitForExit(30 * 60 * 1000)) {
+            try { $proc.Kill() } catch { Write-Verbose "kill failed: $($_.Exception.Message)" }
+            throw 'autorunsc did not finish within 30 minutes; process killed, output discarded'
+        }
         # autorunsc 14.3 exits 0 on success and non-zero (-1 observed) on
         # error. A partial CSV after a mid-scan failure must not be written as
         # a healthy run: fail here so the SIEM sees an ID 101, not an ID 100.
