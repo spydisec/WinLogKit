@@ -544,7 +544,8 @@ $script:BaselineWefDefaults = @{
 #      XPath   = '*[System[(EventID=4688)]] and *[EventData[Data[@Name="NewProcessName"]="C:\Windows\System32\conhost.exe"]]'
 #      Reason  = 'conhost.exe spawns per console session; measured at N/day in the pilot; no detection value' }
 $script:BaselineWefSuppress = @(
-    # TODO(human): decide the default noise-suppression rules for the kit (or leave none)
+    # Deliberately empty: add rules only from measured pilot volume, one per
+    # line, each with a Reason that would survive an incident review.
 )
 
 # -----------------------------------------------------------------------------
