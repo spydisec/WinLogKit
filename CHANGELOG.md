@@ -14,6 +14,11 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
   except that every generated artefact now describes its source the same
   way (`Core tier [+ HighVolume] [+ Optional]` or `baseline file X.csv`).
   The self-checks fail if a function is defined in more than one file.
+- **Selection CSVs are checked before use.** A `-BaselineFile` that is not a
+  selection CSV (missing `ItemType`, `Id` or `Selected` columns), has an
+  empty ItemType or Id, or lists the same item twice now stops the run with
+  a message naming the problem, instead of an obscure error or a silent
+  select-nothing.
 - **Docs cut.** README reduced to one screen and reused as the site home
   page (MkDocs snippet include, one copy of the text). The site goes from
   13 pages to 10: the WEC Collector page absorbs the WEF section of

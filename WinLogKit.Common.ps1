@@ -72,12 +72,36 @@ function Get-AuditPolicyByGuid {
 #   - the tier switches: Core is always on, HighVolume and Optional only when
 #     their switch is given
 
-# Selection map from a selection CSV: "ITEMTYPE|ID" -> bool.
+# Selection map from a selection CSV: "ITEMTYPE|ID" -> bool. The file is
+# checked first: the wrong CSV (a Results export, say) must stop the run,
+# not quietly select nothing.
 function Import-BaselineSelection {
     param([string]$Path)
+    $rows = @(Import-Csv $Path)
+    if ($rows.Count -eq 0) {
+        Write-Error "Baseline file has no rows: $Path"
+        exit 1
+    }
+    $columns = @($rows[0].PSObject.Properties.Name)
+    $missing = @('ItemType', 'Id', 'Selected' | Where-Object { $columns -notcontains $_ })
+    if ($missing.Count -gt 0) {
+        Write-Error "Not a selection CSV (missing column(s): $($missing -join ', ')): $Path (build one with New-LoggingBaseline.ps1 or use a preset)"
+        exit 1
+    }
     $map = @{}
-    foreach ($row in (Import-Csv $Path)) {
-        $map[("$($row.ItemType)|$($row.Id)").ToUpper()] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
+    $n = 0
+    foreach ($row in $rows) {
+        $n++
+        if ([string]::IsNullOrWhiteSpace($row.ItemType) -or [string]::IsNullOrWhiteSpace($row.Id)) {
+            Write-Error "Baseline file row $n has an empty ItemType or Id: $Path"
+            exit 1
+        }
+        $key = ("$($row.ItemType)|$($row.Id)").ToUpper()
+        if ($map.ContainsKey($key)) {
+            Write-Error "Baseline file lists $($row.ItemType) '$($row.Id)' more than once (row $n): $Path"
+            exit 1
+        }
+        $map[$key] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
     }
     return $map
 }

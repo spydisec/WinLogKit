@@ -96,6 +96,16 @@ if ($dupes) {
 } else {
     Pass "every helper function is defined in exactly one file ($($defs.Count) functions)"
 }
+# The shared helpers must stay in the common file: a copy that migrated back
+# into one script would still be a single definition, so name them.
+$commonExpected = @('Test-IsAdmin', 'Get-DomainRole', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
+    'Get-AuditPolicyByGuid', 'Import-BaselineSelection', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
+$notInCommon = @($commonExpected | Where-Object { -not $defs.ContainsKey($_) -or $defs[$_] -ne @('WinLogKit.Common.ps1') })
+if ($notInCommon) {
+    Fail "shared helper not defined in WinLogKit.Common.ps1 (only): $($notInCommon -join ', ')"
+} else {
+    Pass "the $($commonExpected.Count) shared helpers are defined in WinLogKit.Common.ps1 only"
+}
 
 # 2. Settings table consistency -----------------------------------------------
 . (Join-Path $KitRoot 'LoggingBaseline.Settings.ps1')
