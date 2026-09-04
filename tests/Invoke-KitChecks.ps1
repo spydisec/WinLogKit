@@ -87,7 +87,7 @@ foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse |
     $ast = [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors)
     # Root-relative path, so two files with the same name in different
     # folders stay distinct.
-    $rel = $f.FullName.Substring($kitRootFull.Length).TrimStart('')
+    $rel = $f.FullName.Substring($kitRootFull.Length).TrimStart([char]92)
     foreach ($fn in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)) {
         if (-not $defs.ContainsKey($fn.Name)) { $defs[$fn.Name] = @() }
         if ($defs[$fn.Name] -notcontains $rel) { $defs[$fn.Name] += $rel }
@@ -103,7 +103,7 @@ if ($dupes) {
 # into one script would still be a single definition, so name them.
 $commonExpected = @('Test-IsAdmin', 'Get-DomainRole', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
     'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'Import-BaselineSelection', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
-$notInCommon = @($commonExpected | Where-Object { -not $defs.ContainsKey($_) -or $defs[$_] -ne @('WinLogKit.Common.ps1') })
+$notInCommon = @($commonExpected | Where-Object { -not $defs.ContainsKey($_) -or (($defs[$_] -join ';') -ne 'WinLogKit.Common.ps1') })
 if ($notInCommon) {
     Fail "shared helper not defined in WinLogKit.Common.ps1 (only): $($notInCommon -join ', ')"
 } else {
