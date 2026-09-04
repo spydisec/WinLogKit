@@ -22,8 +22,12 @@ Produces a self-contained pair for Intune remediations:
   never shrinks logs, never restarts anything
 
 Upload under **Devices > Manage devices > Scripts and remediations >
-Create**: run using logged-on credentials **No** (SYSTEM), 64-bit
-PowerShell **Yes**. Endpoints need nothing but the two uploaded files -
+Create**: run using logged-on credentials **No** (SYSTEM), enforce script
+signature check **No** (the generated scripts are unsigned; with Yes the
+device's execution policy applies and they must be signed by a trusted
+publisher, per
+[Microsoft's remediation prerequisites](https://learn.microsoft.com/intune/device-management/tools/deploy-remediations#prerequisites)),
+64-bit PowerShell **Yes**. Endpoints need nothing but the two uploaded files -
 role- and version-gating happens at runtime on each host. The AD CS
 AuditFilter is excluded from packs by design (it needs a CertSvc restart,
 which does not belong in unattended remediation).

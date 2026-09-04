@@ -82,9 +82,13 @@ Notes:
   `UserPolicy` sit above the Process scope that Options 1 and 2 use, per
   [about_Execution_Policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies).
   Have the scripts signed per your org's process, or ask for the policy to
-  be changed. The Intune remediation pack is unaffected (Intune
-  executes remediations with its own bypass), and none of this weakens
-  anything the kit configures - execution policy is a usability guardrail,
+  be changed. The Intune remediation pack is unaffected as long as the
+  package is uploaded with **Enforce script signature check** set to No:
+  Intune then runs the (unsigned) scripts under `Bypass`; with it set to
+  Yes, the device's own policy applies and the scripts must be signed by a
+  trusted publisher, per
+  [Microsoft's remediation prerequisites](https://learn.microsoft.com/intune/device-management/tools/deploy-remediations#prerequisites).
+  None of this weakens anything the kit configures - execution policy is a usability guardrail,
   not a security boundary, per Microsoft's own documentation.
 
 ## First run - see everything before changing anything
