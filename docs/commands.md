@@ -1,7 +1,8 @@
 # Commands
 
 Every script, what it does, and the flags you'll actually use. They all
-read the same settings table (`LoggingBaseline.Settings.ps1`), so - given
+read the same settings table (`LoggingBaseline.Settings.ps1`) and share one
+helper file (`WinLogKit.Common.ps1`), so - given
 the same selection, and regenerating artefacts after any settings change -
 what you apply, what you verify and what you deploy can't disagree.
 All of the kit's scripts run on PowerShell 7 and on stock Windows

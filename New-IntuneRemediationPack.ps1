@@ -69,38 +69,12 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $PSScriptRoot 'Intune' }
 
-# Captured here so the nested Test-Wanted function reads script-level state
-# (also keeps PSScriptAnalyzer's unused-parameter analysis accurate).
-$wantHighVolume = [bool]$IncludeHighVolume
-$wantOptional   = [bool]$IncludeOptional
-
 . (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
 
 # ---------------------------------------------------------- item selection ---
 
-$selection = $null
-if (-not [string]::IsNullOrEmpty($BaselineFile)) {
-    if (-not (Test-Path $BaselineFile)) {
-        Write-Error "Baseline file not found: $BaselineFile (build one with New-LoggingBaseline.ps1)"
-        exit 1
-    }
-    $selection = @{}
-    foreach ($row in (Import-Csv $BaselineFile)) {
-        $selection[("$($row.ItemType)|$($row.Id)").ToUpper()] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
-    }
-}
-
-function Test-Wanted {
-    param([string]$ItemType, [string]$Id, [string]$Tier)
-    if ($null -ne $selection) {
-        $key = ("$ItemType|$Id").ToUpper()
-        return ($selection.ContainsKey($key) -and $selection[$key])
-    }
-    if ($Tier -eq 'Core') { return $true }
-    if ($Tier -eq 'HighVolume') { return $script:wantHighVolume }
-    if ($Tier -eq 'Optional') { return $script:wantOptional }
-    return $false
-}
+$sel = Resolve-BaselineSelection -BaselineFile $BaselineFile -IncludeHighVolume $IncludeHighVolume -IncludeOptional $IncludeOptional
 
 # ------------------------------------------- build the embedded item table ---
 
@@ -110,19 +84,19 @@ function ConvertTo-PsBool   { param([bool]$b) if ($b) { '$true' } else { '$false
 $lines = New-Object System.Collections.Generic.List[string]
 
 foreach ($ch in $script:BaselineChannels) {
-    if (-not (Test-Wanted 'Channel' $ch.Name $ch.Tier)) { continue }
+    if (-not (Test-ItemSelected $sel 'Channel' $ch.Name $ch.Tier)) { continue }
     $lines.Add(('    @{{ Type=''Channel''; Name={0}; TargetBytes={1}; MustEnable={2}; DCOnly=$false }}' -f `
         (ConvertTo-PsString $ch.Name), $ch.TargetBytes, (ConvertTo-PsBool $ch.MustEnable)))
 }
 foreach ($sub in $script:BaselineAuditSubcategories) {
-    if (-not (Test-Wanted 'AuditPolicy' $sub.Guid $sub.Tier)) { continue }
+    if (-not (Test-ItemSelected $sel 'AuditPolicy' $sub.Guid $sub.Tier)) { continue }
     $lines.Add(('    @{{ Type=''AuditPolicy''; Name={0}; Guid={1}; Success={2}; Failure={3}; DCOnly={4} }}' -f `
         (ConvertTo-PsString $sub.Name), (ConvertTo-PsString $sub.Guid.ToUpper()), `
         (ConvertTo-PsBool $sub.Success), (ConvertTo-PsBool $sub.Failure), `
         (ConvertTo-PsBool ($sub.Scope -eq 'DomainController'))))
 }
 foreach ($rs in $script:BaselineRegistrySettings) {
-    if (-not (Test-Wanted 'Registry' $rs.Id $rs.Tier)) { continue }
+    if (-not (Test-ItemSelected $sel 'Registry' $rs.Id $rs.Tier)) { continue }
     $valueLiteral = $rs.Value
     if ($rs.Kind -eq 'String') { $valueLiteral = ConvertTo-PsString "$($rs.Value)" }
     $lines.Add(('    @{{ Type=''Registry''; Path={0}; Name={1}; Kind={2}; Value={3}; DCOnly={4} }}' -f `
@@ -130,7 +104,7 @@ foreach ($rs in $script:BaselineRegistrySettings) {
         $valueLiteral, (ConvertTo-PsBool ($rs.Scope -eq 'DomainController'))))
 }
 foreach ($sa in $script:BaselineSmbAuditSettings) {
-    if (-not (Test-Wanted 'SmbAudit' $sa.Id $sa.Tier)) { continue }
+    if (-not (Test-ItemSelected $sel 'SmbAudit' $sa.Id $sa.Tier)) { continue }
     $lines.Add(('    @{{ Type=''SmbAudit''; Id={0}; Side={1}; Value={2}; DCOnly=$false }}' -f `
         (ConvertTo-PsString $sa.Id), (ConvertTo-PsString $sa.Side), (ConvertTo-PsBool $sa.Value)))
 }
@@ -140,8 +114,7 @@ if ($lines.Count -eq 0) {
     exit 1
 }
 
-$sourceDesc = 'recommended tiers'
-if ($null -ne $selection) { $sourceDesc = "baseline file $(Split-Path $BaselineFile -Leaf)" }
+$sourceDesc = $sel.Description
 
 # ----------------------------------------------------------- the template ---
 # Single-quoted here-string: everything is literal; placeholders are replaced

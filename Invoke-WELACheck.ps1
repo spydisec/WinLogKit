@@ -70,10 +70,7 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrEmpty($EvidenceDir)) { $EvidenceDir = Join-Path $PSScriptRoot 'Evidence' }
 
-function Test-IsAdmin {
-    $id = [Security.Principal.WindowsIdentity]::GetCurrent()
-    (New-Object Security.Principal.WindowsPrincipal $id).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
+. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
 
 if (-not (Test-IsAdmin)) {
     Write-Error 'Run as local Administrator - WELA audit-settings reads the audit policy via auditpol.'

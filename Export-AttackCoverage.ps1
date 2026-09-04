@@ -64,48 +64,27 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $PSScriptRoot 'Results' }
 
 . (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
 
 # ---------------------------------------------- resolve the selection sets ---
 
-$selection = $null
-if (-not [string]::IsNullOrEmpty($BaselineFile)) {
-    if (-not (Test-Path $BaselineFile)) {
-        Write-Error "Baseline file not found: $BaselineFile"
-        exit 1
-    }
-    $selection = @{}
-    foreach ($row in (Import-Csv $BaselineFile)) {
-        $selection[("$($row.ItemType)|$($row.Id)").ToUpper()] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
-    }
-}
-
-function Test-ItemOn {
-    param([string]$ItemType, [string]$Id, [string]$Tier)
-    if ($null -ne $selection) {
-        $key = ("$ItemType|$Id").ToUpper()
-        return ($selection.ContainsKey($key) -and $selection[$key])
-    }
-    if ($Tier -eq 'Core') { return $true }
-    if ($Tier -eq 'HighVolume') { return [bool]$IncludeHighVolume }
-    if ($Tier -eq 'Optional') { return [bool]$IncludeOptional }
-    return $false
-}
+$sel = Resolve-BaselineSelection -BaselineFile $BaselineFile -IncludeHighVolume $IncludeHighVolume -IncludeOptional $IncludeOptional
 
 $subcatSelected = @{}; $subcatKnownByGuid = @{}; $subcatNameByGuid = @{}
 foreach ($sub in $script:BaselineAuditSubcategories) {
     $g = $sub.Guid.ToUpper()
     $subcatKnownByGuid[$g] = $true
     $subcatNameByGuid[$g] = $sub.Name
-    if (Test-ItemOn 'AuditPolicy' $sub.Guid $sub.Tier) { $subcatSelected[$g] = $true }
+    if (Test-ItemSelected $sel 'AuditPolicy' $sub.Guid $sub.Tier) { $subcatSelected[$g] = $true }
 }
 $channelSelected = @{}; $channelKnown = @{}
 foreach ($ch in $script:BaselineChannels) {
     $channelKnown[$ch.Name] = $true
-    if (Test-ItemOn 'Channel' $ch.Name $ch.Tier) { $channelSelected[$ch.Name] = $true }
+    if (Test-ItemSelected $sel 'Channel' $ch.Name $ch.Tier) { $channelSelected[$ch.Name] = $true }
 }
 $regSelected = @{}
 foreach ($rs in $script:BaselineRegistrySettings) {
-    if (Test-ItemOn 'Registry' $rs.Id $rs.Tier) { $regSelected[$rs.Id] = $true }
+    if (Test-ItemSelected $sel 'Registry' $rs.Id $rs.Tier) { $regSelected[$rs.Id] = $true }
 }
 
 function Test-Prereq {
@@ -121,8 +100,7 @@ function Test-Prereq {
     return $false
 }
 
-$sourceDesc = "Core tier$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
-if ($null -ne $selection) { $sourceDesc = "baseline file $(Split-Path $BaselineFile -Leaf)" }
+$sourceDesc = $sel.Description
 
 $detail = New-Object System.Collections.Generic.List[object]
 
@@ -134,7 +112,7 @@ if ($UseOssem) {
     $subcatSelectedByName = @{}; $subcatKnownByName = @{}
     foreach ($sub in $script:BaselineAuditSubcategories) {
         $subcatKnownByName[$sub.Name] = $true
-        if (Test-ItemOn 'AuditPolicy' $sub.Guid $sub.Tier) { $subcatSelectedByName[$sub.Name] = $true }
+        if (Test-ItemSelected $sel 'AuditPolicy' $sub.Guid $sub.Tier) { $subcatSelectedByName[$sub.Name] = $true }
     }
     foreach ($r in (Import-Csv $snapshot)) {
         $status = ''; $via = ''

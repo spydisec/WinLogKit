@@ -93,7 +93,8 @@ Reading it top to bottom:
   generated from them.
 - **One table**: every script - the builder, Enable, Test, the coverage
   report and all three fleet generators - dot-sources
-  `LoggingBaseline.Settings.ps1`, so applied config, deployed artefacts and
+  `LoggingBaseline.Settings.ps1` (and the shared helpers in
+  `WinLogKit.Common.ps1`), so applied config, deployed artefacts and
   verification can never disagree.
 - **Events out**: hosts write to the Windows Event Log service;
   [Windows Event Forwarding](https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection)

@@ -6,6 +6,14 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 ## Unreleased
 
 ### Changed
+- **`WinLogKit.Common.ps1`.** The helpers that Enable, Test, the WELA
+  check, the coverage report and the fleet generators each carried their
+  own copy of (admin check, host role and OS type, registry reads, the
+  auditpol reader, selection-CSV loading and the tier logic) now live in
+  one dot-sourced file next to the settings table. Behaviour is unchanged
+  except that every generated artefact now describes its source the same
+  way (`Core tier [+ HighVolume] [+ Optional]` or `baseline file X.csv`).
+  The self-checks fail if a function is defined in more than one file.
 - **Docs cut.** README reduced to one screen and reused as the site home
   page (MkDocs snippet include, one copy of the text). The site goes from
   13 pages to 10: the WEC Collector page absorbs the WEF section of

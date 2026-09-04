@@ -100,40 +100,14 @@ if ([string]::IsNullOrEmpty($BaselineDir)) { $BaselineDir = Join-Path $PSScriptR
 if ([string]::IsNullOrEmpty($LogDir))      { $LogDir      = Join-Path $PSScriptRoot 'Logs' }
 
 . (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
 
 # ---------------------------------------------------------------- helpers ---
 
-function Test-IsAdmin {
-    $id = [Security.Principal.WindowsIdentity]::GetCurrent()
-    (New-Object Security.Principal.WindowsPrincipal $id).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
-
-function Get-DomainRole {
-    # Win32_ComputerSystem.DomainRole: 0/1 standalone, 2/3 member, 4/5 domain controller
-    $role = (Get-CimInstance -ClassName Win32_ComputerSystem).DomainRole
-    if ($role -ge 4) { return 'DomainController' }
-    if ($role -ge 2) { return 'Member' }
-    return 'Standalone'
-}
-
-function Get-OsType {
-    # Win32_OperatingSystem.ProductType: 1 workstation, 2 domain controller, 3 server
-    $pt = (Get-CimInstance -ClassName Win32_OperatingSystem).ProductType
-    if ($pt -eq 1) { return 'Workstation' }
-    if ($pt -eq 2) { return 'Domain Controller' }
-    return 'Server'
-}
-
-# Registry access uses the .NET API throughout, not *-ItemProperty, because
-# one required value is literally named '*' and the ItemProperty cmdlets
-# treat that as a wildcard.
-function ConvertTo-NetRegPath { param([string]$Path) $Path -replace '^HKLM:\\', 'HKEY_LOCAL_MACHINE\' }
-
-function Get-RegValue {
-    param([string]$Path, [string]$Name)
-    [Microsoft.Win32.Registry]::GetValue((ConvertTo-NetRegPath $Path), $Name, $null)
-}
-
+# Host probes, registry reads and the selection model come from
+# WinLogKit.Common.ps1. The registry writers live here because this is
+# the one script that writes; they use the .NET API for the reason noted
+# there (a required value is literally named '*').
 function Set-RegValue {
     param([string]$Path, [string]$Name, $Value, [string]$Kind)
     $kindEnum = [Microsoft.Win32.RegistryValueKind]::$Kind
@@ -147,17 +121,6 @@ function Remove-RegValue {
     if ($null -ne $key) {
         try { $key.DeleteValue($Name, $false) } finally { $key.Close() }
     }
-}
-
-function Get-AuditPolicyByGuid {
-    # One auditpol call for everything; returns hashtable GUID -> inclusion setting text.
-    $map = @{}
-    $csv = auditpol /get /category:* /r | Where-Object { $_ -match '\S' } | ConvertFrom-Csv
-    foreach ($row in $csv) {
-        $guid = ($row.'Subcategory GUID' -replace '[{}]', '').ToUpper()
-        $map[$guid] = $row.'Inclusion Setting'
-    }
-    return $map
 }
 
 function Get-DesiredInclusion {
@@ -217,37 +180,20 @@ function Add-Result {
     Write-Host ('[{0,-15}] {1,-9} {2}  {3}' -f $Action, $Area, $Item, $Detail) -ForegroundColor $colour
 }
 
-function Test-TierSelected {
-    param([string]$Tier)
-    if ($Tier -eq 'Core') { return $true }
-    if ($Tier -eq 'HighVolume') { return [bool]$IncludeHighVolume }
-    if ($Tier -eq 'Optional') { return [bool]$IncludeOptional }
-    return $false
-}
-
-# Selection map from a New-LoggingBaseline.ps1 CSV: "ITEMTYPE|ID" -> bool.
-$script:Selection = $null
-function Import-BaselineSelection {
-    param([string]$Path)
-    $map = @{}
-    foreach ($row in (Import-Csv $Path)) {
-        $map[("$($row.ItemType)|$($row.Id)").ToUpper()] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
-    }
-    return $map
-}
-
 # One decision point for every item: baseline file wins when present,
-# otherwise the tier switches decide. Returns Apply | PendingDecision |
-# Excluded | NotListed.
+# otherwise the tier switches decide (WinLogKit.Common.ps1 resolves both
+# into $script:Selection). Returns Apply | PendingDecision | Excluded |
+# NotListed.
+$script:Selection = Resolve-BaselineSelection -BaselineFile $BaselineFile -IncludeHighVolume $IncludeHighVolume -IncludeOptional $IncludeOptional
 function Get-ItemDecision {
     param([string]$Tier, [string]$ItemType, [string]$Id)
-    if ($null -ne $script:Selection) {
+    if ($null -ne $script:Selection.Map) {
         $key = ("$ItemType|$Id").ToUpper()
-        if (-not $script:Selection.ContainsKey($key)) { return 'NotListed' }
-        if ($script:Selection[$key]) { return 'Apply' }
+        if (-not $script:Selection.Map.ContainsKey($key)) { return 'NotListed' }
+        if ($script:Selection.Map[$key]) { return 'Apply' }
         return 'Excluded'
     }
-    if (Test-TierSelected $Tier) { return 'Apply' }
+    if (Test-ItemSelected $script:Selection $ItemType $Id $Tier) { return 'Apply' }
     return 'PendingDecision'
 }
 
@@ -273,18 +219,10 @@ try {
     $baselineJson = Join-Path $BaselineDir 'LoggingBaseline-FirstRun.json'
     $auditBackup  = Join-Path $BaselineDir 'auditpol-backup.csv'
 
-    if (-not [string]::IsNullOrEmpty($BaselineFile)) {
-        if (-not (Test-Path $BaselineFile)) {
-            Write-Error "Baseline file not found: $BaselineFile (build one with New-LoggingBaseline.ps1)"
-            exit 1
-        }
-        $script:Selection = Import-BaselineSelection -Path $BaselineFile
-    }
-
     Write-Host ''
     Write-Host "Host profile       : $(Get-OsType), $domainRole"
-    if ($null -ne $script:Selection) {
-        Write-Host "Baseline file      : $BaselineFile ($(@($script:Selection.Values | Where-Object { $_ }).Count) items selected; tier switches ignored)"
+    if ($null -ne $script:Selection.Map) {
+        Write-Host "Baseline file      : $BaselineFile ($(@($script:Selection.Map.Values | Where-Object { $_ }).Count) items selected; tier switches ignored)"
     } else {
         Write-Host "Tiers selected     : Core$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
     }

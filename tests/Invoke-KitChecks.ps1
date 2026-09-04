@@ -6,6 +6,8 @@
     Safe on any machine: nothing is applied, no admin needed. Checks:
       1. Every .ps1 parses cleanly on the current PowerShell engine
          (CI runs this under both Windows PowerShell 5.1 and PowerShell 7).
+      1c. Every helper function is defined in exactly one file (shared ones
+         live in WinLogKit.Common.ps1).
       2. The settings table is internally consistent: category tags valid,
          coverage notes complete, audit GUIDs unique and well-formed.
       3. New-LoggingBaseline.ps1 runs end-to-end non-interactively and its
@@ -71,6 +73,28 @@ if ($badNewItem) {
     Fail "New-Item without explicit -ItemType Directory/File (could create a registry key and wipe sibling values, WELA issue #243 class): $($badNewItem -join ', ')"
 } else {
     Pass 'every New-Item declares -ItemType Directory/File (WELA issue #243 class fenced)'
+}
+
+# 1c. One definition per helper. Shared helpers live in WinLogKit.Common.ps1;
+# a function defined in two kit files is the copy-paste drift this fences.
+# The Intune pack generator embeds its helpers inside a here-string, which
+# the AST does not see as definitions - the generated pack must stay
+# self-contained, so that is intended.
+$defs = @{}
+foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse |
+    Where-Object { $_.FullName.Substring($kitRootFull.Length) -notmatch '\\(WELA[^\\]*|Baseline|Logs|Results|Evidence|Intune)\\' }) {
+    $tokens = $null; $errors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors)
+    foreach ($fn in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)) {
+        if (-not $defs.ContainsKey($fn.Name)) { $defs[$fn.Name] = @() }
+        if ($defs[$fn.Name] -notcontains $f.Name) { $defs[$fn.Name] += $f.Name }
+    }
+}
+$dupes = @($defs.Keys | Where-Object { $defs[$_].Count -gt 1 } | Sort-Object | ForEach-Object { "$_ ($($defs[$_] -join ', '))" })
+if ($dupes) {
+    Fail "function defined in more than one file (move it to WinLogKit.Common.ps1): $($dupes -join '; ')"
+} else {
+    Pass "every helper function is defined in exactly one file ($($defs.Count) functions)"
 }
 
 # 2. Settings table consistency -----------------------------------------------
