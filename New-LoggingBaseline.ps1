@@ -92,6 +92,7 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrEmpty($OutFile)) { $OutFile = Join-Path $PSScriptRoot 'MyBaseline.csv' }
 
 . (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
 
 if ((Test-Path $OutFile) -and -not $Force -and -not $Show) {
     Write-Error "$OutFile already exists. Use -Force to overwrite, or pick another -OutFile."
@@ -101,10 +102,7 @@ if ((Test-Path $OutFile) -and -not $Force -and -not $Show) {
 function Get-DefaultSelected {
     # The kit recommendation: Core is in, heavier tiers are opt-in.
     param([string]$Tier)
-    if ($Tier -eq 'Core') { return $true }
-    if ($Tier -eq 'HighVolume') { return [bool]$IncludeHighVolume }
-    if ($Tier -eq 'Optional') { return [bool]$IncludeOptional }
-    return $false
+    Test-TierSelected -Tier $Tier -IncludeHighVolume $IncludeHighVolume -IncludeOptional $IncludeOptional
 }
 
 function Get-ItemField {
@@ -231,17 +229,11 @@ function Show-BaselineTree {
 if ($Show) {
     $decided = @{}
     if (-not [string]::IsNullOrEmpty($BaselineFile)) {
-        if (-not (Test-Path $BaselineFile)) {
-            Write-Error "Baseline file not found: $BaselineFile"
-            exit 1
-        }
+        $sel = Resolve-BaselineSelection -BaselineFile $BaselineFile
         Write-Host "Showing selection from: $BaselineFile"
         # Items absent from the CSV are excluded - matching how Enable/Test
         # treat unlisted items - so a partial CSV cannot overstate coverage.
-        foreach ($it in $items) { $decided["$($it.ItemType)|$($it.Id)"] = $false }
-        foreach ($row in (Import-Csv $BaselineFile)) {
-            $decided["$($row.ItemType)|$($row.Id)"] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
-        }
+        foreach ($it in $items) { $decided["$($it.ItemType)|$($it.Id)"] = (Test-ItemSelected $sel $it.ItemType $it.Id $it.Tier) }
     } else {
         Write-Host "Showing the kit recommendation (Core$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'}))"
         foreach ($it in $items) { $decided["$($it.ItemType)|$($it.Id)"] = Get-DefaultSelected $it.Tier }

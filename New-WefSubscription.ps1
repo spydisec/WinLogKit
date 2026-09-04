@@ -143,6 +143,7 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $PSScriptRoot 'WEF' }
 
 . (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
 
 $wefDefaults = $script:BaselineWefDefaults
 if ([string]::IsNullOrEmpty($ContentFormat)) { $ContentFormat = $wefDefaults.ContentFormat }
@@ -166,32 +167,14 @@ $maxExpressionsPerSelect = 20
 $channels = New-Object System.Collections.Generic.List[string]
 $subcategoryGuids = New-Object System.Collections.Generic.List[string]
 
-if (-not [string]::IsNullOrEmpty($BaselineFile)) {
-    if (-not (Test-Path $BaselineFile)) {
-        Write-Error "Baseline file not found: $BaselineFile (build one with New-LoggingBaseline.ps1 or use a preset)"
-        exit 1
-    }
-    foreach ($row in (Import-Csv $BaselineFile)) {
-        if ("$($row.Selected)".Trim() -notmatch '^(Y|YES|TRUE|1)$') { continue }
-        if ($row.ItemType -eq 'Channel')     { $channels.Add($row.Id) }
-        if ($row.ItemType -eq 'AuditPolicy') { $subcategoryGuids.Add($row.Id.ToUpper()) }
-    }
-    $sourceDesc = "baseline file $(Split-Path $BaselineFile -Leaf)"
-} else {
-    foreach ($ch in $script:BaselineChannels) {
-        $take = ($ch.Tier -eq 'Core')
-        if ($ch.Tier -eq 'HighVolume' -and $IncludeHighVolume) { $take = $true }
-        if ($ch.Tier -eq 'Optional' -and $IncludeOptional) { $take = $true }
-        if ($take) { $channels.Add($ch.Name) }
-    }
-    foreach ($sub in $script:BaselineAuditSubcategories) {
-        $take = ($sub.Tier -eq 'Core')
-        if ($sub.Tier -eq 'HighVolume' -and $IncludeHighVolume) { $take = $true }
-        if ($sub.Tier -eq 'Optional' -and $IncludeOptional) { $take = $true }
-        if ($take) { $subcategoryGuids.Add($sub.Guid.ToUpper()) }
-    }
-    $sourceDesc = "kit Core tier$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
+$sel = Resolve-BaselineSelection -BaselineFile $BaselineFile -IncludeHighVolume $IncludeHighVolume -IncludeOptional $IncludeOptional
+foreach ($ch in $script:BaselineChannels) {
+    if (Test-ItemSelected $sel 'Channel' $ch.Name $ch.Tier) { $channels.Add($ch.Name) }
 }
+foreach ($sub in $script:BaselineAuditSubcategories) {
+    if (Test-ItemSelected $sel 'AuditPolicy' $sub.Guid $sub.Tier) { $subcategoryGuids.Add($sub.Guid.ToUpper()) }
+}
+$sourceDesc = $sel.Description
 
 if ($channels.Count -eq 0) {
     Write-Error 'No channels selected - nothing to forward.'

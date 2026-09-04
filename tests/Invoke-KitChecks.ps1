@@ -6,6 +6,8 @@
     Safe on any machine: nothing is applied, no admin needed. Checks:
       1. Every .ps1 parses cleanly on the current PowerShell engine
          (CI runs this under both Windows PowerShell 5.1 and PowerShell 7).
+      1c. Every helper function is defined in exactly one file (shared ones
+         live in WinLogKit.Common.ps1).
       2. The settings table is internally consistent: category tags valid,
          coverage notes complete, audit GUIDs unique and well-formed.
       3. New-LoggingBaseline.ps1 runs end-to-end non-interactively and its
@@ -73,6 +75,43 @@ if ($badNewItem) {
     Pass 'every New-Item declares -ItemType Directory/File (WELA issue #243 class fenced)'
 }
 
+# 1c. One definition per helper. Shared helpers live in WinLogKit.Common.ps1;
+# a function defined in two kit files is the copy-paste drift this fences, and
+# a function defined twice in one file (PowerShell keeps the last, silently)
+# fails the same way.
+# The Intune pack generator embeds its helpers inside a here-string, which
+# the AST does not see as definitions - the generated pack must stay
+# self-contained, so that is intended.
+$defs = @{}
+foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse |
+    Where-Object { $_.FullName.Substring($kitRootFull.Length) -notmatch '\\(WELA[^\\]*|Baseline|Logs|Results|Evidence|Intune)\\' }) {
+    $tokens = $null; $errors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors)
+    # Root-relative path, so two files with the same name in different
+    # folders stay distinct.
+    $rel = $f.FullName.Substring($kitRootFull.Length).TrimStart([char]92)
+    foreach ($fn in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)) {
+        if (-not $defs.ContainsKey($fn.Name)) { $defs[$fn.Name] = @() }
+        $defs[$fn.Name] += $rel
+    }
+}
+$dupes = @($defs.Keys | Where-Object { $defs[$_].Count -gt 1 } | Sort-Object | ForEach-Object { "$_ ($($defs[$_] -join ', '))" })
+if ($dupes) {
+    Fail "function defined more than once (shared helpers belong in WinLogKit.Common.ps1): $($dupes -join '; ')"
+} else {
+    Pass "every helper function is defined exactly once ($($defs.Count) functions)"
+}
+# The shared helpers must stay in the common file: a copy that migrated back
+# into one script would still be a single definition, so name them.
+$commonExpected = @('Test-IsAdmin', 'Get-DomainRole', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
+    'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'Get-BaselineItemKeySet', 'Import-BaselineSelection', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
+$notInCommon = @($commonExpected | Where-Object { -not $defs.ContainsKey($_) -or (($defs[$_] -join ';') -ne 'WinLogKit.Common.ps1') })
+if ($notInCommon) {
+    Fail "shared helper not defined in WinLogKit.Common.ps1 (only): $($notInCommon -join ', ')"
+} else {
+    Pass "the $($commonExpected.Count) shared helpers are defined in WinLogKit.Common.ps1 only"
+}
+
 # 2. Settings table consistency -----------------------------------------------
 . (Join-Path $KitRoot 'LoggingBaseline.Settings.ps1')
 
@@ -126,6 +165,28 @@ try {
     $selOther  = @($r1 | Where-Object { $_.Selected -eq 'Y' -and $_.Tier -ne 'Core' }).Count
     if ($selCore -ne $coreCount -or $selOther -ne 0) { Fail "recommended defaults wrong (core=$coreCount selected-core=$selCore selected-noncore=$selOther)" } else { Pass 'recommended defaults select exactly Core' }
     if (@($r2 | Where-Object { $_.Selected -eq 'Y' }).Count -ne $r2.Count) { Fail 'all-tiers run did not select everything' } else { Pass 'all-tiers run selects everything' }
+
+    # 4b. Selection CSV validation: a file with the right columns but no row
+    #     matching this kit must be rejected (otherwise Test would report every
+    #     item NOT APPLICABLE and exit 0), while one stale row only warns.
+    #     Child process: the rejection is a terminating error in-session, and
+    #     the child's stderr is captured with ErrorActionPreference relaxed,
+    #     because Windows PowerShell 5.1 turns redirected native stderr into
+    #     a terminating error under 'Stop'.
+    $engine = (Get-Process -Id $PID).Path
+    $badCsv = Join-Path $tmp 'unknown-only.csv'
+    '"ItemType","Id","Selected"', '"Channel","No-Such-Channel/Operational","Y"' | Set-Content $badCsv
+    $staleCsv = Join-Path $tmp 'one-stale-row.csv'
+    (Get-Content $csv1) + '"Channel","No-Such-Channel/Operational","Core","All","Y","Y","","",""' | Set-Content $staleCsv
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $badOut = & $engine -NoProfile -ExecutionPolicy Bypass -File (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -Show -BaselineFile $badCsv 2>&1 | Out-String
+    $badExit = $LASTEXITCODE
+    $staleOut = & $engine -NoProfile -ExecutionPolicy Bypass -File (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -Show -BaselineFile $staleCsv 2>&1 | Out-String
+    $staleExit = $LASTEXITCODE
+    $ErrorActionPreference = $prevEap
+    if ($badExit -ne 0 -and $badOut -match 'No row in the baseline file matches') { Pass 'selection CSV with no known item is rejected' } else { Fail "selection CSV with no known item was accepted (exit $badExit): $($badOut.Trim())" }
+    if ($staleExit -eq 0 -and $staleOut -match 'does not know, ignored: CHANNEL\|NO-SUCH-CHANNEL/OPERATIONAL') { Pass 'selection CSV with one unknown row warns and continues' } else { Fail "stale-row CSV handling wrong (exit $staleExit): $($staleOut.Trim())" }
 
     # 5. Intune pack generation: files parse, placeholders replaced, selection respected
     $packDir = Join-Path $tmp 'intune'

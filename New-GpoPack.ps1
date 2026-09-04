@@ -66,33 +66,11 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $PSScriptRoot 'GPO' }
 
 . (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
 
-$selection = $null
-if (-not [string]::IsNullOrEmpty($BaselineFile)) {
-    if (-not (Test-Path $BaselineFile)) {
-        Write-Error "Baseline file not found: $BaselineFile (build one with New-LoggingBaseline.ps1 or use a preset)"
-        exit 1
-    }
-    $selection = @{}
-    foreach ($row in (Import-Csv $BaselineFile)) {
-        $selection[("$($row.ItemType)|$($row.Id)").ToUpper()] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
-    }
-}
+$sel = Resolve-BaselineSelection -BaselineFile $BaselineFile -IncludeHighVolume $IncludeHighVolume -IncludeOptional $IncludeOptional
 
-function Test-ItemOn {
-    param([string]$ItemType, [string]$Id, [string]$Tier)
-    if ($null -ne $selection) {
-        $key = ("$ItemType|$Id").ToUpper()
-        return ($selection.ContainsKey($key) -and $selection[$key])
-    }
-    if ($Tier -eq 'Core') { return $true }
-    if ($Tier -eq 'HighVolume') { return [bool]$IncludeHighVolume }
-    if ($Tier -eq 'Optional') { return [bool]$IncludeOptional }
-    return $false
-}
-
-$sourceDesc = "Core tier$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
-if ($null -ne $selection) { $sourceDesc = "baseline file $(Split-Path $BaselineFile -Leaf)" }
+$sourceDesc = $sel.Description
 
 New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
 $outDirFull = (Resolve-Path $OutDir).Path
@@ -104,7 +82,7 @@ $auditLines = New-Object System.Collections.Generic.List[string]
 $auditLines.Add('Machine Name,Policy Target,Subcategory,Subcategory GUID,Inclusion Setting,Exclusion Setting,Setting Value')
 $auditCount = 0
 foreach ($sub in $script:BaselineAuditSubcategories) {
-    if (-not (Test-ItemOn 'AuditPolicy' $sub.Guid $sub.Tier)) { continue }
+    if (-not (Test-ItemSelected $sel 'AuditPolicy' $sub.Guid $sub.Tier)) { continue }
     $value = 0
     if ($sub.Success) { $value += 1 }
     if ($sub.Failure) { $value += 2 }
@@ -127,7 +105,7 @@ $regEntries = New-Object System.Collections.Generic.List[string]
 $skipped = New-Object System.Collections.Generic.List[string]
 $regCount = 0
 foreach ($rs in $script:BaselineRegistrySettings) {
-    if (-not (Test-ItemOn 'Registry' $rs.Id $rs.Tier)) { continue }
+    if (-not (Test-ItemSelected $sel 'Registry' $rs.Id $rs.Tier)) { continue }
     if ($rs.Path -notmatch $policyPathPattern) {
         $skipped.Add("$($rs.Path)\$($rs.Name) (GPO Security Options territory - set in GPMC, not a registry.pol value)")
         continue
@@ -162,7 +140,7 @@ if ($auditCount -lt $totalAudit) {
     Write-Host ("PARTIAL SELECTION: audit.csv covers {0} of {1} kit subcategories. Apply semantics for the others depend on the tool " -f $auditCount, $totalAudit) -ForegroundColor Yellow
     Write-Host 'and existing policy (LGPO /ac and GPO application may not preserve unlisted subcategories). After applying, ALWAYS verify' -ForegroundColor Yellow
     $verifyArgs = ''
-    if ($null -ne $selection) { $verifyArgs = " -BaselineFile `"$BaselineFile`"" }
+    if ($null -ne $sel.Map) { $verifyArgs = " -BaselineFile `"$BaselineFile`"" }
     else {
         if ($IncludeHighVolume) { $verifyArgs += ' -IncludeHighVolume' }
         if ($IncludeOptional)   { $verifyArgs += ' -IncludeOptional' }

@@ -6,6 +6,23 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 ## Unreleased
 
 ### Changed
+- **`WinLogKit.Common.ps1`.** The helpers that Enable, Test, the WELA
+  check, the coverage report and the fleet generators each carried their
+  own copy of (admin check, host role and OS type, registry reads, the
+  auditpol and SMB audit-state readers, selection-CSV loading and the tier
+  logic) now live in
+  one dot-sourced file next to the settings table. Behaviour is unchanged
+  except that every generated artefact now describes its source the same
+  way (`Core tier [+ HighVolume] [+ Optional]` or `baseline file X.csv`).
+  The self-checks fail if a function is defined in more than one file.
+- **Selection CSVs are checked before use.** A `-BaselineFile` that is not a
+  selection CSV (missing `ItemType`, `Id` or `Selected` columns), has an
+  empty ItemType or Id, or lists the same item twice now stops the run with
+  a message naming the problem, instead of an obscure error or a silent
+  select-nothing. So does a CSV whose rows match nothing in the settings
+  table (Test would otherwise report everything NOT APPLICABLE and exit 0);
+  rows for items this kit version does not know are warned about and
+  ignored, so an older CSV still works.
 - **Docs cut.** README reduced to one screen and reused as the site home
   page (MkDocs snippet include, one copy of the text). The site goes from
   13 pages to 10: the WEC Collector page absorbs the WEF section of

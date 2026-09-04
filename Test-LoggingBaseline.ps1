@@ -66,76 +66,25 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrEmpty($OutputDir)) { $OutputDir = Join-Path $PSScriptRoot 'Results' }
 
 . (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
 
 # ---------------------------------------------------------------- helpers ---
 
-function Test-IsAdmin {
-    $id = [Security.Principal.WindowsIdentity]::GetCurrent()
-    (New-Object Security.Principal.WindowsPrincipal $id).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
-
-function Get-DomainRole {
-    $role = (Get-CimInstance -ClassName Win32_ComputerSystem).DomainRole
-    if ($role -ge 4) { return 'DomainController' }
-    if ($role -ge 2) { return 'Member' }
-    return 'Standalone'
-}
-
-function Get-OsType {
-    # Win32_OperatingSystem.ProductType: 1 workstation, 2 domain controller, 3 server
-    $pt = (Get-CimInstance -ClassName Win32_OperatingSystem).ProductType
-    if ($pt -eq 1) { return 'Workstation' }
-    if ($pt -eq 2) { return 'Domain Controller' }
-    return 'Server'
-}
-
-function ConvertTo-NetRegPath { param([string]$Path) $Path -replace '^HKLM:\\', 'HKEY_LOCAL_MACHINE\' }
-
-function Get-RegValue {
-    param([string]$Path, [string]$Name)
-    [Microsoft.Win32.Registry]::GetValue((ConvertTo-NetRegPath $Path), $Name, $null)
-}
-
-function Get-AuditPolicyByGuid {
-    $map = @{}
-    $csv = auditpol /get /category:* /r | Where-Object { $_ -match '\S' } | ConvertFrom-Csv
-    foreach ($row in $csv) {
-        $guid = ($row.'Subcategory GUID' -replace '[{}]', '').ToUpper()
-        $map[$guid] = $row.'Inclusion Setting'
-    }
-    return $map
-}
-
-function Test-TierSelected {
-    param([string]$Tier)
-    if ($Tier -eq 'Core') { return $true }
-    if ($Tier -eq 'HighVolume') { return [bool]$IncludeHighVolume }
-    if ($Tier -eq 'Optional') { return [bool]$IncludeOptional }
-    return $false
-}
-
-# Selection map from a New-LoggingBaseline.ps1 CSV: "ITEMTYPE|ID" -> bool.
-$script:Selection = $null
-function Import-BaselineSelection {
-    param([string]$Path)
-    $map = @{}
-    foreach ($row in (Import-Csv $Path)) {
-        $map[("$($row.ItemType)|$($row.Id)").ToUpper()] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
-    }
-    return $map
-}
+# Host probes, registry reads, the audit policy reader and the selection
+# model come from WinLogKit.Common.ps1.
+$script:Selection = Resolve-BaselineSelection -BaselineFile $BaselineFile -IncludeHighVolume $IncludeHighVolume -IncludeOptional $IncludeOptional
 
 # Returns $null when the item should be assessed, otherwise the
 # NOT APPLICABLE reason text.
 function Get-SkipReason {
     param([string]$Tier, [string]$ItemType, [string]$Id)
-    if ($null -ne $script:Selection) {
+    if ($null -ne $script:Selection.Map) {
         $key = ("$ItemType|$Id").ToUpper()
-        if (-not $script:Selection.ContainsKey($key)) { return 'Not listed in baseline file' }
-        if (-not $script:Selection[$key]) { return 'Selected = N in baseline file' }
+        if (-not $script:Selection.Map.ContainsKey($key)) { return 'Not listed in baseline file' }
+        if (-not $script:Selection.Map[$key]) { return 'Selected = N in baseline file' }
         return $null
     }
-    if (Test-TierSelected $Tier) { return $null }
+    if (Test-ItemSelected $script:Selection $ItemType $Id $Tier) { return $null }
     return "$Tier tier not selected for this assessment"
 }
 
@@ -160,18 +109,10 @@ if (-not (Test-IsAdmin)) {
     exit 1
 }
 
-if (-not [string]::IsNullOrEmpty($BaselineFile)) {
-    if (-not (Test-Path $BaselineFile)) {
-        Write-Error "Baseline file not found: $BaselineFile (build one with New-LoggingBaseline.ps1)"
-        exit 1
-    }
-    $script:Selection = Import-BaselineSelection -Path $BaselineFile
-}
-
 $domainRole = Get-DomainRole
 Write-Host "Test-LoggingBaseline (verification only, nothing is changed)"
 Write-Host "Host profile   : $(Get-OsType), $domainRole"
-if ($null -ne $script:Selection) {
+if ($null -ne $script:Selection.Map) {
     Write-Host "Baseline file  : $BaselineFile (tier switches ignored)"
 } else {
     Write-Host "Tiers assessed : Core$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
@@ -276,17 +217,7 @@ foreach ($rs in $script:BaselineRegistrySettings) {
 
 # ------------------- SMB signing/encryption auditing (Server 2025+) ---------
 
-$smbState = @{}
-$srvCfg = $null; $cliCfg = $null
-try { $srvCfg = Get-SmbServerConfiguration -ErrorAction Stop } catch { $srvCfg = $null }
-try { $cliCfg = Get-SmbClientConfiguration -ErrorAction Stop } catch { $cliCfg = $null }
-foreach ($sa in $script:BaselineSmbAuditSettings) {
-    $cfg = $srvCfg
-    if ($sa.Side -eq 'Client') { $cfg = $cliCfg }
-    if ($null -ne $cfg -and ($cfg.PSObject.Properties.Name -contains $sa.Id)) {
-        $smbState[$sa.Id] = [bool]$cfg.($sa.Id)
-    }
-}
+$smbState = Get-SmbAuditState
 foreach ($sa in $script:BaselineSmbAuditSettings) {
     $expected = "$($sa.Value)"
     $skip = Get-SkipReason $sa.Tier 'SmbAudit' $sa.Id

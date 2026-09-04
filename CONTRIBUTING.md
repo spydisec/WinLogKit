@@ -24,6 +24,11 @@ is what tunes the presets. Open an issue with the *Field report* template.
   plain-language purpose and, where it matters, a risk note. Scripts,
   presets, packs and docs derive from it; never hard-code a setting
   anywhere else.
+- **Shared helpers live in `WinLogKit.Common.ps1`** (host probes, registry
+  reads, the audit policy reader, the selection model). A function
+  defined in two kit files fails the self-checks. The Intune pack
+  generator embeds its own helpers on purpose: the generated scripts must
+  run alone.
 - **Windows PowerShell 5.1 compatible, no external modules, no agents.**
   The design intent is a kit that runs on a bare server with nothing
   installed. PowerShell 7 is fully supported (CI tests every change on

@@ -47,6 +47,10 @@ reviews:
         - Every logging setting lives in LoggingBaseline.Settings.ps1 with a
           plain-language Purpose (and Risk where volume/stability matters).
           Flag settings hardcoded in the other scripts.
+        - Shared helpers live in WinLogKit.Common.ps1 (host probes, registry
+          reads, selection model). Flag a helper duplicated across scripts;
+          the generated Intune pack embedding its own is the intended
+          exception.
         - No external module dependencies, no third party agents (no Sysmon).
         - Never introduce CrashOnAuditFail, "do not overwrite" log retention,
           global object access auditing, blanket SACLs, service restarts or
