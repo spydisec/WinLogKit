@@ -34,7 +34,7 @@
     Requires: Windows PowerShell 5.1+. No admin needed to generate.
 
 .PARAMETER OutDir
-    Where to write the pair. Default: .\Intune next to this script.
+    Where to write the pair. Default: Intune\ at the kit root (the parent of fleet\).
 
 .PARAMETER BaselineFile
     Optional selection CSV from New-LoggingBaseline.ps1. Only Selected = Y

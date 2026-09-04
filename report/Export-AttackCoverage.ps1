@@ -40,7 +40,7 @@
     Use the vendored OSSEM-DM snapshot instead of the native mapping.
 
 .PARAMETER OutDir
-    Where the CSVs go. Default: .\Results next to this script.
+    Where the CSVs go. Default: Results\ at the kit root (the parent of report\).
 
 .EXAMPLE
     .\report\Export-AttackCoverage.ps1 -IncludeHighVolume

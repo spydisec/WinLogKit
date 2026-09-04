@@ -84,7 +84,7 @@
     Subscription name shown in wecutil / Event Viewer. Default: WinLogKit-Baseline.
 
 .PARAMETER OutDir
-    Where the XML and sidecar are written. Default: .\WEF next to this script.
+    Where the XML and sidecar are written. Default: WEF\ at the kit root (the parent of fleet\).
 
 .PARAMETER ContentFormat
     Events (binary, locale-independent, smaller on the wire - default) or
@@ -407,6 +407,6 @@ Write-Host "    Server=http://<collector-fqdn>:5985/wsman/SubscriptionManager/WE
 Write-Host '    (optionally HTTPS: Server=https://<collector-fqdn>:5986/... - needs a server certificate on the collector)'
 Write-Host '  For the Security log: add NETWORK SERVICE to "Event Log Readers" on sources, or Security forwarding silently fails.' -ForegroundColor Yellow
 Write-Host ''
-Write-Host "Prove the filter on the collector:  .\fleet\Test-WefFilter.ps1 -ExpectedFile `"$sidecar`" -SubscriptionId $SubscriptionId"
+Write-Host "Prove the filter on the collector:  $(Join-Path $PSScriptRoot 'Test-WefFilter.ps1') -ExpectedFile `"$sidecar`" -SubscriptionId $SubscriptionId"
 Write-Host 'SIEM handoff point: the ForwardedEvents log on the collector. Ingestion beyond that is out of kit scope.'
 exit 0

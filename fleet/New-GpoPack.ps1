@@ -42,7 +42,7 @@
     switches decide (Core by default).
 
 .PARAMETER OutDir
-    Output folder. Default: .\GPO next to this script.
+    Output folder. Default: GPO\ at the kit root (the parent of fleet\).
 
 .EXAMPLE
     .\fleet\New-GpoPack.ps1 -IncludeHighVolume
@@ -148,7 +148,7 @@ if ($auditCount -lt $totalAudit) {
         if ($IncludeHighVolume) { $verifyArgs += ' -IncludeHighVolume' }
         if ($IncludeOptional)   { $verifyArgs += ' -IncludeOptional' }
     }
-    Write-Host "the effective result: .\Test-LoggingBaseline.ps1$verifyArgs (it reads the live audit policy, not the file you applied)." -ForegroundColor Yellow
+    Write-Host "the effective result: $(Join-Path $kitRoot 'Test-LoggingBaseline.ps1')$verifyArgs (it reads the live audit policy, not the file you applied)." -ForegroundColor Yellow
 }
 Write-Host 'Note: LGPO /t is additive - deselected registry values are NOT removed by a smaller pack. Use Enable-LoggingBaseline -Rollback or remove them deliberately.' -ForegroundColor Yellow
 exit 0
