@@ -1,0 +1,1608 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Enable, verify, collect and deploy Windows event logging baselines with plain PowerShell - no modules, no agents.">
+      
+      
+      
+        <link rel="canonical" href="https://spydisec.github.io/WinLogKit/wec/">
+      
+      
+        <link rel="prev" href="../commands/">
+      
+      
+        <link rel="next" href="../deployment/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Collect - WinLogKit</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#collect" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="WinLogKit" class="md-header__button md-logo" aria-label="WinLogKit" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 9a3 3 0 0 1 3 3 3 3 0 0 1-3 3 3 3 0 0 1-3-3 3 3 0 0 1 3-3m5.86 10.31C16.23 21.22 14.28 22.45 12 23c-2.56-.61-4.7-2.07-6.42-4.37C3.86 16.34 3 13.8 3 11V5l9-4 9 4v6c0 2.39-.64 4.61-1.92 6.67l-2.91-2.91c.52-.79.83-1.76.83-2.76a5 5 0 0 0-5-5 5 5 0 0 0-5 5 5 5 0 0 0 5 5c1 0 1.97-.31 2.76-.83z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            WinLogKit
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Collect
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/spydisec/WinLogKit" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    spydisec/WinLogKit
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../baselines/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Baselines
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../commands/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Commands
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Collect
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../deployment/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Deploy
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../mapping/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Coverage
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../safety/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Safety & FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../addons/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Add-ons
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="WinLogKit" class="md-nav__button md-logo" aria-label="WinLogKit" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 9a3 3 0 0 1 3 3 3 3 0 0 1-3 3 3 3 0 0 1-3-3 3 3 0 0 1 3-3m5.86 10.31C16.23 21.22 14.28 22.45 12 23c-2.56-.61-4.7-2.07-6.42-4.37C3.86 16.34 3 13.8 3 11V5l9-4 9 4v6c0 2.39-.64 4.61-1.92 6.67l-2.91-2.91c.52-.79.83-1.76.83-2.76a5 5 0 0 0-5-5 5 5 0 0 0-5 5 5 5 0 0 0 5 5c1 0 1.97-.31 2.76-.83z"/></svg>
+
+    </a>
+    WinLogKit
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/spydisec/WinLogKit" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    spydisec/WinLogKit
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../baselines/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Baselines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Collect
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Collect
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#generate-the-subscription" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate the subscription
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-up-the-collector-and-the-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set up the collector and the sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#there-is-no-default-subscription" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        There is no default subscription
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-a-subscription-the-fields-that-matter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading a subscription: the fields that matter
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wide-open-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Wide open" queries
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#who-sends-two-lists-that-must-agree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who sends: two lists that must agree
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runtime-status-the-reconciliation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime status: the reconciliation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#forwardedevents-channel-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ForwardedEvents channel health
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#classic-silent-failures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Classic silent failures
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filtering-with-xpath-matching-the-subscription-to-the-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filtering with XPath: matching the subscription to the baseline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Filtering with XPath: matching the subscription to the baseline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-xpath-subset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The XPath subset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#matching-the-filter-to-the-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Matching the filter to the baseline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#confirming-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confirming it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deploy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mapping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coverage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety & FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../addons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Add-ons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#generate-the-subscription" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate the subscription
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-up-the-collector-and-the-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set up the collector and the sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#there-is-no-default-subscription" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        There is no default subscription
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-a-subscription-the-fields-that-matter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading a subscription: the fields that matter
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wide-open-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Wide open" queries
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#who-sends-two-lists-that-must-agree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who sends: two lists that must agree
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runtime-status-the-reconciliation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime status: the reconciliation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#forwardedevents-channel-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ForwardedEvents channel health
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#classic-silent-failures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Classic silent failures
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filtering-with-xpath-matching-the-subscription-to-the-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filtering with XPath: matching the subscription to the baseline
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Filtering with XPath: matching the subscription to the baseline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-xpath-subset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The XPath subset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#matching-the-filter-to-the-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Matching the filter to the baseline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#confirming-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confirming it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="collect">Collect<a class="headerlink" href="#collect" title="Permanent link">&para;</a></h1>
+<p>Central collection with Windows Event Forwarding (WEF): generate the
+subscription from the same selection you applied, set up the collector and
+the sources, read what an existing collector is already doing, and prove
+that events arrive. The commands under "Set up" change collector and source configuration;
+everything else only reads it (two commands write export files to the
+current folder), so it is safe on a production collector.</p>
+<p>Where this sits in the chain:</p>
+<div class="highlight"><pre><span></span><code>Source host                       WEC collector                      SIEM
+[audit policy + channels] --push--&gt; [subscription -&gt; ForwardedEvents] --agent--&gt; [your platform]
+        Gate 1                            Gate 2                        Gate 3
+</code></pre></div>
+<p>The gates multiply. An event reaches the collector only if it is
+<strong>generated</strong> on the source (Gate 1, the baseline's job) <em>and</em> <strong>matched</strong>
+by the subscription query (Gate 2, this page). A subscription cannot forward
+what was never generated, and source config cannot force forwarding of a
+channel the subscription does not name. Keeping both generated from the
+same baseline selection is why
+<a href="../commands/#new-wefsubscriptionps1"><code>New-WefSubscription.ps1</code></a> exists.
+Gate 3, the hop from ForwardedEvents into a SIEM, is deliberately outside
+the kit: any agent or connector that reads a Windows event log will do. One
+worked example for Microsoft Sentinel is kept as an
+<a href="../extras/sentinel-kql/">extra</a>.</p>
+<h2 id="generate-the-subscription">Generate the subscription<a class="headerlink" href="#generate-the-subscription" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="p">.\</span><span class="n">fleet</span><span class="p">\</span><span class="nb">New-WefSubscription</span><span class="p">.</span><span class="n">ps1</span> <span class="p">[</span><span class="n">-BaselineFile</span> <span class="p">&lt;</span><span class="n">csv</span><span class="p">&gt;]</span> <span class="p">[</span><span class="n">-Filter</span> <span class="n">Channel</span><span class="p">|</span><span class="n">Baseline</span><span class="p">]</span> <span class="p">[</span><span class="n">-Validate</span><span class="p">]</span> <span class="p">[</span><span class="n">-SubscriptionId</span> <span class="p">&lt;</span><span class="n">name</span><span class="p">&gt;]</span>
+</code></pre></div>
+<p>Generates a source-initiated subscription XML with one query per selected
+channel, plus a sidecar <code>&lt;name&gt;.expected-eventids.csv</code> saying what it
+should deliver. Transport defaults (<code>Events</code> format, 30s/500-item batching,
+1h heartbeat, source SDDL) live in the settings table and are overridable
+per run.</p>
+<p>Two filter modes. <code>-Filter Channel</code> (default) forwards every event of each
+selected channel: the baseline's channel selection is the coarse filter and
+the right first deployment. <code>-Filter Baseline</code> narrows the Security channel
+to exactly the event IDs the baseline's enabled audit subcategories can
+produce, plus the always-on log-tamper events, and leaves every other
+channel whole; see
+<a href="#filtering-with-xpath-matching-the-subscription-to-the-baseline">filtering with XPath</a>
+below. Add <code>-Validate</code> to parse each query in the local event engine before
+deploying, then prove the filter on the collector with
+<code>Test-WefFilter.ps1</code>.</p>
+<h2 id="set-up-the-collector-and-the-sources">Set up the collector and the sources<a class="headerlink" href="#set-up-the-collector-and-the-sources" title="Permanent link">&para;</a></h2>
+<p>The generator prints the full setup; the essentials:</p>
+<div class="highlight"><pre><span></span><code>Collector:  winrm qc -q            (WinRM listener first)
+            wecutil qc /q          (then the collector service)
+            wecutil cs .\WEF\WinLogKit-Baseline.xml
+            wevtutil sl ForwardedEvents /ms:1073741824
+Sources:    winrm qc -q   (WinRM must be configured on each source too - or
+                           enable the WinRM service via GPO fleet-wide)
+            GPO &gt; Event Forwarding &gt; Configure target Subscription Manager
+            Server=http://&lt;collector-fqdn&gt;:5985/wsman/SubscriptionManager/WEC,Refresh=60
+</code></pre></div>
+<p>Per <a href="https://learn.microsoft.com/windows/win32/wec/setting-up-a-source-initiated-subscription">Microsoft's source-initiated subscription procedure</a>,
+both ends need WinRM: the collector to listen, the sources to forward.</p>
+<p>The classic trap: for the Security log, add NETWORK SERVICE to <strong>Event Log
+Readers</strong> on sources, or Security forwarding silently fails. Verify either
+side with:</p>
+<div class="highlight"><pre><span></span><code><span class="p">.\</span><span class="nb">Test-LoggingBaseline</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-WefRole</span> <span class="n">Source</span>      <span class="c"># forwarding host: SubscriptionManager policy present, WinRM state</span>
+<span class="p">.\</span><span class="nb">Test-LoggingBaseline</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-WefRole</span> <span class="n">Collector</span>   <span class="c"># collector: Wecsvc, ForwardedEvents sizing, a subscription loaded</span>
+</code></pre></div>
+<h2 id="there-is-no-default-subscription">There is no default subscription<a class="headerlink" href="#there-is-no-default-subscription" title="Permanent link">&para;</a></h2>
+<p>A Windows box ships with zero subscriptions; the Windows Event Collector
+service is not even configured until <code>wecutil qc</code> runs. Whatever exists on
+a collector today was put there by someone. Reading it back is the first
+step of any assessment:</p>
+<div class="highlight"><pre><span></span><code><span class="n">wecutil</span> <span class="n">es</span>                          <span class="c"># enumerate all subscription names</span>
+<span class="n">wecutil</span> <span class="n">gs</span> <span class="s2">"&lt;SubName&gt;"</span> <span class="p">/</span><span class="n">f</span><span class="p">:</span><span class="n">xml</span>       <span class="c"># full configuration as XML</span>
+<span class="n">wecutil</span> <span class="n">gr</span> <span class="s2">"&lt;SubName&gt;"</span>              <span class="c"># runtime status: sources, state, heartbeats</span>
+</code></pre></div>
+<p>Evidence-grade export of everything in one go:</p>
+<div class="highlight"><pre><span></span><code><span class="n">wecutil</span> <span class="n">es</span> <span class="p">|</span> <span class="k">ForEach</span><span class="n">-Object</span> <span class="p">{</span> <span class="n">wecutil</span> <span class="n">gs</span> <span class="nv">$_</span> <span class="p">/</span><span class="n">f</span><span class="p">:</span><span class="n">xml</span> <span class="p">|</span> <span class="nb">Out-File</span> <span class="s2">".\WEF-Sub-</span><span class="p">$(</span><span class="nv">$_</span> <span class="o">-replace</span> <span class="s1">'[\\/:*?\"&lt;&gt;|]'</span><span class="p">,</span><span class="s1">'_'</span><span class="p">)</span><span class="s2">.xml"</span> <span class="p">}</span>
+</code></pre></div>
+<p>The same information is in Event Viewer under <strong>Subscriptions</strong>, but the
+XML is what you keep. Command reference:
+<a href="https://learn.microsoft.com/windows-server/administration/windows-commands/wecutil">wecutil</a>.</p>
+<h2 id="reading-a-subscription-the-fields-that-matter">Reading a subscription: the fields that matter<a class="headerlink" href="#reading-a-subscription-the-fields-that-matter" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Field in the XML</th>
+<th>What it controls</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;SubscriptionType&gt;</code></td>
+<td><code>SourceInitiated</code> (sources push to the collector over WinRM, the model that scales) or <code>CollectorInitiated</code> (the collector pulls; account-heavy, usually legacy)</td>
+</tr>
+<tr>
+<td><code>&lt;Query&gt;</code></td>
+<td>The authoritative "what is forwarded" filter - one <code>&lt;Select Path="channel"&gt;</code> per channel</td>
+</tr>
+<tr>
+<td><code>&lt;AllowedSourceDomainComputers&gt;</code></td>
+<td>SDDL naming which computers may participate (normally an AD group) - the "who sends" control</td>
+</tr>
+<tr>
+<td><code>&lt;LogFile&gt;</code></td>
+<td>Where events land on the collector, normally <code>ForwardedEvents</code>. This page assumes <code>ForwardedEvents</code>; if a subscription writes to another log, substitute that channel in every downstream step (sizing, agent configuration)</td>
+</tr>
+<tr>
+<td><code>&lt;ConfigurationMode&gt;</code></td>
+<td>The delivery/latency trade-off (table below)</td>
+</tr>
+<tr>
+<td><code>&lt;ContentFormat&gt;</code></td>
+<td><code>Events</code> (compact, recommended) or <code>RenderedText</code> (adds locale-rendered strings, inflates volume)</td>
+</tr>
+<tr>
+<td><code>&lt;ReadExistingEvents&gt;</code></td>
+<td>Whether a newly joined source backfills existing events or starts from now</td>
+</tr>
+</tbody>
+</table>
+<p>Delivery modes set the latency floor for everything downstream - no SIEM
+query can see an event before the source has batched and sent it. The
+values below are the documented approximate defaults (per the
+<a href="https://learn.microsoft.com/windows-server/administration/windows-commands/wecutil">wecutil reference</a>);
+treat them as order-of-magnitude, not guarantees:</p>
+<table>
+<thead>
+<tr>
+<th>ConfigurationMode</th>
+<th>Batching behaviour (approximate defaults)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MinLatency</code></td>
+<td>~30 seconds</td>
+</tr>
+<tr>
+<td><code>Normal</code></td>
+<td>batched delivery, up to ~15 minutes</td>
+</tr>
+<tr>
+<td><code>MinBandwidth</code></td>
+<td>up to ~6 hours</td>
+</tr>
+<tr>
+<td><code>Custom</code></td>
+<td>Whatever <code>&lt;Delivery&gt;</code> specifies</td>
+</tr>
+</tbody>
+</table>
+<h2 id="wide-open-queries">"Wide open" queries<a class="headerlink" href="#wide-open-queries" title="Permanent link">&para;</a></h2>
+<p>A subscription must contain a query, but the query can be per-channel
+wildcards with no event-level filtering:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;Query</span><span class="w"> </span><span class="na">Id=</span><span class="s">"0"</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Select</span><span class="w"> </span><span class="na">Path=</span><span class="s">"Security"</span><span class="nt">&gt;</span>*<span class="nt">&lt;/Select&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Select</span><span class="w"> </span><span class="na">Path=</span><span class="s">"Microsoft-Windows-PowerShell/Operational"</span><span class="nt">&gt;</span>*<span class="nt">&lt;/Select&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Select</span><span class="w"> </span><span class="na">Path=</span><span class="s">"Microsoft-Windows-TaskScheduler/Operational"</span><span class="nt">&gt;</span>*<span class="nt">&lt;/Select&gt;</span>
+<span class="nt">&lt;/Query&gt;</span>
+</code></pre></div>
+<p><code>*</code> means every event in that channel - as open as WEF gets, and what this
+kit's generator emits by default (<code>-Filter Channel</code>). Two structural facts:</p>
+<ul>
+<li>There is <strong>no channel wildcard</strong>. "All channels on the machine" cannot be
+  expressed; every channel must be listed as its own <code>Select</code>. Windows
+  <a href="https://learn.microsoft.com/windows/win32/wes/queryschema-querytype-complextype">limits a query to 32 expressions</a>
+  (<code>Select</code>/<code>Suppress</code> combined), so a channel list beyond that needs
+  additional <code>&lt;Query&gt;</code> elements or subscriptions.</li>
+<li>Whole-channel forwarding makes the <strong>source configuration the effective
+  filter</strong>, which is easy to verify ("every event in channels X, Y, Z
+  present on a source = forwarded") but means volume is governed entirely
+  upstream. Starting wide open and tightening with evidence after a pilot
+  is a defensible sequence; Microsoft's
+  <a href="https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection">WEF intrusion-detection guidance</a>
+  has curated per-event queries to graduate to.</li>
+</ul>
+<h2 id="who-sends-two-lists-that-must-agree">Who sends: two lists that must agree<a class="headerlink" href="#who-sends-two-lists-that-must-agree" title="Permanent link">&para;</a></h2>
+<p>With source-initiated WEF, a machine forwards only if <strong>both</strong> hold:</p>
+<ol>
+<li>It received the <strong>SubscriptionManager</strong> policy pointing at this
+   collector (GPO: Computer Configuration &gt; Policies &gt; Administrative
+   Templates &gt; Windows Components &gt; Event Forwarding). On a source, the
+   applied value is readable at
+   <code>HKLM:\SOFTWARE\Policies\Microsoft\Windows\EventLog\EventForwarding\SubscriptionManager</code>.</li>
+<li>Its computer account is inside the subscription's
+   <code>&lt;AllowedSourceDomainComputers&gt;</code> SDDL.</li>
+</ol>
+<p>When these are scoped by two different AD groups they drift independently -
+worth a standing check.</p>
+<h2 id="runtime-status-the-reconciliation">Runtime status: the reconciliation<a class="headerlink" href="#runtime-status-the-reconciliation" title="Permanent link">&para;</a></h2>
+<p><code>wecutil gr "&lt;SubName&gt;"</code> lists every registered source with its state and
+last heartbeat. The health assertion worth writing down as an acceptance
+criterion is a three-way count:</p>
+<blockquote>
+<p>AD group membership = registered sources = sources in state Active.</p>
+</blockquote>
+<p>Machines in the group but never registered have a broken hop (GPO not
+applied, WinRM unreachable, or the Security-log permission below) - but
+first allow the SubscriptionManager refresh interval to elapse, since a
+source does not appear until it has checked in.
+Machines registered but Inactive have not met the subscription's activity
+and heartbeat criteria - the cause can be connectivity, authentication or
+simply nothing to send, so investigate rather than assume. Name the
+discrepancies; do not just record the counts.</p>
+<h2 id="forwardedevents-channel-health">ForwardedEvents channel health<a class="headerlink" href="#forwardedevents-channel-health" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="n">wevtutil</span> <span class="nb">gl </span><span class="n">ForwardedEvents</span>
+<span class="nb">Get-WinEvent</span> <span class="n">-ListLog</span> <span class="n">ForwardedEvents</span> <span class="p">|</span> <span class="nb">Select-Object</span> <span class="n">RecordCount</span><span class="p">,</span> <span class="n">FileSize</span><span class="p">,</span> <span class="n">IsLogFull</span><span class="p">,</span> <span class="n">LastWriteTime</span>
+</code></pre></div>
+<ul>
+<li><strong>Size it like a busy log.</strong> All forwarded volume concentrates here.</li>
+<li><strong>Retention must stay circular</strong> (overwrite as needed). "Do not
+  overwrite" silently stops collection when full - the same trap
+  <a href="../safety/#what-the-kit-will-never-do">Test-LoggingBaseline flags</a> on
+  any channel.</li>
+<li><strong>Know the headroom</strong>: at the observed events/hour, how many hours does
+  the channel hold? That is the buffer available if the onward SIEM hop
+  goes down.</li>
+</ul>
+<h2 id="classic-silent-failures">Classic silent failures<a class="headerlink" href="#classic-silent-failures" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Every channel forwards except Security, no loud error anywhere</td>
+<td>NETWORK SERVICE cannot read the Security log on the source. Fix: add it to the <strong>Event Log Readers</strong> group, or grant read via the channel's SDDL where group membership alone is not honoured (both per <a href="https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection">Microsoft's WEF guidance</a>).</td>
+</tr>
+<tr>
+<td>Sources registered, zero events arriving</td>
+<td>Gate 1: the subscribed channels are not enabled/generating on the sources - verify with <a href="../commands/#test-loggingbaselineps1"><code>Test-LoggingBaseline.ps1</code></a></td>
+</tr>
+<tr>
+<td>Some machines never register</td>
+<td>SubscriptionManager GPO scope vs <code>AllowedSourceDomainComputers</code> mismatch, or WinRM (5985/5986) blocked</td>
+</tr>
+<tr>
+<td>Collection stops after working fine</td>
+<td>ForwardedEvents full with non-circular retention</td>
+</tr>
+<tr>
+<td>Volume far above estimate</td>
+<td><code>RenderedText</code> content format, or a high-volume source-side setting (see the <a href="../safety/#volume-impact-settings-the-highvolume-tier-and-friends">volume table</a>)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="filtering-with-xpath-matching-the-subscription-to-the-baseline">Filtering with XPath: matching the subscription to the baseline<a class="headerlink" href="#filtering-with-xpath-matching-the-subscription-to-the-baseline" title="Permanent link">&para;</a></h2>
+<p>Whole-channel forwarding is complete but blunt. The next step is a query
+that forwards only what the baseline meant to generate - and the place to
+do it is the subscription, because of one fact about how WEF works:</p>
+<p><strong>The subscription's XPath is evaluated on each source.</strong> In a
+<a href="https://learn.microsoft.com/windows/win32/wec/setting-up-a-source-initiated-subscription">source-initiated subscription</a>
+the collector hands the subscription, query included, to every source, and
+each source's forwarding service sends only the events that match, before
+anything leaves the machine. An event dropped here never reaches the
+network, the collector or the SIEM; any SIEM-side transform runs after
+forwarding, so the subscription is the earliest filter in the chain.</p>
+<h3 id="the-xpath-subset">The XPath subset<a class="headerlink" href="#the-xpath-subset" title="Permanent link">&para;</a></h3>
+<p>Windows Event Log accepts a
+<a href="https://learn.microsoft.com/windows/win32/wes/consuming-events">subset of XPath 1.0</a>
+over the event's XML. In practice a subscription needs three shapes:</p>
+<table>
+<thead>
+<tr>
+<th>Shape</th>
+<th>Example</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Whole channel</td>
+<td><code>*</code></td>
+<td>every event</td>
+</tr>
+<tr>
+<td>By event ID</td>
+<td><code>*[System[(EventID=4688 or (EventID &gt;= 4720 and EventID &lt;= 4726))]]</code></td>
+<td>the listed IDs and ranges</td>
+</tr>
+<tr>
+<td>By event data</td>
+<td><code>*[EventData[Data[@Name="TargetUserName"]="svc-backup"]]</code></td>
+<td>field-level match</td>
+</tr>
+</tbody>
+</table>
+<p>Two rules shape how queries are written. <strong>Suppress beats Select</strong>: an
+event matching any <code>&lt;Suppress&gt;</code> is dropped even if a <code>&lt;Select&gt;</code> wants it.
+And each <code>&lt;Select&gt;</code> or <code>&lt;Suppress&gt;</code> is
+<a href="https://learn.microsoft.com/windows/win32/wes/queryschema-querytype-complextype">limited to 32 expressions</a>,
+where <code>EventID=N</code> costs one and a range <code>(EventID &gt;= a and EventID &lt;= b)</code>
+costs two - so long ID lists are split across several <code>&lt;Select&gt;</code> elements
+in the same <code>&lt;Query&gt;</code>, and consecutive IDs are collapsed into ranges.
+Inside the subscription XML the query sits in CDATA, but the query is
+itself XML: write <code>&lt;=</code> as <code>&amp;lt;=</code>.</p>
+<h3 id="matching-the-filter-to-the-baseline">Matching the filter to the baseline<a class="headerlink" href="#matching-the-filter-to-the-baseline" title="Permanent link">&para;</a></h3>
+<p>The baseline selects <em>audit subcategories</em>; each subcategory produces a
+fixed, Microsoft-documented set of Security event IDs. That makes the
+Security filter derivable rather than hand-written:</p>
+<div class="highlight"><pre><span></span><code>baseline CSV  -&gt;  enabled subcategory GUIDs
+              -&gt;  union of their documented event IDs   (data\wef\audit_subcategory_events.csv)
+              +   the always-on Eventlog-service events  (1100, 1102, 1104, 1105, 1108)
+              -&gt;  &lt;Select Path="Security"&gt; elements, ranges collapsed, 20 expressions each
+</code></pre></div>
+<p><code>New-WefSubscription.ps1 -Filter Baseline -BaselineFile &lt;csv&gt;</code> does exactly
+that; every other channel stays <code>*</code>, because the baseline enables those
+channels as units. The generated <code>&lt;Query&gt;</code> for a full server preset looks
+like:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;Query</span><span class="w"> </span><span class="na">Id=</span><span class="s">"0"</span><span class="w"> </span><span class="na">Path=</span><span class="s">"Security"</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="cm">&lt;!-- Security: 262 event IDs from 33 enabled audit subcategories + Eventlog service events --&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Select</span><span class="w"> </span><span class="na">Path=</span><span class="s">"Security"</span><span class="nt">&gt;</span>*[System[(EventID=1100<span class="w"> </span>or<span class="w"> </span>EventID=1102<span class="w"> </span>or<span class="w"> </span>(EventID<span class="w"> </span>&gt;=<span class="w"> </span>1104<span class="w"> </span>and<span class="w"> </span>EventID<span class="w"> </span><span class="ni">&amp;lt;</span>=<span class="w"> </span>1105)<span class="w"> </span>or<span class="w"> </span>EventID=1108<span class="w"> </span>or<span class="w"> </span>(EventID<span class="w"> </span>&gt;=<span class="w"> </span>4608<span class="w"> </span>and<span class="w"> </span>EventID<span class="w"> </span><span class="ni">&amp;lt;</span>=<span class="w"> </span>4612)<span class="w"> </span>...<span class="w"> </span>)]]<span class="nt">&lt;/Select&gt;</span>
+<span class="w">  </span><span class="nt">&lt;Select</span><span class="w"> </span><span class="na">Path=</span><span class="s">"Security"</span><span class="nt">&gt;</span>*[System[((EventID<span class="w"> </span>&gt;=<span class="w"> </span>4661<span class="w"> </span>and<span class="w"> </span>EventID<span class="w"> </span><span class="ni">&amp;lt;</span>=<span class="w"> </span>4663)<span class="w"> </span>or<span class="w"> </span>(EventID<span class="w"> </span>&gt;=<span class="w"> </span>4670<span class="w"> </span>and<span class="w"> </span>EventID<span class="w"> </span><span class="ni">&amp;lt;</span>=<span class="w"> </span>4675)<span class="w"> </span>or<span class="w"> </span>EventID=4688<span class="w"> </span>...<span class="w"> </span>)]]<span class="nt">&lt;/Select&gt;</span>
+<span class="w">  </span>...
+<span class="nt">&lt;/Query&gt;</span>
+</code></pre></div>
+<p>Why the <em>complete</em> documented set and not a curated "interesting events"
+list: the two gates must agree. If the baseline enables a subcategory, the
+filter must forward everything that subcategory can produce, or it silently
+drops events someone decided to generate. The table below is the whole
+contract:</p>
+<table>
+<thead>
+<tr>
+<th>Baseline (Gate 1)</th>
+<th>Filter (Gate 2)</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Subcategory enabled</td>
+<td>Its IDs selected</td>
+<td>Forwarded - the intended case</td>
+</tr>
+<tr>
+<td>Subcategory enabled</td>
+<td>Not selected</td>
+<td>Cannot happen: the filter is derived from the same selection</td>
+</tr>
+<tr>
+<td>Subcategory not enabled</td>
+<td>Its IDs not selected</td>
+<td>Never generated, nothing to filter</td>
+</tr>
+<tr>
+<td>Event outside any enabled subcategory</td>
+<td>Not selected</td>
+<td>Generated by something else, stays local</td>
+</tr>
+</tbody>
+</table>
+<p>The event map is a vendored snapshot with the source URL on every row
+(<code>data\wef\README.md</code>); the kit refuses to build a Baseline filter for a
+subcategory it has no documented IDs for, rather than drop them.</p>
+<p><strong>Suppress</strong> is the other half, and it is a policy decision, not a tuning
+knob: anything suppressed never reaches the collector, the SIEM, or any
+retention. The kit ships no suppress rules; <code>$BaselineWefSuppress</code> in the
+settings table is where measured, defensible noise rules go (channel,
+XPath, reason), and the generator writes them into the query with the
+reason as a comment.</p>
+<h3 id="confirming-it-works">Confirming it works<a class="headerlink" href="#confirming-it-works" title="Permanent link">&para;</a></h3>
+<p>Four checks, cheapest first:</p>
+<ol>
+<li><strong>Does it parse?</strong> <code>New-WefSubscription.ps1 ... -Validate</code> runs every
+   generated query through the local event engine (<code>Get-WinEvent
+   -FilterXml</code>). A bad expression fails the run before anything is
+   written; "no events found" and "access denied" mean the syntax is fine.</li>
+<li><strong>Is it the deployed query?</strong> On the collector, <code>wecutil gs &lt;name&gt;
+   /f:xml</code> shows the registered <code>&lt;Query&gt;</code>; <code>Test-WefFilter.ps1
+   -SubscriptionId &lt;name&gt;</code> compares it to the generated file, so a hand
+   edit or a stale registration shows up.</li>
+<li><strong>Is it in effect?</strong> <code>Test-WefFilter.ps1 -ExpectedFile
+   &lt;name&gt;.expected-eventids.csv</code> reads ForwardedEvents and lists every
+   Security event ID that arrived but is not in the expected set. Any
+   UNEXPECTED row means the filter is not applied (or another subscription
+   forwards more). Expected-but-unseen IDs are informational: the sources
+   may simply not have produced them in the window.</li>
+<li><strong>Same check at the SIEM end.</strong> The script prints the KQL: <code>WindowsEvent
+   | where Channel == "Security" | where EventID !in (...)</code> - any row
+   returned is an event the filter should have stopped.</li>
+</ol>
+<p>What the filter buys you is measurable before and after: the Security
+channel's share of ingested volume per source is the number to compare
+(the <a href="../extras/sentinel-kql/#query-pack">Sentinel extra</a> has the queries).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../commands/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Commands">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Commands
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../deployment/" class="md-footer__link md-footer__link--next" aria-label="Next: Deploy">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Deploy
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "toc.follow", "content.code.copy", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

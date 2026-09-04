@@ -1,0 +1,1291 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Enable, verify, collect and deploy Windows event logging baselines with plain PowerShell - no modules, no agents.">
+      
+      
+      
+        <link rel="canonical" href="https://spydisec.github.io/WinLogKit/extras/sentinel-kql/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Sentinel KQL - WinLogKit</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#sentinel-kql" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="WinLogKit" class="md-header__button md-logo" aria-label="WinLogKit" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 9a3 3 0 0 1 3 3 3 3 0 0 1-3 3 3 3 0 0 1-3-3 3 3 0 0 1 3-3m5.86 10.31C16.23 21.22 14.28 22.45 12 23c-2.56-.61-4.7-2.07-6.42-4.37C3.86 16.34 3 13.8 3 11V5l9-4 9 4v6c0 2.39-.64 4.61-1.92 6.67l-2.91-2.91c.52-.79.83-1.76.83-2.76a5 5 0 0 0-5-5 5 5 0 0 0-5 5 5 5 0 0 0 5 5c1 0 1.97-.31 2.76-.83z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            WinLogKit
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Sentinel KQL
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/spydisec/WinLogKit" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    spydisec/WinLogKit
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../baselines/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Baselines
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../commands/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Commands
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../wec/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Collect
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../deployment/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Deploy
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../mapping/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Coverage
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../reference/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../safety/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Safety & FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../addons/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Add-ons
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="WinLogKit" class="md-nav__button md-logo" aria-label="WinLogKit" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 9a3 3 0 0 1 3 3 3 3 0 0 1-3 3 3 3 0 0 1-3-3 3 3 0 0 1 3-3m5.86 10.31C16.23 21.22 14.28 22.45 12 23c-2.56-.61-4.7-2.07-6.42-4.37C3.86 16.34 3 13.8 3 11V5l9-4 9 4v6c0 2.39-.64 4.61-1.92 6.67l-2.91-2.91c.52-.79.83-1.76.83-2.76a5 5 0 0 0-5-5 5 5 0 0 0-5 5 5 5 0 0 0 5 5c1 0 1.97-.31 2.76-.83z"/></svg>
+
+    </a>
+    WinLogKit
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/spydisec/WinLogKit" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    spydisec/WinLogKit
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../baselines/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Baselines
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../wec/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Collect
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deploy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mapping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coverage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety & FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../addons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Add-ons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#which-table-the-events-land-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which table the events land in
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#confirming-ama-actually-collects-forwardedevents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confirming AMA actually collects ForwardedEvents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query pack
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#domain-controllers-which-path-are-they-on" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Domain controllers: which path are they on?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-reconciliation-that-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The reconciliation that matters
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="sentinel-kql">Sentinel KQL<a class="headerlink" href="#sentinel-kql" title="Permanent link">&para;</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Kept as an extra</p>
+<p>WinLogKit is SIEM-agnostic and ends at the collector's ForwardedEvents
+log. This page is one worked example of verifying the last hop, for
+Microsoft Sentinel. It is outside the main navigation on purpose.</p>
+</div>
+<p>Verifying the last hop: a collector (or any host) shipping events to a Log
+Analytics workspace with the Azure Monitor Agent (AMA), and the KQL that
+proves the whole chain works. Generic Microsoft Sentinel / Azure Monitor
+material - nothing here is specific to this kit, but every query assumes
+the <a href="../../wec/">WEC page's</a> architecture: sources push to a collector's
+ForwardedEvents log, AMA collects that log.</p>
+<h2 id="which-table-the-events-land-in">Which table the events land in<a class="headerlink" href="#which-table-the-events-land-in" title="Permanent link">&para;</a></h2>
+<p>Forwarded events collected by AMA land in the
+<a href="https://learn.microsoft.com/azure/azure-monitor/reference/tables/windowsevent"><strong>WindowsEvent</strong></a>
+table - that is what the
+<a href="https://learn.microsoft.com/azure/sentinel/data-connectors/windows-forwarded-events">Windows Forwarded Events connector</a>
+configures: a
+<a href="https://learn.microsoft.com/azure/azure-monitor/agents/data-collection-windows-events">Data Collection Rule</a>
+whose XPath list reads the <code>ForwardedEvents</code> channel.</p>
+<p>An analogy that holds up well: the workspace is a filing cabinet and each
+table is a drawer.</p>
+<ul>
+<li><strong>Two drawers look similar.</strong> <code>SecurityEvent</code> is a <em>different</em> drawer
+  with its own clerk: the <em>Windows Security Events via AMA</em> connector
+  files a machine's <strong>own</strong> Security log into <code>SecurityEvent</code>. Put that
+  clerk on a collector and it files the collector's own activity - the
+  thousands of forwarded events sitting in its ForwardedEvents log are
+  ignored. Practical consequence: a detection that only searches
+  <code>SecurityEvent</code> never sees anything that travelled via WEF (ASIM
+  parsers union both drawers - see
+  <a href="https://learn.microsoft.com/azure/sentinel/normalization">normalisation</a>).</li>
+<li><strong>Every document keeps its original letterhead.</strong> Everything physically
+  passed through the collector, but each event still records the machine
+  that created it: <code>Computer</code> is the <strong>original source</strong>, not the
+  collector. That is what makes fleet verification possible from the
+  workspace end - you can list exactly which servers are represented
+  without logging into anything.</li>
+<li><strong>The envelope is thrown away; the letter is kept.</strong> ForwardedEvents
+  was only the transport envelope. Once filed, each event shows its
+  <em>original</em> log name (<code>Channel</code> = <code>Security</code> and so on), so "everything
+  that came via forwarding" cannot be filtered for directly - it is
+  inferred from the <code>Computer</code> names instead. And the event's details are
+  not split into neat named columns the way <code>SecurityEvent</code>'s are; they
+  sit bundled in one <code>EventData</code> field that queries unpack
+  (<code>EventData.CommandLine</code>).</li>
+<li><strong>There is also a stamp saying which clerk filed it.</strong> Every row
+  carries
+  <a href="https://learn.microsoft.com/azure/azure-monitor/logs/log-standard-columns#_resourceid"><code>_ResourceId</code></a></li>
+<li>the Azure resource the record is associated with, which for
+  agent-collected data is the machine running the agent, i.e. the
+  <strong>collector</strong> - while <code>Computer</code> stays the end device. That pair
+  (collector stamp + original letterhead) powers the
+  collector-attribution queries below; sanity-check the mapping in your
+  own workspace by comparing against <code>Heartbeat._ResourceId</code>.</li>
+</ul>
+<p>One real-world wrinkle: a single DCR can carry <strong>two data sources</strong> - a
+Custom XPath one reading <code>ForwardedEvents!*</code> (those rows go to
+<code>WindowsEvent</code>) <em>and</em> a Basic one collecting the collector's own
+Application/Security/System logs (those rows go to the <code>Event</code> table).
+Finding the collectors' own noise in <code>Event</code> rather than <code>WindowsEvent</code>
+is the second source doing exactly what its checkboxes say, not a fault.</p>
+<h2 id="confirming-ama-actually-collects-forwardedevents">Confirming AMA actually collects ForwardedEvents<a class="headerlink" href="#confirming-ama-actually-collects-forwardedevents" title="Permanent link">&para;</a></h2>
+<p>Four layers; a green connector page proves none of them individually.</p>
+<p><strong>1. The DCR names the channel:</strong></p>
+<div class="highlight"><pre><span></span><code>az<span class="w"> </span>monitor<span class="w"> </span>data-collection<span class="w"> </span>rule<span class="w"> </span>show<span class="w"> </span>--resource-group<span class="w"> </span>&lt;rg&gt;<span class="w"> </span>--name<span class="w"> </span>&lt;dcr&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--query<span class="w"> </span><span class="s2">"dataSources.windowsEventLogs[].xPathQueries"</span><span class="w"> </span>-o<span class="w"> </span>json
+</code></pre></div>
+<p>(Depending on CLI version the payload may nest under <code>properties</code> - if the
+query returns nothing, retry with
+<code>properties.dataSources.windowsEventLogs[].xPathQueries</code>. The portal
+equivalent is the DCR's <strong>Data sources</strong> blade.)</p>
+<p>Look for <code>ForwardedEvents!*</code>. Only <code>Security!*</code> / <code>System!*</code> means the DCR
+collects the collector's own logs - the classic looks-healthy failure.</p>
+<p><strong>2. The DCR is associated with the collector:</strong></p>
+<div class="highlight"><pre><span></span><code>az<span class="w"> </span>monitor<span class="w"> </span>data-collection<span class="w"> </span>rule<span class="w"> </span>association<span class="w"> </span>list<span class="w"> </span>--resource<span class="w"> </span><span class="s2">"&lt;collector resource ID&gt;"</span><span class="w"> </span>-o<span class="w"> </span>table
+</code></pre></div>
+<p><strong>3. The agent received that config</strong> (on the collector; AMA caches its
+delivered DCRs locally):</p>
+<div class="highlight"><pre><span></span><code><span class="nb">Get-Service</span> <span class="n">AzureMonitorAgent</span>
+<span class="nb">Get-ChildItem</span> <span class="s2">"C:\WindowsAzure\Resources\AMADataStore.*\mcs\configchunks"</span> <span class="n">-Recurse</span> <span class="p">|</span>
+    <span class="nb">Select-String</span> <span class="n">-Pattern</span> <span class="s2">"ForwardedEvents"</span> <span class="n">-List</span>
+</code></pre></div>
+<p>(Arc-enabled servers cache under <code>C:\Resources\Directory\AMADataStore</code>.)
+No hit after 10-15 minutes means the delivered config lacks the data
+source - the fault can sit in the DCR content, the association, or the
+agent's connectivity; work back up the layers. Agent liveness from the
+workspace:</p>
+<div class="highlight"><pre><span></span><code><span class="n">Heartbeat</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">Computer</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="s">"&lt;collector&gt;"</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">Category</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="s">"Azure Monitor Agent"</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">TimeGenerated</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>4. End-to-end tracer.</strong> Generate a known harmless event on a <strong>member
+server</strong> (create and delete a test scheduled task = 4698/4699 in its
+Security log - which
+<a href="https://learn.microsoft.com/windows/security/threat-protection/auditing/audit-other-object-access-events">requires Success auditing on the <em>Other Object Access Events</em> subcategory</a>,
+part of this kit's Core tier; confirm it
+first or the tracer reports a false forwarding failure), then watch it
+cross each hop: source Security log -&gt; collector ForwardedEvents -&gt;
+workspace:</p>
+<div class="highlight"><pre><span></span><code><span class="n">WindowsEvent</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">1</span><span class="n">h</span><span class="p">)</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">EventID</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="mi">4698</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">Computer</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="s">"&lt;member server fqdn&gt;"</span>
+<span class="p">|</span><span class="w"> </span><span class="k">project</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="p">,</span><span class="w"> </span><span class="n">Computer</span><span class="p">,</span><span class="w"> </span><span class="n">Channel</span><span class="p">,</span><span class="w"> </span><span class="n">EventData</span>
+</code></pre></div>
+<p>A one-sentence acceptance criterion that exercises all four layers: <em>a
+tracer event generated on a nominated source appears in WindowsEvent with
+the source's Computer name within [delivery-mode floor + margin] minutes.</em></p>
+<h2 id="query-pack">Query pack<a class="headerlink" href="#query-pack" title="Permanent link">&para;</a></h2>
+<p><strong>Fleet inventory</strong> - who is arriving, how much, how fresh. If only the
+collector's own name appears, the DCR reads the wrong channel:</p>
+<div class="highlight"><pre><span></span><code><span class="n">WindowsEvent</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">24</span><span class="n">h</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">count</span><span class="p">(),</span><span class="w"> </span><span class="n">Channels</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">dcount</span><span class="p">(</span><span class="n">Channel</span><span class="p">),</span><span class="w"> </span><span class="n">LastSeen</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">TimeGenerated</span><span class="p">)</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Computer</span>
+<span class="p">|</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="n">desc</span>
+</code></pre></div>
+<p><strong>Collection method map</strong> - for every source, <em>how</em> its events reached
+the workspace: direct AMA on the machine itself, or WEF via a named
+collector. The row's <code>_ResourceId</code> is the machine whose agent shipped it,
+so when the source's own name matches that resource, the machine shipped
+its own events (direct); when it differs, the events rode a subscription
+through that collector. Joining Heartbeat on the lowercased full
+<code>_ResourceId</code> (never on computer names, whose short/FQDN forms differ
+between tables) adds each shipping agent's health. Field-tested against a
+mixed direct-and-forwarded estate:</p>
+<div class="highlight"><pre><span></span><code><span class="n">let</span><span class="w"> </span><span class="n">Lookback</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">24</span><span class="n">h</span><span class="p">;</span>
+<span class="n">let</span><span class="w"> </span><span class="n">ActiveAgents</span><span class="w"> </span><span class="p">=</span>
+<span class="w">    </span><span class="n">Heartbeat</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="n">Lookback</span><span class="p">)</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">Category</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="s">"Azure Monitor Agent"</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">AgentResourceId</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tolower</span><span class="p">(</span><span class="n">_ResourceId</span><span class="p">)</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">arg_max</span><span class="p">(</span><span class="n">TimeGenerated</span><span class="p">,</span><span class="w"> </span><span class="n">Version</span><span class="p">,</span><span class="w"> </span><span class="n">OSType</span><span class="p">)</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">AgentResourceId</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span><span class="k">project</span><span class="w"> </span><span class="n">AgentResourceId</span><span class="p">,</span><span class="w"> </span><span class="n">LastHeartbeat</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="p">,</span><span class="w"> </span><span class="n">AgentVersion</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">Version</span><span class="p">,</span><span class="w"> </span><span class="n">OSType</span><span class="p">;</span>
+<span class="n">WindowsEvent</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="n">Lookback</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">SourceComputer</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tostring</span><span class="p">(</span><span class="n">Computer</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">SourceShortName</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tolower</span><span class="p">(</span><span class="n">tostring</span><span class="p">(</span><span class="n">split</span><span class="p">(</span><span class="n">Computer</span><span class="p">,</span><span class="w"> </span><span class="s">"."</span><span class="p">)[</span><span class="mi">0</span><span class="p">]))</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">AgentResourceId</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tolower</span><span class="p">(</span><span class="n">tostring</span><span class="p">(</span><span class="n">_ResourceId</span><span class="p">))</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">Collector</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">extract</span><span class="p">(</span><span class="s">@"([^/]+)$"</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">AgentResourceId</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">CollectorShortName</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tolower</span><span class="p">(</span><span class="n">tostring</span><span class="p">(</span><span class="n">split</span><span class="p">(</span><span class="n">Collector</span><span class="p">,</span><span class="w"> </span><span class="s">"."</span><span class="p">)[</span><span class="mi">0</span><span class="p">]))</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span>
+<span class="w">    </span><span class="n">Events</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">count</span><span class="p">(),</span>
+<span class="w">    </span><span class="n">Channels</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">dcount</span><span class="p">(</span><span class="n">Channel</span><span class="p">),</span>
+<span class="w">    </span><span class="n">FirstEvent</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">min</span><span class="p">(</span><span class="n">TimeGenerated</span><span class="p">),</span>
+<span class="w">    </span><span class="n">LastEvent</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">TimeGenerated</span><span class="p">)</span>
+<span class="w">    </span><span class="k">by</span><span class="w"> </span><span class="n">SourceComputer</span><span class="p">,</span><span class="w"> </span><span class="n">SourceShortName</span><span class="p">,</span><span class="w"> </span><span class="n">Collector</span><span class="p">,</span><span class="w"> </span><span class="n">CollectorShortName</span><span class="p">,</span><span class="w"> </span><span class="n">AgentResourceId</span>
+<span class="p">|</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">kind</span><span class="p">=</span><span class="n">leftouter</span><span class="w"> </span><span class="n">ActiveAgents</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">AgentResourceId</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">CollectionMethod</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">case</span><span class="p">(</span>
+<span class="w">    </span><span class="n">isempty</span><span class="p">(</span><span class="n">AgentResourceId</span><span class="p">),</span><span class="w"> </span><span class="s">"Unknown - Resource ID unavailable"</span><span class="p">,</span>
+<span class="w">    </span><span class="n">SourceShortName</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="n">CollectorShortName</span><span class="p">,</span><span class="w"> </span><span class="s">"Direct AMA"</span><span class="p">,</span>
+<span class="w">    </span><span class="n">strcat</span><span class="p">(</span><span class="s">"WEF via collector: "</span><span class="p">,</span><span class="w"> </span><span class="n">Collector</span><span class="p">))</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">CollectorHeartbeatStatus</span><span class="w"> </span><span class="p">=</span>
+<span class="w">    </span><span class="n">iff</span><span class="p">(</span><span class="n">isnotempty</span><span class="p">(</span><span class="n">LastHeartbeat</span><span class="p">),</span><span class="w"> </span><span class="s">"Active"</span><span class="p">,</span><span class="w"> </span><span class="s">"No heartbeat in last 24h"</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">project</span>
+<span class="w">    </span><span class="n">SourceComputer</span><span class="p">,</span><span class="w"> </span><span class="n">CollectionMethod</span><span class="p">,</span><span class="w"> </span><span class="n">Collector</span><span class="p">,</span><span class="w"> </span><span class="n">CollectorHeartbeatStatus</span><span class="p">,</span>
+<span class="w">    </span><span class="n">LastHeartbeat</span><span class="p">,</span><span class="w"> </span><span class="n">AgentVersion</span><span class="p">,</span><span class="w"> </span><span class="n">Events</span><span class="p">,</span><span class="w"> </span><span class="n">Channels</span><span class="p">,</span><span class="w"> </span><span class="n">FirstEvent</span><span class="p">,</span><span class="w"> </span><span class="n">LastEvent</span>
+<span class="p">|</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">CollectionMethod</span><span class="w"> </span><span class="n">asc</span><span class="p">,</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="n">desc</span>
+</code></pre></div>
+<p>One row per source, and the <code>CollectionMethod</code> column answers the
+question directly; <code>CollectorHeartbeatStatus</code> flags a shipping agent that
+has since gone quiet. (Absence of a heartbeat is evidence within the
+window, not proof the machine is down - see the
+<a href="https://learn.microsoft.com/azure/azure-monitor/agents/azure-monitor-agent-troubleshoot-windows-vm">agent troubleshooting</a>.)</p>
+<p><strong>Per-collector rollup of observed events</strong> - how balanced the shipping
+collectors are. There is no "DCR name" column in the table, so scope by
+the machines listed on the DCR's <strong>Resources</strong> tab (add
+<code>| where Collector in ("wec01", "wec02", ...)</code> when other machines also
+write to <code>WindowsEvent</code>). <code>TimeGenerated</code> is when an event happened on
+the source; <code>ingestion_time()</code> is when the workspace received it - this
+query windows and reports on the latter, since delivery freshness is the
+claim being made
+(<a href="https://learn.microsoft.com/azure/azure-monitor/logs/log-standard-columns">standard columns</a>).
+A collector that shipped nothing cannot appear here; the next section
+finds those:</p>
+<div class="highlight"><pre><span></span><code><span class="n">WindowsEvent</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">ingestion_time</span><span class="p">()</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">24</span><span class="n">h</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">Collector</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tolower</span><span class="p">(</span><span class="n">tostring</span><span class="p">(</span><span class="n">split</span><span class="p">(</span><span class="n">_ResourceId</span><span class="p">,</span><span class="w"> </span><span class="s">"/"</span><span class="p">)[-</span><span class="mi">1</span><span class="p">]))</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">count</span><span class="p">(),</span><span class="w"> </span><span class="n">EndDevices</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">dcount</span><span class="p">(</span><span class="n">Computer</span><span class="p">),</span><span class="w"> </span><span class="n">LastIngested</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">ingestion_time</span><span class="p">())</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Collector</span>
+<span class="p">|</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="n">desc</span>
+</code></pre></div>
+<p>And if the DCR also carries a Basic data source for the collectors' own
+Application/Security/System logs, those rows are in the <code>Event</code> table:</p>
+<div class="highlight"><pre><span></span><code><span class="n">Event</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">24</span><span class="n">h</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">Collector</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tolower</span><span class="p">(</span><span class="n">tostring</span><span class="p">(</span><span class="n">split</span><span class="p">(</span><span class="n">_ResourceId</span><span class="p">,</span><span class="w"> </span><span class="s">"/"</span><span class="p">)[-</span><span class="mi">1</span><span class="p">]))</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">count</span><span class="p">()</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Collector</span><span class="p">,</span><span class="w"> </span><span class="n">EventLog</span>
+<span class="p">|</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Collector</span><span class="w"> </span><span class="n">asc</span><span class="p">,</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="n">desc</span>
+</code></pre></div>
+<p><strong>Silent collectors: attached to the DCR but forwarding nothing.</strong> The
+rollup above only shows collectors that shipped at least one row - a dead
+collector is invisible in it. This version starts from the machines that
+<em>should</em> be shipping (their AMA heartbeats) and left-joins what actually
+arrived, so the silent ones surface with zero counts. Replace the list
+with the names from the DCR's Resources tab:</p>
+<p>Both sides derive the collector name from <code>_ResourceId</code> (present on
+<a href="https://learn.microsoft.com/azure/azure-monitor/logs/log-standard-columns#_resourceid">both tables</a>)
+so the join key cannot disagree on short name vs FQDN; only the
+<code>expectedCollectors</code> list needs to match the resource names from the
+Resources tab (lowercase, to match the <code>tolower</code> normalisation):</p>
+<div class="highlight"><pre><span></span><code><span class="n">let</span><span class="w"> </span><span class="n">window</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">24</span><span class="n">h</span><span class="p">;</span>
+<span class="n">let</span><span class="w"> </span><span class="n">expectedCollectors</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">dynamic</span><span class="p">([</span><span class="s">"wec01"</span><span class="p">,</span><span class="w"> </span><span class="s">"wec02"</span><span class="p">,</span><span class="w"> </span><span class="s">"wec03"</span><span class="p">,</span><span class="w"> </span><span class="s">"wec04"</span><span class="p">,</span><span class="w"> </span><span class="s">"wec05"</span><span class="p">]);</span>
+<span class="n">let</span><span class="w"> </span><span class="n">shipping</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">WindowsEvent</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">ingestion_time</span><span class="p">()</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="n">window</span><span class="p">)</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">Collector</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tolower</span><span class="p">(</span><span class="n">tostring</span><span class="p">(</span><span class="n">split</span><span class="p">(</span><span class="n">_ResourceId</span><span class="p">,</span><span class="w"> </span><span class="s">"/"</span><span class="p">)[-</span><span class="mi">1</span><span class="p">]))</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">count</span><span class="p">(),</span><span class="w"> </span><span class="n">EndDevices</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">dcount</span><span class="p">(</span><span class="n">Computer</span><span class="p">),</span><span class="w"> </span><span class="n">LastIngested</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">ingestion_time</span><span class="p">())</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Collector</span><span class="p">;</span>
+<span class="n">let</span><span class="w"> </span><span class="n">alive</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">Heartbeat</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="n">window</span><span class="p">)</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">Category</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="s">"Azure Monitor Agent"</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">Collector</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tolower</span><span class="p">(</span><span class="n">tostring</span><span class="p">(</span><span class="n">split</span><span class="p">(</span><span class="n">_ResourceId</span><span class="p">,</span><span class="w"> </span><span class="s">"/"</span><span class="p">)[-</span><span class="mi">1</span><span class="p">]))</span>
+<span class="w">    </span><span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">LastHeartbeat</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">TimeGenerated</span><span class="p">)</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Collector</span><span class="p">;</span>
+<span class="k">print</span><span class="w"> </span><span class="n">Collector</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">expectedCollectors</span>
+<span class="p">|</span><span class="w"> </span><span class="k">mv-expand</span><span class="w"> </span><span class="n">Collector</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="k">typeof</span><span class="p">(</span><span class="k">string</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">kind</span><span class="p">=</span><span class="n">leftouter</span><span class="w"> </span><span class="n">alive</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">Collector</span>
+<span class="p">|</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">kind</span><span class="p">=</span><span class="n">leftouter</span><span class="w"> </span><span class="n">shipping</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">Collector</span>
+<span class="p">|</span><span class="w"> </span><span class="k">project</span><span class="w"> </span><span class="n">Collector</span><span class="p">,</span><span class="w"> </span><span class="n">LastHeartbeat</span><span class="p">,</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">coalesce</span><span class="p">(</span><span class="n">Events</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">),</span><span class="w"> </span><span class="n">EndDevices</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">coalesce</span><span class="p">(</span><span class="n">EndDevices</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">),</span><span class="w"> </span><span class="n">LastIngested</span>
+<span class="p">|</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="n">asc</span>
+</code></pre></div>
+<p>Reading the result rows for a silent collector, in order (heartbeat
+presence or absence here means <em>within this query's window and filters</em> -
+it is evidence, not proof, of a machine's state):</p>
+<ol>
+<li><strong>No matching heartbeat</strong> - the machine, its agent, or heartbeat
+   ingestion is not working (or the name in <code>expectedCollectors</code> does not
+   match the resource name); nothing about WEF yet. Start with the
+   <a href="https://learn.microsoft.com/azure/azure-monitor/agents/azure-monitor-agent-troubleshoot-windows-vm">agent troubleshooting</a>.</li>
+<li><strong>Heartbeat present, events zero</strong> - the agent reports in but ships no
+   forwarded events; the question becomes <em>which side of the collector is
+   broken</em>. On that collector,
+   check whether ForwardedEvents itself has recent events:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="nb">Get-WinEvent</span> <span class="n">-LogName</span> <span class="n">ForwardedEvents</span> <span class="n">-MaxEvents</span> <span class="n">5</span> <span class="p">|</span> <span class="nb">Select-Object</span> <span class="n">TimeCreated</span><span class="p">,</span> <span class="n">MachineName</span><span class="p">,</span> <span class="n">Id</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>- **ForwardedEvents has recent events** -&gt; the WEF half works; the
+  workspace hop is broken *for this machine*. Verify the DCR
+  association actually includes it (a five-collector estate where
+  only three were ever associated looks exactly like this) and grep
+  the local config cache for `ForwardedEvents` as in the four-layer
+  check above.
+- **ForwardedEvents is empty or stale** -&gt; the WEF half is broken:
+  run `wecutil es` on that collector, then `wecutil gr &lt;name&gt;` for each
+  subscription it lists. No subscriptions
+  = none is currently registered (never set up, or since removed);
+  subscriptions with zero or Inactive sources
+  = work the [WEC page's](../wec.md) reconciliation and silent-failures
+  table (GPO scope, WinRM, the Security-log permission). It is
+  entirely possible for some collectors in an estate to have
+  subscriptions and others none - each collector's subscription store
+  is local to it.
+</code></pre></div>
+<p><strong>Channel and event mix</strong> - compare against the subscription query and the
+source baseline (the <a href="../../reference/">Reference page</a> lists what each kit
+setting emits):</p>
+<div class="highlight"><pre><span></span><code><span class="n">WindowsEvent</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">24</span><span class="n">h</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">Computers</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">dcount</span><span class="p">(</span><span class="n">Computer</span><span class="p">),</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">count</span><span class="p">()</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Channel</span><span class="p">,</span><span class="w"> </span><span class="n">EventID</span>
+<span class="p">|</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="n">desc</span>
+</code></pre></div>
+<p><strong>Collection-policy fingerprinting</strong> - machines sharing an identical
+channel set are almost certainly under the same DCR or subscription; the
+distinct fingerprints recover the collection design from the data alone:</p>
+<div class="highlight"><pre><span></span><code><span class="n">WindowsEvent</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">24</span><span class="n">h</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">ChannelSet</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">make_set</span><span class="p">(</span><span class="n">Channel</span><span class="p">)</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Computer</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">Fingerprint</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">hash_sha256</span><span class="p">(</span><span class="n">tostring</span><span class="p">(</span><span class="n">array_sort_asc</span><span class="p">(</span><span class="n">ChannelSet</span><span class="p">)))</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">Machines</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">make_set</span><span class="p">(</span><span class="n">Computer</span><span class="p">),</span><span class="w"> </span><span class="n">Count</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">dcount</span><span class="p">(</span><span class="n">Computer</span><span class="p">)</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Fingerprint</span>
+<span class="p">|</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Count</span><span class="w"> </span><span class="n">desc</span>
+</code></pre></div>
+<p><strong>Silent sources</strong> - previously seen, gone quiet (the workspace-side twin
+of <code>wecutil gr</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="n">WindowsEvent</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">7</span><span class="n">d</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">LastSeen</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">TimeGenerated</span><span class="p">)</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Computer</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">LastSeen</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">2</span><span class="n">h</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">LastSeen</span><span class="w"> </span><span class="n">asc</span>
+</code></pre></div>
+<p><strong>Never-seen sources</strong> - diff the expected fleet against reality.
+<code>set_difference</code> compares exact strings and <code>Computer</code> usually carries the
+FQDN, so list the expected fleet as FQDNs (or normalise both sides):</p>
+<div class="highlight"><pre><span></span><code><span class="n">let</span><span class="w"> </span><span class="n">expected</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">dynamic</span><span class="p">([</span><span class="s">"server1.corp.example"</span><span class="p">,</span><span class="w"> </span><span class="s">"server2.corp.example"</span><span class="p">]);</span>
+<span class="n">let</span><span class="w"> </span><span class="n">seen</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">toscalar</span><span class="p">(</span><span class="n">WindowsEvent</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">24</span><span class="n">h</span><span class="p">)</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">make_set</span><span class="p">(</span><span class="n">Computer</span><span class="p">));</span>
+<span class="k">print</span><span class="w"> </span><span class="n">missing</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">set_difference</span><span class="p">(</span><span class="n">expected</span><span class="p">,</span><span class="w"> </span><span class="n">seen</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Ingestion latency</strong> - against whatever target applies, remembering the
+subscription delivery mode sets the floor before Azure is involved. One
+caveat: if the DCR sets <code>UseTimeReceivedForForwardedEvents</code>, AMA stamps
+<code>TimeGenerated</code> with the collector's receipt time, so this measures only
+the post-receipt hop; leave that setting off to measure source-to-table:</p>
+<div class="highlight"><pre><span></span><code><span class="n">WindowsEvent</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">24</span><span class="n">h</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">lag</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">ingestion_time</span><span class="p">()</span><span class="w"> </span><span class="p">-</span><span class="w"> </span><span class="n">TimeGenerated</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">p50</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">percentile</span><span class="p">(</span><span class="n">lag</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">),</span><span class="w"> </span><span class="n">p95</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">percentile</span><span class="p">(</span><span class="n">lag</span><span class="p">,</span><span class="w"> </span><span class="mi">95</span><span class="p">)</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Computer</span>
+<span class="p">|</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">p95</span><span class="w"> </span><span class="n">desc</span>
+</code></pre></div>
+<p><strong>Volume and cost attribution</strong> - the evidence for filtering further left
+(source config, subscription query, or a
+<a href="https://learn.microsoft.com/azure/azure-monitor/data-collection/data-collection-transformations">DCR transform</a>):</p>
+<div class="highlight"><pre><span></span><code><span class="n">WindowsEvent</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">7</span><span class="n">d</span><span class="p">)</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">_IsBillable</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="n">true</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">GB</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">sum</span><span class="p">(</span><span class="n">_BilledSize</span><span class="p">)</span><span class="w"> </span><span class="p">/</span><span class="w"> </span><span class="mi">1</span><span class="n">e9</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">bin</span><span class="p">(</span><span class="n">TimeGenerated</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="n">d</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="n">WindowsEvent</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">24</span><span class="n">h</span><span class="p">)</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">_IsBillable</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="n">true</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">GB</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">sum</span><span class="p">(</span><span class="n">_BilledSize</span><span class="p">)</span><span class="w"> </span><span class="p">/</span><span class="w"> </span><span class="mi">1</span><span class="n">e9</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Computer</span><span class="p">,</span><span class="w"> </span><span class="n">Channel</span>
+<span class="p">|</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">GB</span><span class="w"> </span><span class="n">desc</span>
+</code></pre></div>
+<p><strong>Payload spot check</strong> - pulling fields from the dynamic bag (4688 with
+command line, assuming the source enables the kit's
+<a href="../../baselines/#tiers">HighVolume tier</a>):</p>
+<div class="highlight"><pre><span></span><code><span class="n">WindowsEvent</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">1</span><span class="n">h</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">Channel</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="s">"Security"</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">EventID</span><span class="w"> </span><span class="p">==</span><span class="w"> </span><span class="mi">4688</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">NewProcess</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tostring</span><span class="p">(</span><span class="n">EventData</span><span class="p">.</span><span class="n">NewProcessName</span><span class="p">),</span><span class="w"> </span><span class="n">CmdLine</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tostring</span><span class="p">(</span><span class="n">EventData</span><span class="p">.</span><span class="n">CommandLine</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">project</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="p">,</span><span class="w"> </span><span class="n">Computer</span><span class="p">,</span><span class="w"> </span><span class="n">NewProcess</span><span class="p">,</span><span class="w"> </span><span class="n">CmdLine</span>
+<span class="p">|</span><span class="w"> </span><span class="k">take</span><span class="w"> </span><span class="mi">20</span>
+</code></pre></div>
+<h2 id="domain-controllers-which-path-are-they-on">Domain controllers: which path are they on?<a class="headerlink" href="#domain-controllers-which-path-are-they-on" title="Permanent link">&para;</a></h2>
+<p>DCs are usually the highest-value sources and often the messiest to
+trace, because one DC's telemetry can arrive over <strong>three separate
+paths</strong> into <strong>three separate tables</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>DC telemetry</th>
+<th>Path</th>
+<th>Table</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Security / directory events via WEF</td>
+<td>DC -&gt; collector -&gt; AMA</td>
+<td><code>WindowsEvent</code></td>
+</tr>
+<tr>
+<td>Security events via direct AMA (the <a href="https://learn.microsoft.com/azure/sentinel/connect-services-windows-based">Security Events connector</a> on the DC itself)</td>
+<td>DC -&gt; AMA</td>
+<td><code>SecurityEvent</code></td>
+</tr>
+<tr>
+<td>DNS server activity (the <a href="https://learn.microsoft.com/azure/sentinel/dns-normalization-schema">ASIM DNS via AMA connector</a>)</td>
+<td>DC -&gt; AMA</td>
+<td><code>ASimDnsActivityLogs</code></td>
+</tr>
+</tbody>
+</table>
+<p>The DNS path can never ride WEF - that connector's DCR runs on the DNS
+server (typically the DCs) itself - so DNS rows are always evidence of a
+working <em>direct</em> agent on that DC.</p>
+<p>Which tables each DC is actually landing in (short names, lowercase):</p>
+<div class="highlight"><pre><span></span><code><span class="n">let</span><span class="w"> </span><span class="n">DCs</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">dynamic</span><span class="p">([</span><span class="s">"dc01"</span><span class="p">,</span><span class="w"> </span><span class="s">"dc02"</span><span class="p">]);</span>
+<span class="k">union</span><span class="w"> </span><span class="n">isfuzzy</span><span class="p">=</span><span class="n">true</span>
+<span class="w">    </span><span class="p">(</span><span class="n">WindowsEvent</span><span class="w">        </span><span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">24</span><span class="n">h</span><span class="p">)</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">Table</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">"WindowsEvent"</span><span class="p">,</span><span class="w">        </span><span class="n">Host</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tolower</span><span class="p">(</span><span class="n">tostring</span><span class="p">(</span><span class="n">split</span><span class="p">(</span><span class="n">Computer</span><span class="p">,</span><span class="w"> </span><span class="s">"."</span><span class="p">)[</span><span class="mi">0</span><span class="p">]))),</span>
+<span class="w">    </span><span class="p">(</span><span class="n">SecurityEvent</span><span class="w">       </span><span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">24</span><span class="n">h</span><span class="p">)</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">Table</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">"SecurityEvent"</span><span class="p">,</span><span class="w">       </span><span class="n">Host</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tolower</span><span class="p">(</span><span class="n">tostring</span><span class="p">(</span><span class="n">split</span><span class="p">(</span><span class="n">Computer</span><span class="p">,</span><span class="w"> </span><span class="s">"."</span><span class="p">)[</span><span class="mi">0</span><span class="p">]))),</span>
+<span class="w">    </span><span class="p">(</span><span class="n">ASimDnsActivityLogs</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">24</span><span class="n">h</span><span class="p">)</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">Table</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">"ASimDnsActivityLogs"</span><span class="p">,</span><span class="w"> </span><span class="n">Host</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tolower</span><span class="p">(</span><span class="n">tostring</span><span class="p">(</span><span class="n">split</span><span class="p">(</span><span class="n">coalesce</span><span class="p">(</span><span class="n">DvcHostname</span><span class="p">,</span><span class="w"> </span><span class="n">Dvc</span><span class="p">),</span><span class="w"> </span><span class="s">"."</span><span class="p">)[</span><span class="mi">0</span><span class="p">])))</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">Host</span><span class="w"> </span><span class="n">in</span><span class="w"> </span><span class="p">(</span><span class="n">DCs</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">count</span><span class="p">(),</span><span class="w"> </span><span class="n">LastIngested</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">ingestion_time</span><span class="p">())</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Host</span><span class="p">,</span><span class="w"> </span><span class="n">Table</span>
+<span class="p">|</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Host</span><span class="w"> </span><span class="n">asc</span><span class="p">,</span><span class="w"> </span><span class="n">Table</span><span class="w"> </span><span class="n">asc</span>
+</code></pre></div>
+<p>A DC missing a row for an expected table means <strong>no matching rows were
+observed in the window</strong> - strong evidence, not proof, that the path is
+broken: the path may be deliberately unconfigured for that DC, or a
+<a href="https://learn.microsoft.com/azure/azure-monitor/vm/data-collection-windows-events">DCR XPath filter</a>
+may exclude the events. Interpret against the intended design, then
+confirm with the tracer-event and configuration checks above before
+declaring it broken. For the <code>WindowsEvent</code> rows, <em>how</em> each DC arrives
+(WEF via which collector, or direct) is the collection method map above -
+insert <code>| where SourceShortName in (DCs)</code> before its <code>project</code>.</p>
+<p>(<code>Host</code> in the DNS leg prefers <code>DvcHostname</code> and falls back to <code>Dvc</code>,
+which per the
+<a href="https://learn.microsoft.com/azure/sentinel/normalization-entity-device">ASIM device schema</a>
+can also carry an IP or device ID - rows where the fallback is not a
+hostname will not match the <code>DCs</code> list.)</p>
+<p>And which machines are shipping DNS activity at all (field-tested; the
+resource ID also says whether each is an Arc-enabled server or an Azure
+VM):</p>
+<div class="highlight"><pre><span></span><code><span class="n">ASimDnsActivityLogs</span>
+<span class="p">|</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">TimeGenerated</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="n">ago</span><span class="p">(</span><span class="mi">24</span><span class="n">h</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">summarize</span><span class="w"> </span><span class="n">Events</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="k">count</span><span class="p">(),</span><span class="w"> </span><span class="n">LastIngested</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">max</span><span class="p">(</span><span class="n">ingestion_time</span><span class="p">())</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">_ResourceId</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">Machine</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">tolower</span><span class="p">(</span><span class="n">tostring</span><span class="p">(</span><span class="n">split</span><span class="p">(</span><span class="n">trim_end</span><span class="p">(</span><span class="s">@"/"</span><span class="p">,</span><span class="w"> </span><span class="n">_ResourceId</span><span class="p">),</span><span class="w"> </span><span class="s">"/"</span><span class="p">)[-</span><span class="mi">1</span><span class="p">]))</span>
+<span class="p">|</span><span class="w"> </span><span class="k">extend</span><span class="w"> </span><span class="n">HostType</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">case</span><span class="p">(</span>
+<span class="w">    </span><span class="n">_ResourceId</span><span class="w"> </span><span class="k">has</span><span class="w"> </span><span class="s">"/microsoft.hybridcompute/machines/"</span><span class="p">,</span><span class="w"> </span><span class="s">"Arc-enabled server"</span><span class="p">,</span>
+<span class="w">    </span><span class="n">_ResourceId</span><span class="w"> </span><span class="k">has</span><span class="w"> </span><span class="s">"/microsoft.compute/virtualmachines/"</span><span class="p">,</span><span class="w"> </span><span class="s">"Azure VM"</span><span class="p">,</span>
+<span class="w">    </span><span class="s">"Other"</span><span class="p">)</span>
+<span class="p">|</span><span class="w"> </span><span class="k">project</span><span class="w"> </span><span class="n">Machine</span><span class="p">,</span><span class="w"> </span><span class="n">HostType</span><span class="p">,</span><span class="w"> </span><span class="n">Events</span><span class="p">,</span><span class="w"> </span><span class="n">LastIngested</span><span class="p">,</span><span class="w"> </span><span class="n">_ResourceId</span>
+<span class="p">|</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">Machine</span><span class="w"> </span><span class="n">asc</span>
+</code></pre></div>
+<p>An on-prem DC expected here but absent shipped no matching DNS rows in
+the window - triage it like any silent direct-AMA machine (heartbeat,
+DCR association, config cache), not like a WEF problem.</p>
+<h2 id="the-reconciliation-that-matters">The reconciliation that matters<a class="headerlink" href="#the-reconciliation-that-matters" title="Permanent link">&para;</a></h2>
+<p>The single most useful standing assertion is a three-list comparison, and
+none of the lists comes from a status page:</p>
+<ol>
+<li>the intended fleet (the AD group scoping the subscription),</li>
+<li>the collector's registered Active sources (<code>wecutil gr</code>),</li>
+<li>distinct <code>Computer</code> values in <code>WindowsEvent</code> over 24 hours.</li>
+</ol>
+<p>Equal counts and matching names show the chain is delivering for those
+machines. Every gap has at least one broken hop behind it, and the
+queries above narrow down which.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.instant", "navigation.tracking", "navigation.top", "navigation.footer", "toc.follow", "content.code.copy", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
