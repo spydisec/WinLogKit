@@ -7,7 +7,7 @@
 
 .DESCRIPTION
     Everything is derived, never hand-written:
-      - items and sizes: LoggingBaseline.Settings.ps1
+      - items and sizes: WinLogKit.Settings.ps1
       - key events: the curated ATT&CK event map (authoritative for audit
         subcategories) plus event IDs mentioned in each item's Purpose text
       - reference membership: the ASD / Microsoft_Client / Microsoft_Server
@@ -32,7 +32,7 @@ $ErrorActionPreference = 'Stop'
 $kitRoot = Split-Path $PSScriptRoot -Parent
 if ([string]::IsNullOrEmpty($OutFile)) { $OutFile = Join-Path (Join-Path $kitRoot 'docs') 'reference.md' }
 
-. (Join-Path $kitRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Settings.ps1')
 
 # ---- preset membership lookups ----------------------------------------------
 
@@ -176,7 +176,7 @@ Reading the columns:
   **S** = Microsoft Server, **Y** = Yamato (per the shipped reference
   presets; kit-added extras such as the Server 2025 SMB auditing and the
   NTLM audit values show no reference letter and are sourced in the
-  [settings table](https://github.com/spydisec/WinLogKit/blob/main/LoggingBaseline.Settings.ps1)).
+  [settings table](https://github.com/spydisec/WinLogKit/blob/main/WinLogKit.Settings.ps1)).
 - **Minimal / Heavy** - membership in `spydi_Server_Minimal` /
   `spydi_Server_Heavy` (the superset role presets; rows marked **(DC)** are
   deselected in the Workstation variants and inert off domain controllers).

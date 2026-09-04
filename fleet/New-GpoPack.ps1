@@ -45,11 +45,11 @@
     Output folder. Default: .\GPO next to this script.
 
 .EXAMPLE
-    .\New-GpoPack.ps1 -IncludeHighVolume
+    .\fleet\New-GpoPack.ps1 -IncludeHighVolume
     Core + HighVolume audit policy and registry artefacts.
 
 .EXAMPLE
-    .\New-GpoPack.ps1 -BaselineFile .\presets\Microsoft_Server.csv -OutDir .\GPO\MSServer
+    .\fleet\New-GpoPack.ps1 -BaselineFile .\presets\Microsoft_Server.csv -OutDir .\GPO\MSServer
 #>
 [CmdletBinding()]
 param(
@@ -63,10 +63,13 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
-if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $PSScriptRoot 'GPO' }
+# This script lives in fleet\; the settings table, shared helpers, data
+# and output folders are at the kit root.
+$kitRoot = Split-Path $PSScriptRoot -Parent
+if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $kitRoot 'GPO' }
 
-. (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
-. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Settings.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Common.ps1')
 
 $sel = Resolve-BaselineSelection -BaselineFile $BaselineFile -IncludeHighVolume $IncludeHighVolume -IncludeOptional $IncludeOptional
 

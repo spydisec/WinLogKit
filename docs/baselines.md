@@ -7,7 +7,7 @@ ready-made lists we ship, how to build your own, and which one to pick.
 
 ## The model
 
-The settings table (`LoggingBaseline.Settings.ps1`) is the single source of
+The settings table (`WinLogKit.Settings.ps1`) is the single source of
 truth: every channel, audit subcategory, registry value and SMB audit
 setting, each with a plain-language purpose, a tier, a scope, behaviour
 category tags and - where it matters - a volume/stability risk note.
@@ -114,7 +114,7 @@ Usage is identical to any baseline CSV:
 ```powershell
 .\New-LoggingBaseline.ps1 -Show -BaselineFile .\presets\role_Workstation.csv
 .\Enable-LoggingBaseline.ps1 -BaselineFile .\presets\role_MemberServer.csv -WhatIf
-.\New-IntuneRemediationPack.ps1 -BaselineFile .\presets\role_Workstation.csv -OutDir .\Intune\Workstation
+.\fleet\New-IntuneRemediationPack.ps1 -BaselineFile .\presets\role_Workstation.csv -OutDir .\Intune\Workstation
 ```
 
 To customise a role, copy the CSV, flip `Selected` values in Excel, and keep
@@ -208,7 +208,7 @@ Notes, stated plainly:
   kit's heaviest setting.
 - Selection CSVs carry item choices, not sizes: the Security log stays at
   the kit's 1 GB (ASD suggests 2 GB; raise it in
-  `LoggingBaseline.Settings.ps1` if you take that view).
+  `WinLogKit.Settings.ps1` if you take that view).
 - A **GPO pack** generated from a `spydi_Server_*` preset includes the
   DC-only subcategories. They are inert on member servers and collectors
   (those events only generate on DCs), but if your GPO hygiene prefers

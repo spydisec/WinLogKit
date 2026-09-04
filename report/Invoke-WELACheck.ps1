@@ -48,11 +48,11 @@
     Default: .\Evidence next to this script.
 
 .EXAMPLE
-    .\Invoke-WELACheck.ps1 -Download
+    .\report\Invoke-WELACheck.ps1 -Download
     First run on an internet-connected test box: fetch WELA, run both audits.
 
 .EXAMPLE
-    .\Invoke-WELACheck.ps1 -WelaPath C:\Tools\WELA\WELA.ps1 -Baseline ASD
+    .\report\Invoke-WELACheck.ps1 -WelaPath C:\Tools\WELA\WELA.ps1 -Baseline ASD
     Air-gapped run against a pre-staged WELA copy, ASD baseline.
 #>
 [CmdletBinding()]
@@ -68,9 +68,12 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
-if ([string]::IsNullOrEmpty($EvidenceDir)) { $EvidenceDir = Join-Path $PSScriptRoot 'Evidence' }
+# This script lives in report\; the settings table, shared helpers, data
+# and output folders are at the kit root.
+$kitRoot = Split-Path $PSScriptRoot -Parent
+if ([string]::IsNullOrEmpty($EvidenceDir)) { $EvidenceDir = Join-Path $kitRoot 'Evidence' }
 
-. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Common.ps1')
 
 if (-not (Test-IsAdmin)) {
     Write-Error 'Run as local Administrator - WELA audit-settings reads the audit policy via auditpol.'
@@ -79,7 +82,7 @@ if (-not (Test-IsAdmin)) {
 
 # ------------------------------------------------------- locate / download ---
 
-$welaDir = Join-Path $PSScriptRoot 'WELA'
+$welaDir = Join-Path $kitRoot 'WELA'
 if ([string]::IsNullOrEmpty($WelaPath)) {
     # Search order: .\WELA\, any .\WELA-* folder (e.g. an unzipped WELA-2.1.0
     # release, newest name first), then WELA.ps1 in the current directory.
@@ -89,7 +92,7 @@ if ([string]::IsNullOrEmpty($WelaPath)) {
         $v = $null
         if ([version]::TryParse(($_.Name -replace '^WELA-', ''), [ref]$v)) { $v } else { [version]'0.0' }
     }; Descending = $true }
-    foreach ($d in (Get-ChildItem -Path $PSScriptRoot -Directory -Filter 'WELA-*' -ErrorAction SilentlyContinue | Sort-Object -Property $versionSort)) {
+    foreach ($d in (Get-ChildItem -Path $kitRoot -Directory -Filter 'WELA-*' -ErrorAction SilentlyContinue | Sort-Object -Property $versionSort)) {
         $candidates += Join-Path $d.FullName 'WELA.ps1'
     }
     $candidates += Join-Path (Get-Location).Path 'WELA.ps1'

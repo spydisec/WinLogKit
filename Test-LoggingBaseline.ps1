@@ -65,7 +65,7 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrEmpty($OutputDir)) { $OutputDir = Join-Path $PSScriptRoot 'Results' }
 
-. (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $PSScriptRoot 'WinLogKit.Settings.ps1')
 . (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
 
 # ---------------------------------------------------------------- helpers ---

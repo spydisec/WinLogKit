@@ -44,7 +44,7 @@ reviews:
           or parameters. Flag anything 7-only.
         - $PSScriptRoot is unreliable in param-default expressions under
           powershell.exe -File; defaults must be resolved in the script body.
-        - Every logging setting lives in LoggingBaseline.Settings.ps1 with a
+        - Every logging setting lives in WinLogKit.Settings.ps1 with a
           plain-language Purpose (and Risk where volume/stability matters).
           Flag settings hardcoded in the other scripts.
         - Shared helpers live in WinLogKit.Common.ps1 (host probes, registry

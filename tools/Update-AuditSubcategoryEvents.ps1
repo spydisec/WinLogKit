@@ -27,7 +27,7 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 $kitRoot = Split-Path $PSScriptRoot -Parent
 if ([string]::IsNullOrEmpty($OutFile)) { $OutFile = Join-Path (Join-Path (Join-Path $kitRoot 'data') 'wef') 'audit_subcategory_events.csv' }
-. (Join-Path $kitRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Settings.ps1')
 
 $base = 'https://learn.microsoft.com/windows/security/threat-protection/auditing/'
 # Explicit name -> page slug map. Microsoft's slugs are not derivable for

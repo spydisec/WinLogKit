@@ -93,7 +93,7 @@ Reading it top to bottom:
   generated from them.
 - **One table**: every script - the builder, Enable, Test, the coverage
   report and all three fleet generators - dot-sources
-  `LoggingBaseline.Settings.ps1` (and the shared helpers in
+  `WinLogKit.Settings.ps1` (and the shared helpers in
   `WinLogKit.Common.ps1`), so applied config, deployed artefacts and
   verification can never disagree.
 - **Events out**: hosts write to the Windows Event Log service;
@@ -158,9 +158,9 @@ Two data files in `data/attack/` (provenance and attribution in its README):
    logging), one sourced row per claim.
 
 ```powershell
-.\Export-AttackCoverage.ps1                                        # Core tier
-.\Export-AttackCoverage.ps1 -IncludeHighVolume
-.\Export-AttackCoverage.ps1 -BaselineFile .\presets\role_Workstation.csv
+.\report\Export-AttackCoverage.ps1                                        # Core tier
+.\report\Export-AttackCoverage.ps1 -IncludeHighVolume
+.\report\Export-AttackCoverage.ps1 -BaselineFile .\presets\role_Workstation.csv
 ```
 
 Every technique verdict carries a reason:

@@ -62,7 +62,7 @@
         Security events will silently fail.
 
     Transport defaults (ContentFormat, batching, heartbeat, source SDDL) live
-    in LoggingBaseline.Settings.ps1 ($BaselineWefDefaults); parameters here
+    in WinLogKit.Settings.ps1 ($BaselineWefDefaults); parameters here
     override them per run.
 
     Generation is read-only: no admin needed, nothing on the host changes.
@@ -105,15 +105,15 @@
     Computers and Network Service (Microsoft's documented default).
 
 .EXAMPLE
-    .\New-WefSubscription.ps1
+    .\fleet\New-WefSubscription.ps1
     Core-tier channels, whole-channel forwarding, into .\WEF\WinLogKit-Baseline.xml.
 
 .EXAMPLE
-    .\New-WefSubscription.ps1 -BaselineFile .\presets\spydi_Server_Minimal.csv -Filter Baseline -Validate
+    .\fleet\New-WefSubscription.ps1 -BaselineFile .\presets\spydi_Server_Minimal.csv -Filter Baseline -Validate
     Security filtered to exactly what that preset enables; every query parsed locally.
 
 .EXAMPLE
-    .\New-WefSubscription.ps1 -BaselineFile .\presets\ASD.csv -SubscriptionId ASD-Baseline
+    .\fleet\New-WefSubscription.ps1 -BaselineFile .\presets\ASD.csv -SubscriptionId ASD-Baseline
     Subscription covering exactly the channels the ASD preset selects.
 #>
 [CmdletBinding()]
@@ -140,10 +140,13 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
-if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $PSScriptRoot 'WEF' }
+# This script lives in fleet\; the settings table, shared helpers, data
+# and output folders are at the kit root.
+$kitRoot = Split-Path $PSScriptRoot -Parent
+if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $kitRoot 'WEF' }
 
-. (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
-. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Settings.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Common.ps1')
 
 $wefDefaults = $script:BaselineWefDefaults
 if ([string]::IsNullOrEmpty($ContentFormat)) { $ContentFormat = $wefDefaults.ContentFormat }
@@ -202,7 +205,7 @@ if ($Filter -eq 'Baseline') {
         Write-Error 'Baseline filter mode found no selected audit subcategories in this selection, so the Security query would forward only the log-tamper events. Select subcategories in the baseline, or use -Filter Channel.'
         exit 1
     }
-    $mapPath = Join-Path (Join-Path (Join-Path $PSScriptRoot 'data') 'wef') 'audit_subcategory_events.csv'
+    $mapPath = Join-Path (Join-Path (Join-Path $kitRoot 'data') 'wef') 'audit_subcategory_events.csv'
     if (-not (Test-Path $mapPath)) { Write-Error "Event map not found: $mapPath (regenerate with tools\Update-AuditSubcategoryEvents.ps1)"; exit 1 }
     $eventMap = Import-Csv $mapPath
     $idSet = New-Object 'System.Collections.Generic.SortedSet[int]'
@@ -404,6 +407,6 @@ Write-Host "    Server=http://<collector-fqdn>:5985/wsman/SubscriptionManager/WE
 Write-Host '    (optionally HTTPS: Server=https://<collector-fqdn>:5986/... - needs a server certificate on the collector)'
 Write-Host '  For the Security log: add NETWORK SERVICE to "Event Log Readers" on sources, or Security forwarding silently fails.' -ForegroundColor Yellow
 Write-Host ''
-Write-Host "Prove the filter on the collector:  .\Test-WefFilter.ps1 -ExpectedFile `"$sidecar`" -SubscriptionId $SubscriptionId"
+Write-Host "Prove the filter on the collector:  .\fleet\Test-WefFilter.ps1 -ExpectedFile `"$sidecar`" -SubscriptionId $SubscriptionId"
 Write-Host 'SIEM handoff point: the ForwardedEvents log on the collector. Ingestion beyond that is out of kit scope.'
 exit 0

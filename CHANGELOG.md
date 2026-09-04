@@ -3,9 +3,24 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
-## Unreleased
+## v1.0.0 - 2026-09-04
+
+The v1.0 restructure ([ADR-001](https://github.com/spydisec/WinLogKit/pull/30)):
+docs cut, one copy of the shared helpers, and a layout that shows a new
+reader the three scripts they need. Version 1.0.0 because paths move; no
+setting changed.
 
 ### Changed
+- **Layout (breaking: paths).** The fleet generators
+  (`New-IntuneRemediationPack.ps1`, `New-GpoPack.ps1`,
+  `New-WefSubscription.ps1`, `Test-WefFilter.ps1`) now live in `fleet\`,
+  and the coverage report and WELA check (`Export-AttackCoverage.ps1`,
+  `Invoke-WELACheck.ps1`) in `report\`. The three host scripts stay at the
+  root with the settings table and the shared helpers. Output folders
+  (`Intune\`, `GPO\`, `WEF\`, `Results\`, `Evidence\`) stay at the kit
+  root wherever the script runs from.
+- **`LoggingBaseline.Settings.ps1` is now `WinLogKit.Settings.ps1`.** Same
+  contents. If you carry a modified copy, rename it.
 - **`WinLogKit.Common.ps1`.** The helpers that Enable, Test, the WELA
   check, the coverage report and the fleet generators each carried their
   own copy of (admin check, host role and OS type, registry reads, the

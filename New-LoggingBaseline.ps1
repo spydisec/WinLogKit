@@ -91,7 +91,7 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrEmpty($OutFile)) { $OutFile = Join-Path $PSScriptRoot 'MyBaseline.csv' }
 
-. (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $PSScriptRoot 'WinLogKit.Settings.ps1')
 . (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
 
 if ((Test-Path $OutFile) -and -not $Force -and -not $Show) {

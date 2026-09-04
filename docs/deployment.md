@@ -11,7 +11,7 @@ Central collection (WEF / WEC) has its own page: [Collect](wec.md).
 ## Intune (workstations and cloud-managed servers)
 
 ```powershell
-.\New-IntuneRemediationPack.ps1 [-BaselineFile <csv>] [-IncludeHighVolume] [-IncludeOptional]
+.\fleet\New-IntuneRemediationPack.ps1 [-BaselineFile <csv>] [-IncludeHighVolume] [-IncludeOptional]
 ```
 
 Produces a self-contained pair for Intune remediations:
@@ -35,7 +35,7 @@ which does not belong in unattended remediation).
 ## GPO (domain-joined fleets)
 
 ```powershell
-.\New-GpoPack.ps1 [-BaselineFile <csv>] [-IncludeHighVolume] [-IncludeOptional]
+.\fleet\New-GpoPack.ps1 [-BaselineFile <csv>] [-IncludeHighVolume] [-IncludeOptional]
 ```
 
 Produces:

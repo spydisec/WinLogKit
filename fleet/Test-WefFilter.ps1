@@ -48,7 +48,7 @@
     (<SubscriptionId>.xml next to the sidecar).
 
 .EXAMPLE
-    .\Test-WefFilter.ps1 -ExpectedFile .\WEF\WinLogKit-Baseline.expected-eventids.csv -SubscriptionId WinLogKit-Baseline
+    .\fleet\Test-WefFilter.ps1 -ExpectedFile .\WEF\WinLogKit-Baseline.expected-eventids.csv -SubscriptionId WinLogKit-Baseline
 #>
 [CmdletBinding()]
 param(

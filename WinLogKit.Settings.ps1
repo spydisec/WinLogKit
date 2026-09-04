@@ -1,6 +1,6 @@
 # =============================================================================
-# LoggingBaseline.Settings.ps1
-# Shared settings table for Enable-LoggingBaseline.ps1 and Test-LoggingBaseline.ps1
+# WinLogKit.Settings.ps1
+# The settings table every kit script dot-sources.
 #
 # This is the single source of truth for the kit. Both the enable script and
 # the verification script dot-source this file, so they can never disagree
