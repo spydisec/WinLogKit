@@ -20,7 +20,7 @@ is what tunes the presets. Open an issue with the *Field report* template.
 
 ## Ground rules for changes
 
-- **Every setting lives in `LoggingBaseline.Settings.ps1`** with a
+- **Every setting lives in `WinLogKit.Settings.ps1`** with a
   plain-language purpose and, where it matters, a risk note. Scripts,
   presets, packs and docs derive from it; never hard-code a setting
   anywhere else.

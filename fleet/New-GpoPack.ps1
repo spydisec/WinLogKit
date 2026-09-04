@@ -42,14 +42,14 @@
     switches decide (Core by default).
 
 .PARAMETER OutDir
-    Output folder. Default: .\GPO next to this script.
+    Output folder. Default: GPO\ at the kit root (the parent of fleet\).
 
 .EXAMPLE
-    .\New-GpoPack.ps1 -IncludeHighVolume
+    .\fleet\New-GpoPack.ps1 -IncludeHighVolume
     Core + HighVolume audit policy and registry artefacts.
 
 .EXAMPLE
-    .\New-GpoPack.ps1 -BaselineFile .\presets\Microsoft_Server.csv -OutDir .\GPO\MSServer
+    .\fleet\New-GpoPack.ps1 -BaselineFile .\presets\Microsoft_Server.csv -OutDir .\GPO\MSServer
 #>
 [CmdletBinding()]
 param(
@@ -63,10 +63,13 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
-if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $PSScriptRoot 'GPO' }
+# This script lives in fleet\; the settings table, shared helpers, data
+# and output folders are at the kit root.
+$kitRoot = Split-Path $PSScriptRoot -Parent
+if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $kitRoot 'GPO' }
 
-. (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
-. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Settings.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Common.ps1')
 
 $sel = Resolve-BaselineSelection -BaselineFile $BaselineFile -IncludeHighVolume $IncludeHighVolume -IncludeOptional $IncludeOptional
 
@@ -140,12 +143,12 @@ if ($auditCount -lt $totalAudit) {
     Write-Host ("PARTIAL SELECTION: audit.csv covers {0} of {1} kit subcategories. Apply semantics for the others depend on the tool " -f $auditCount, $totalAudit) -ForegroundColor Yellow
     Write-Host 'and existing policy (LGPO /ac and GPO application may not preserve unlisted subcategories). After applying, ALWAYS verify' -ForegroundColor Yellow
     $verifyArgs = ''
-    if ($null -ne $sel.Map) { $verifyArgs = " -BaselineFile `"$BaselineFile`"" }
+    if ($null -ne $sel.Map) { $verifyArgs = " -BaselineFile `"$((Resolve-Path $BaselineFile).Path)`"" }
     else {
         if ($IncludeHighVolume) { $verifyArgs += ' -IncludeHighVolume' }
         if ($IncludeOptional)   { $verifyArgs += ' -IncludeOptional' }
     }
-    Write-Host "the effective result: .\Test-LoggingBaseline.ps1$verifyArgs (it reads the live audit policy, not the file you applied)." -ForegroundColor Yellow
+    Write-Host "the effective result: & `"$(Join-Path $kitRoot 'Test-LoggingBaseline.ps1')`"$verifyArgs (it reads the live audit policy, not the file you applied)." -ForegroundColor Yellow
 }
 Write-Host 'Note: LGPO /t is additive - deselected registry values are NOT removed by a smaller pack. Use Enable-LoggingBaseline -Rollback or remove them deliberately.' -ForegroundColor Yellow
 exit 0

@@ -1,13 +1,29 @@
 # Commands
 
-Every script, what it does, and the flags you'll actually use. They all
-read the same settings table (`LoggingBaseline.Settings.ps1`) and share one
-helper file (`WinLogKit.Common.ps1`), so - given
+Every script, what it does, and the flags you'll actually use. All of them
+except `Test-WefFilter.ps1` (which needs only its sidecar CSV) read the
+same settings table (`WinLogKit.Settings.ps1`) and share one helper file
+(`WinLogKit.Common.ps1`), so - given
 the same selection, and regenerating artefacts after any settings change -
 what you apply, what you verify and what you deploy can't disagree.
 All of the kit's scripts run on PowerShell 7 and on stock Windows
 PowerShell 5.1 - use whichever your host has. (WELA is Yamato's tool
 with its own requirements; `Invoke-WELACheck.ps1` drives it either way.)
+
+## Where the scripts live
+
+| Folder | Scripts | Run from |
+|---|---|---|
+| kit root | `New-`, `Enable-`, `Test-LoggingBaseline.ps1`, the settings table `WinLogKit.Settings.ps1`, the shared helpers `WinLogKit.Common.ps1` | the host you are configuring |
+| `fleet\` | `New-IntuneRemediationPack.ps1`, `New-GpoPack.ps1`, `New-WefSubscription.ps1`, `Test-WefFilter.ps1` | an admin workstation (generators); the collector (`Test-WefFilter`) |
+| `report\` | `Export-AttackCoverage.ps1`, `Invoke-WELACheck.ps1` | anywhere (coverage); the host (WELA) |
+| `tools\` | regenerators for presets, the Reference page and the WEF event map | maintainers |
+
+The root, `fleet\` and `report\` scripts read the settings table and
+helpers from the kit root and write their output (`Intune\`, `GPO\`, `WEF\`,
+`Results\`, `Evidence\`) there too, wherever they live. Two things stand
+alone by design: `Test-WefFilter.ps1` needs only its sidecar CSV, and the
+generated Intune pack carries everything it needs to the endpoint.
 
 ## Enable-LoggingBaseline.ps1
 
@@ -65,7 +81,7 @@ which techniques it makes observable - and why the rest are not
 [Coverage](mapping.md).
 
 ```powershell
-.\Export-AttackCoverage.ps1 [-IncludeHighVolume] [-IncludeOptional] [-BaselineFile <csv>]
+.\report\Export-AttackCoverage.ps1 [-IncludeHighVolume] [-IncludeOptional] [-BaselineFile <csv>]
 ```
 
 ## Invoke-WELACheck.ps1
@@ -76,7 +92,7 @@ timestamped evidence. Locates WELA in `.\WELA\` or an unzipped
 `WELA-<version>\` folder; `-Download` fetches it from GitHub on request.
 
 ```powershell
-.\Invoke-WELACheck.ps1 [-Download] [-WelaPath <path>] [-Baseline YamatoSecurity|ASD|Microsoft_Client|Microsoft_Server]
+.\report\Invoke-WELACheck.ps1 [-Download] [-WelaPath <path>] [-Baseline YamatoSecurity|ASD|Microsoft_Client|Microsoft_Server]
 ```
 
 WELA's own commands, for reference (v2.1.0, verified against source; all
@@ -123,7 +139,7 @@ local event engine first. See
 [Collect - filtering with XPath](wec.md#filtering-with-xpath-matching-the-subscription-to-the-baseline).
 
 ```powershell
-.\New-WefSubscription.ps1 [-BaselineFile <csv>] [-Filter Channel|Baseline] [-Validate] [-SubscriptionId <name>] [-OutDir <dir>]
+.\fleet\New-WefSubscription.ps1 [-BaselineFile <csv>] [-Filter Channel|Baseline] [-Validate] [-SubscriptionId <name>] [-OutDir <dir>]
 ```
 
 ## Test-WefFilter.ps1
@@ -136,7 +152,7 @@ checks the deployed subscription's query matches the generated XML
 on any unexpected ID or mismatch.
 
 ```powershell
-.\Test-WefFilter.ps1 -ExpectedFile .\WEF\<name>.expected-eventids.csv [-SubscriptionId <name>] [-Hours 24]
+.\fleet\Test-WefFilter.ps1 -ExpectedFile .\WEF\<name>.expected-eventids.csv [-SubscriptionId <name>] [-Hours 24]
 ```
 
 ## New-GpoPack.ps1

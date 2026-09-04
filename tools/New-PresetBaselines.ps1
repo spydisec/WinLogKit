@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     Regenerates the reference baseline presets in .\presets\ from the settings
-    table. Run after changing LoggingBaseline.Settings.ps1; CI fails if the
+    table. Run after changing WinLogKit.Settings.ps1; CI fails if the
     committed presets drift from what this script produces.
 
 .DESCRIPTION

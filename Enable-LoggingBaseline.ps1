@@ -99,7 +99,7 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrEmpty($BaselineDir)) { $BaselineDir = Join-Path $PSScriptRoot 'Baseline' }
 if ([string]::IsNullOrEmpty($LogDir))      { $LogDir      = Join-Path $PSScriptRoot 'Logs' }
 
-. (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $PSScriptRoot 'WinLogKit.Settings.ps1')
 . (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
 
 # ---------------------------------------------------------------- helpers ---

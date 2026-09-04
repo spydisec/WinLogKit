@@ -40,13 +40,13 @@
     Use the vendored OSSEM-DM snapshot instead of the native mapping.
 
 .PARAMETER OutDir
-    Where the CSVs go. Default: .\Results next to this script.
+    Where the CSVs go. Default: Results\ at the kit root (the parent of report\).
 
 .EXAMPLE
-    .\Export-AttackCoverage.ps1 -IncludeHighVolume
+    .\report\Export-AttackCoverage.ps1 -IncludeHighVolume
 
 .EXAMPLE
-    .\Export-AttackCoverage.ps1 -BaselineFile .\presets\role_Workstation.csv
+    .\report\Export-AttackCoverage.ps1 -BaselineFile .\presets\role_Workstation.csv
 #>
 [CmdletBinding()]
 param(
@@ -61,10 +61,13 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
-if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $PSScriptRoot 'Results' }
+# This script lives in report\; the settings table, shared helpers, data
+# and output folders are at the kit root.
+$kitRoot = Split-Path $PSScriptRoot -Parent
+if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $kitRoot 'Results' }
 
-. (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
-. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Settings.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Common.ps1')
 
 # ---------------------------------------------- resolve the selection sets ---
 
@@ -106,7 +109,7 @@ $detail = New-Object System.Collections.Generic.List[object]
 
 if ($UseOssem) {
     # ------------------- legacy cross-check: OSSEM-DM snapshot join ----------
-    $snapshot = Join-Path (Join-Path (Join-Path $PSScriptRoot 'data') 'ossem') 'techniques_to_events_windows.csv'
+    $snapshot = Join-Path (Join-Path (Join-Path $kitRoot 'data') 'ossem') 'techniques_to_events_windows.csv'
     if (-not (Test-Path $snapshot)) { Write-Error "OSSEM snapshot not found at $snapshot"; exit 1 }
     $subcatAlias = @{ 'PNP Activity' = 'Plug and Play'; 'Policy Change' = 'Audit Policy Change' }
     $subcatSelectedByName = @{}; $subcatKnownByName = @{}
@@ -144,7 +147,7 @@ if ($UseOssem) {
 } else {
     # ------------------------ native mapping: ATT&CK v19.2 + kit event map ---
     # Nested Join-Path keeps these resolvable on non-Windows PowerShell too.
-    $attackDir    = Join-Path (Join-Path $PSScriptRoot 'data') 'attack'
+    $attackDir    = Join-Path (Join-Path $kitRoot 'data') 'attack'
     $analyticsCsv = Join-Path $attackDir 'windows_analytics.csv'
     $mapCsv       = Join-Path $attackDir 'event_map.csv'
     foreach ($p in @($analyticsCsv, $mapCsv)) {

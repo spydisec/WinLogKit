@@ -30,7 +30,7 @@ worked example for Microsoft Sentinel is kept as an
 ## Generate the subscription
 
 ```powershell
-.\New-WefSubscription.ps1 [-BaselineFile <csv>] [-Filter Channel|Baseline] [-Validate] [-SubscriptionId <name>]
+.\fleet\New-WefSubscription.ps1 [-BaselineFile <csv>] [-Filter Channel|Baseline] [-Validate] [-SubscriptionId <name>]
 ```
 
 Generates a source-initiated subscription XML with one query per selected

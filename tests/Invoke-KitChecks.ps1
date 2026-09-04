@@ -113,7 +113,7 @@ if ($notInCommon) {
 }
 
 # 2. Settings table consistency -----------------------------------------------
-. (Join-Path $KitRoot 'LoggingBaseline.Settings.ps1')
+. (Join-Path $KitRoot 'WinLogKit.Settings.ps1')
 
 $bad = @()
 foreach ($grp in @($BaselineChannels, $BaselineAuditSubcategories, $BaselineRegistrySettings, $BaselineSmbAuditSettings)) {
@@ -190,7 +190,7 @@ try {
 
     # 5. Intune pack generation: files parse, placeholders replaced, selection respected
     $packDir = Join-Path $tmp 'intune'
-    & (Join-Path $KitRoot 'New-IntuneRemediationPack.ps1') -OutDir $packDir | Out-Null
+    & (Join-Path $KitRoot 'fleet\New-IntuneRemediationPack.ps1') -OutDir $packDir | Out-Null
     foreach ($f in @('Detect-LoggingBaseline.ps1', 'Remediate-LoggingBaseline.ps1')) {
         $p = Join-Path $packDir $f
         if (-not (Test-Path $p)) { Fail "Intune pack missing $f"; continue }
@@ -200,7 +200,7 @@ try {
         if ((Get-Content $p -Raw) -match '__(MODE|ITEMS|COUNT|SOURCE|FILENAME)__') { Fail "generated $f has unreplaced placeholders" }
     }
     $packDir2 = Join-Path $tmp 'intune-csv'
-    & (Join-Path $KitRoot 'New-IntuneRemediationPack.ps1') -OutDir $packDir2 -BaselineFile $csv1 | Out-Null
+    & (Join-Path $KitRoot 'fleet\New-IntuneRemediationPack.ps1') -OutDir $packDir2 -BaselineFile $csv1 | Out-Null
     $detect2 = Get-Content (Join-Path $packDir2 'Detect-LoggingBaseline.ps1') -Raw
     # The recommended CSV selects only Core, so no HighVolume item may be embedded.
     if ($detect2 -match 'EnableModuleLogging') { Fail 'Intune pack from Core-only CSV embedded a HighVolume item' } else { Pass 'Intune pack honours the baseline CSV selection' }
@@ -231,7 +231,7 @@ try {
 
     # 7a. GPO pack: audit.csv row count matches selection; registry.txt has policy values
     $gpoTmp = Join-Path $tmp 'gpo'
-    & (Join-Path $KitRoot 'New-GpoPack.ps1') -OutDir $gpoTmp -IncludeHighVolume | Out-Null
+    & (Join-Path $KitRoot 'fleet\New-GpoPack.ps1') -OutDir $gpoTmp -IncludeHighVolume | Out-Null
     $auditRows = @(Import-Csv (Join-Path $gpoTmp 'audit.csv'))
     $expectedAudit = @($BaselineAuditSubcategories | Where-Object { $_.Tier -eq 'Core' -or $_.Tier -eq 'HighVolume' }).Count
     if ($auditRows.Count -eq $expectedAudit) { Pass "GPO audit.csv rows ($expectedAudit)" } else { Fail "GPO audit.csv has $($auditRows.Count) rows, expected $expectedAudit" }
@@ -252,7 +252,7 @@ try {
     if ($badMap) { Fail "event_map.csv references unknown settings items: $($badMap -join ', ')" } else { Pass 'event map item ids valid against settings table' }
 
     $covTmp = Join-Path $tmp 'cov'
-    & (Join-Path $KitRoot 'Export-AttackCoverage.ps1') -OutDir $covTmp | Out-Null
+    & (Join-Path $KitRoot 'report\Export-AttackCoverage.ps1') -OutDir $covTmp | Out-Null
     $covDetail = Get-ChildItem $covTmp -Filter 'AttackCoverage_Detail_*.csv' | Select-Object -First 1
     if ($null -eq $covDetail) { Fail 'coverage detail CSV not produced' } else {
         $covRows = Import-Csv $covDetail.FullName
@@ -265,7 +265,7 @@ try {
 
     # 7. WEF subscription generation: valid XML, one query per selected channel
     $wefTmp = Join-Path $tmp 'wef'
-    & (Join-Path $KitRoot 'New-WefSubscription.ps1') -OutDir $wefTmp -BaselineFile (Join-Path $KitRoot 'presets\ASD.csv') -SubscriptionId 'CheckSub' | Out-Null
+    & (Join-Path $KitRoot 'fleet\New-WefSubscription.ps1') -OutDir $wefTmp -BaselineFile (Join-Path $KitRoot 'presets\ASD.csv') -SubscriptionId 'CheckSub' | Out-Null
     try {
         [xml]$wx = Get-Content (Join-Path $wefTmp 'CheckSub.xml') -Raw
         $qCount = [regex]::Matches($wx.Subscription.Query.'#cdata-section', '<Query ').Count
@@ -315,7 +315,7 @@ try {
     }
 
     $wefB = Join-Path $tmp 'wefB'
-    $wefOut = & (Join-Path $KitRoot 'New-WefSubscription.ps1') -OutDir $wefB -BaselineFile (Join-Path $KitRoot 'presets\spydi_Server_Heavy.csv') -Filter Baseline -Validate -SubscriptionId 'CheckB' 2>&1 | Out-String
+    $wefOut = & (Join-Path $KitRoot 'fleet\New-WefSubscription.ps1') -OutDir $wefB -BaselineFile (Join-Path $KitRoot 'presets\spydi_Server_Heavy.csv') -Filter Baseline -Validate -SubscriptionId 'CheckB' 2>&1 | Out-String
     if ($wefOut -match 'INVALID') { Fail "WEF Baseline filter: a generated query failed local validation: $wefOut" }
     try {
         [xml]$wb = Get-Content (Join-Path $wefB 'CheckB.xml') -Raw

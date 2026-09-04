@@ -56,6 +56,9 @@ generator accept through `-BaselineFile`; `presets\` ships ready-made
 ones (ASD, Microsoft, and the kit's own `spydi_*` Minimal / Heavy pairs
 per role).
 
+The three host scripts are at the kit root; fleet generators (Intune, GPO,
+WEF) are in `fleet\` and the coverage report and WELA check in `report\`.
+
 If scripts are blocked, `Set-ExecutionPolicy -Scope Process RemoteSigned`
 unblocks the current window without persisting anything; downloaded zips
 also need `Unblock-File`, and a policy enforced by Group Policy cannot be

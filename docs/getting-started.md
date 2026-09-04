@@ -111,13 +111,13 @@ From an **elevated** Windows PowerShell prompt in the kit folder:
 .\Test-LoggingBaseline.ps1
 
 # 3. Decide on the high volume tier with evidence, then apply it.
-.\Export-AttackCoverage.ps1                    # what Core makes observable
-.\Export-AttackCoverage.ps1 -IncludeHighVolume # what HighVolume adds
+.\report\Export-AttackCoverage.ps1                    # what Core makes observable
+.\report\Export-AttackCoverage.ps1 -IncludeHighVolume # what HighVolume adds
 .\Enable-LoggingBaseline.ps1 -IncludeHighVolume
 .\Test-LoggingBaseline.ps1   -IncludeHighVolume
 
 # 4. Independent second opinion (fetches WELA once, on request).
-.\Invoke-WELACheck.ps1 -Download
+.\report\Invoke-WELACheck.ps1 -Download
 
 # Escape hatch: restore everything captured at first run.
 .\Enable-LoggingBaseline.ps1 -Rollback
@@ -142,6 +142,15 @@ stability risk, and `t` shows the whole tree at any point:
 
 Or start from a published reference: see
 [Baselines & Presets](baselines.md).
+
+## Where the scripts live
+
+The three host scripts sit at the kit root. Fleet generators are in
+`fleet\`, the coverage report and WELA check in `report\`; see
+[Commands](commands.md#where-the-scripts-live). Wherever a script lives, it
+reads the settings table from the root and writes its output there; the
+one that needs neither is `Test-WefFilter.ps1`, which runs on the collector
+from its sidecar CSV alone.
 
 ## Where things land
 

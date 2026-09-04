@@ -7,7 +7,7 @@
         # The kit is an interactive console tool: Write-Host with colour IS the UI.
         'PSAvoidUsingWriteHost'
 
-        # LoggingBaseline.Settings.ps1 defines script-scope tables consumed by the
+        # WinLogKit.Settings.ps1 defines script-scope tables consumed by the
         # other scripts after dot-sourcing; per-file analysis cannot see that.
         'PSUseDeclaredVarsMoreThanAssignments'
 

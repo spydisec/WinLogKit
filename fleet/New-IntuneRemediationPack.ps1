@@ -34,7 +34,7 @@
     Requires: Windows PowerShell 5.1+. No admin needed to generate.
 
 .PARAMETER OutDir
-    Where to write the pair. Default: .\Intune next to this script.
+    Where to write the pair. Default: Intune\ at the kit root (the parent of fleet\).
 
 .PARAMETER BaselineFile
     Optional selection CSV from New-LoggingBaseline.ps1. Only Selected = Y
@@ -48,11 +48,11 @@
     Without -BaselineFile: also embed Optional tier items.
 
 .EXAMPLE
-    .\New-IntuneRemediationPack.ps1
+    .\fleet\New-IntuneRemediationPack.ps1
     Recommended (Core) pack into .\Intune\.
 
 .EXAMPLE
-    .\New-IntuneRemediationPack.ps1 -BaselineFile .\WorkstationBaseline.csv -OutDir .\Intune\Workstation
+    .\fleet\New-IntuneRemediationPack.ps1 -BaselineFile .\WorkstationBaseline.csv -OutDir .\Intune\Workstation
     Pack for a role-specific baseline built with New-LoggingBaseline.ps1.
 #>
 [CmdletBinding()]
@@ -67,10 +67,13 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
-if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $PSScriptRoot 'Intune' }
+# This script lives in fleet\; the settings table, shared helpers, data
+# and output folders are at the kit root.
+$kitRoot = Split-Path $PSScriptRoot -Parent
+if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $kitRoot 'Intune' }
 
-. (Join-Path $PSScriptRoot 'LoggingBaseline.Settings.ps1')
-. (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Settings.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Common.ps1')
 
 # ---------------------------------------------------------- item selection ---
 

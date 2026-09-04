@@ -8,7 +8,7 @@
 ## Checklist
 
 - [ ] `tests\Invoke-KitChecks.ps1` passes locally
-- [ ] Settings changes made in `LoggingBaseline.Settings.ps1` only, with a
+- [ ] Settings changes made in `WinLogKit.Settings.ps1` only, with a
       plain-language purpose (and risk note where it matters)
 - [ ] Generated files (presets, docs Reference page, packs) regenerated via
       their `tools\` generators, not edited by hand
