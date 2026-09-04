@@ -3,7 +3,7 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
-## Unreleased
+## v0.11.0 - 2026-09-04
 
 ### Added
 - **WEF XPath filtering matched to the baseline.**
