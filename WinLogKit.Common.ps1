@@ -97,7 +97,7 @@ function Get-SmbAuditState {
 #     their switch is given
 
 # Every "ITEMTYPE|ID" key the settings table defines, as a hashtable set.
-function Get-BaselineItemKeys {
+function Get-BaselineItemKeySet {
     $keys = @{}
     foreach ($ch in $script:BaselineChannels)          { $keys[("Channel|$($ch.Name)").ToUpper()] = $true }
     foreach ($sub in $script:BaselineAuditSubcategories) { $keys[("AuditPolicy|$($sub.Guid)").ToUpper()] = $true }
@@ -141,7 +141,7 @@ function Import-BaselineSelection {
         }
         $map[$key] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
     }
-    $known = Get-BaselineItemKeys
+    $known = Get-BaselineItemKeySet
     $unknown = @($map.Keys | Where-Object { -not $known.ContainsKey($_) } | Sort-Object)
     if ($unknown.Count -eq $map.Count) {
         Write-Error "No row in the baseline file matches a setting in this kit (first: $($unknown[0])): $Path (build one with New-LoggingBaseline.ps1 or use a preset)"
