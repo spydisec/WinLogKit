@@ -1,22 +1,12 @@
-# Fleet Deployment
+# Deploy
 
-How to roll a baseline out to many machines - through Intune, Windows
-Event Forwarding, or Group Policy - all generated from the same tested
-selection (tier switches, or optionally a baseline CSV). One mental model
-for everything on this page:
-
-```text
-generate (this kit, on each host)  ->  transport (WEF/WEC)  ->  ingest (your SIEM)
-```
-
-The kit owns *generate* and helps you set up *transport*. *Ingest* -
-agents, connectors, SIEM-side filtering - is deliberately out of scope: the
-handoff point is the ForwardedEvents log on your collector.
-
-All three generators below compile from the settings table (or the same
-`-BaselineFile` selection CSV used everywhere else), so deployed artefacts
+How to roll a baseline out to many machines through Intune or Group Policy.
+Both generators compile from the settings table, or from the same
+`-BaselineFile` selection CSV used everywhere else, so deployed artefacts
 cannot drift from the tested baseline. Regenerate after any settings
 change; the generated files say not to edit them by hand.
+
+Central collection (WEF / WEC) has its own page: [Collect](wec.md).
 
 ## Intune (workstations and cloud-managed servers)
 
@@ -37,56 +27,6 @@ PowerShell **Yes**. Endpoints need nothing but the two uploaded files -
 role- and version-gating happens at runtime on each host. The AD CS
 AuditFilter is excluded from packs by design (it needs a CertSvc restart,
 which does not belong in unattended remediation).
-
-## WEF/WEC (central collection, agentless)
-
-```powershell
-.\New-WefSubscription.ps1 [-BaselineFile <csv>] [-SubscriptionId <name>]
-```
-
-Generates a source-initiated subscription XML - one query per selected
-channel. Transport defaults (`Events` format, 30s/500-item batching, 1h
-heartbeat, source SDDL) live in the settings table and are overridable per
-run. The script prints the full setup:
-
-```text
-Collector:  winrm qc -q            (WinRM listener first)
-            wecutil qc /q          (then the collector service)
-            wecutil cs .\WEF\WinLogKit-Baseline.xml
-            wevtutil sl ForwardedEvents /ms:1073741824
-Sources:    winrm qc -q   (WinRM must be configured on each source too - or
-                           enable the WinRM service via GPO fleet-wide)
-            GPO > Event Forwarding > Configure target Subscription Manager
-            Server=http://<collector-fqdn>:5985/wsman/SubscriptionManager/WEC,Refresh=60
-```
-
-Per [Microsoft's source-initiated subscription procedure](https://learn.microsoft.com/windows/win32/wec/setting-up-a-source-initiated-subscription),
-both ends need WinRM: the collector to listen, the sources to forward.
-
-The classic trap: for the Security log, add NETWORK SERVICE to **Event Log
-Readers** on sources, or Security forwarding silently fails. Verify either
-side with:
-
-```powershell
-.\Test-LoggingBaseline.ps1 -WefRole Source      # on a forwarding host
-.\Test-LoggingBaseline.ps1 -WefRole Collector   # on the WEC
-```
-
-Two filter modes. `-Filter Channel` (default) forwards every event of each
-selected channel - the baseline's channel selection is the coarse filter and
-the right first deployment. `-Filter Baseline` narrows the Security channel
-to exactly the event IDs the baseline's enabled audit subcategories can
-produce (Microsoft's documented per-subcategory lists, vendored in
-`data\wef\`) plus the always-on log-tamper events, and leaves every other
-channel whole. Add `-Validate` to parse each query in the local event engine
-before deploying, then prove the filter on the collector with
-`Test-WefFilter.ps1`. How the XPath works and how to confirm it:
-[WEC Collector - filtering with XPath](wec.md#filtering-with-xpath-matching-the-subscription-to-the-baseline).
-
-Beyond generating the subscription: the [WEC Collector](wec.md) page covers
-reading and verifying an existing collector (subscription anatomy, runtime
-status, the silent failures), and [Sentinel KQL](kql.md) covers the onward
-hop to a SIEM workspace and the queries that prove the chain end-to-end.
 
 ## GPO (domain-joined fleets)
 

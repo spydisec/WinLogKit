@@ -1,7 +1,7 @@
 site_name: WinLogKit
 site_description: >-
-  Implement the Yamato Security Windows event logging baselines with native
-  PowerShell - enable, verify, roll back, and deploy at fleet scale.
+  Enable, verify, collect and deploy Windows event logging baselines with
+  plain PowerShell - no modules, no agents.
 site_url: https://spydisec.github.io/WinLogKit/
 repo_url: https://github.com/spydisec/WinLogKit
 repo_name: spydisec/WinLogKit
@@ -53,23 +53,23 @@ markdown_extensions:
       permalink: true
   - pymdownx.superfences
   - pymdownx.highlight
+  - pymdownx.snippets:
+      base_path: ['.']
+      check_paths: true
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 # Ordered as a reader journey: try it, pick a baseline, look up commands,
-# roll it out, measure it, understand it, stay safe, get unstuck.
+# collect it, roll it out, measure it, stay safe.
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Baselines: baselines.md
   - Commands: commands.md
-  - Deployment: deployment.md
-  - WEC Collector: wec.md
-  - Sentinel KQL: kql.md
+  - Collect: wec.md
+  - Deploy: deployment.md
   - Coverage: mapping.md
   - Reference: reference.md
-  - Architecture: architecture.md
-  - Safety: safety.md
+  - Safety & FAQ: safety.md
   - Add-ons: addons.md
-  - FAQ: faq.md

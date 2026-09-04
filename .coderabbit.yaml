@@ -38,7 +38,7 @@ reviews:
   path_instructions:
     - path: "**/*.ps1"
       instructions: |
-        House rules for this repo (see README "Contributing and SDLC"):
+        House rules for this repo (see CONTRIBUTING.md):
         - Must run on stock Windows PowerShell 5.1: no ternary operator, no
           null-coalescing (??), no null-conditional (?.), no pwsh-only cmdlets
           or parameters. Flag anything 7-only.

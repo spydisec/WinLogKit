@@ -1,5 +1,5 @@
 /* =========================================================================
-   WinLogKit docs — spydi theme (steel blue + signal teal)
+   WinLogKit docs - spydi theme (steel blue + signal teal)
    Structure adapted from Yamato Security's WELA docs stylesheet (MIT).
    ========================================================================= */
 
@@ -52,63 +52,6 @@
 /* Wider content column for the dense baseline/coverage tables */
 .md-grid {
   max-width: 68rem;
-}
-
-/* =========================================================================
-   Landing-page hero
-   ========================================================================= */
-.sp-hero {
-  text-align: center;
-  padding: 2.2rem 0 1rem;
-}
-.sp-hero h1 {
-  margin-bottom: 0.6rem;
-}
-.sp-hero .sp-tagline {
-  font-size: 1.12rem;
-  line-height: 1.6;
-  max-width: 44rem;
-  margin: 0 auto 1.3rem;
-  color: var(--md-default-fg-color--light);
-}
-.sp-badges {
-  margin: 0.3rem 0 1.3rem;
-}
-.sp-badges img {
-  margin: 2px;
-  vertical-align: middle;
-}
-.sp-cta {
-  display: flex;
-  gap: 0.6rem;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-.sp-cta .md-button {
-  margin: 0.2rem;
-}
-.sp-hook {
-  max-width: 44rem;
-  margin: 0 auto;
-  color: var(--md-default-fg-color--light);
-  font-size: 0.95rem;
-}
-
-/* =========================================================================
-   Grid cards (feature highlights)
-   ========================================================================= */
-.md-typeset .grid.cards > ul > li {
-  border-radius: 0.5rem;
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
-}
-.md-typeset .grid.cards > ul > li:hover {
-  border-color: var(--md-accent-fg-color);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
-  transform: translateY(-2px);
-}
-.md-typeset .grid.cards .lg.middle {
-  color: var(--md-accent-fg-color);
 }
 
 /* =========================================================================

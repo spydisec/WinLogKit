@@ -58,10 +58,9 @@ No elevation needed; changes nothing.
 
 ## Export-AttackCoverage.ps1
 
-Joins a selection against the vendored OSSEM-DM snapshot and reports which
-ATT&CK techniques it makes observable - and why the rest are not
-(NotSelected / NotInKit / RequiresSysmon). See
-[ATT&CK Coverage Mapping](mapping.md).
+Joins a selection against the vendored MITRE ATT&CK snapshot and reports
+which techniques it makes observable - and why the rest are not
+(NotSelected / NotInKit / RequiresSysmon). See [Coverage](mapping.md).
 
 ```powershell
 .\Export-AttackCoverage.ps1 [-IncludeHighVolume] [-IncludeOptional] [-BaselineFile <csv>]
@@ -107,7 +106,7 @@ always kit drift):
 ## New-IntuneRemediationPack.ps1
 
 Compiles the selection into a self-contained Intune detection + remediation
-script pair. See [Fleet Deployment](deployment.md).
+script pair. See [Deploy](deployment.md).
 
 ## New-WefSubscription.ps1
 
@@ -119,7 +118,7 @@ Two filter modes: `Channel` (default) forwards each selected channel whole;
 subcategories can produce (vendored Microsoft lists in `data\wef\`) plus
 the always-on log-tamper events. `-Validate` parses every query in the
 local event engine first. See
-[filtering with XPath](wec.md#filtering-with-xpath-matching-the-subscription-to-the-baseline).
+[Collect - filtering with XPath](wec.md#filtering-with-xpath-matching-the-subscription-to-the-baseline).
 
 ```powershell
 .\New-WefSubscription.ps1 [-BaselineFile <csv>] [-Filter Channel|Baseline] [-Validate] [-SubscriptionId <name>] [-OutDir <dir>]
@@ -141,7 +140,7 @@ on any unexpected ID or mismatch.
 ## New-GpoPack.ps1
 
 Generates the advanced audit policy `audit.csv` and an LGPO-format
-`registry.txt` from the selection. See [Fleet Deployment](deployment.md).
+`registry.txt` from the selection. See [Deploy](deployment.md).
 
 ## tests\Invoke-KitChecks.ps1
 

@@ -1,10 +1,15 @@
 # Sentinel KQL
 
+!!! note "Kept as an extra"
+    WinLogKit is SIEM-agnostic and ends at the collector's ForwardedEvents
+    log. This page is one worked example of verifying the last hop, for
+    Microsoft Sentinel. It is outside the main navigation on purpose.
+
 Verifying the last hop: a collector (or any host) shipping events to a Log
 Analytics workspace with the Azure Monitor Agent (AMA), and the KQL that
 proves the whole chain works. Generic Microsoft Sentinel / Azure Monitor
 material - nothing here is specific to this kit, but every query assumes
-the [WEC page's](wec.md) architecture: sources push to a collector's
+the [WEC page's](../wec.md) architecture: sources push to a collector's
 ForwardedEvents log, AMA collects that log.
 
 ## Which table the events land in
@@ -275,16 +280,17 @@ it is evidence, not proof, of a machine's state):
       the local config cache for `ForwardedEvents` as in the four-layer
       check above.
     - **ForwardedEvents is empty or stale** -> the WEF half is broken:
-      run `wecutil es` / `wecutil gr` on that collector. No subscriptions
+      run `wecutil es` on that collector, then `wecutil gr <name>` for each
+      subscription it lists. No subscriptions
       = it was never set up; subscriptions with zero or Inactive sources
-      = work the [WEC page's](wec.md) reconciliation and silent-failures
+      = work the [WEC page's](../wec.md) reconciliation and silent-failures
       table (GPO scope, WinRM, the Security-log permission). It is
       entirely possible for some collectors in an estate to have
       subscriptions and others none - each collector's subscription store
       is local to it.
 
 **Channel and event mix** - compare against the subscription query and the
-source baseline (the [Reference page](reference.md) lists what each kit
+source baseline (the [Reference page](../reference.md) lists what each kit
 setting emits):
 
 ```kusto
@@ -361,7 +367,7 @@ WindowsEvent
 
 **Payload spot check** - pulling fields from the dynamic bag (4688 with
 command line, assuming the source enables the kit's
-[HighVolume tier](baselines.md#tiers)):
+[HighVolume tier](../baselines.md#tiers)):
 
 ```kusto
 WindowsEvent

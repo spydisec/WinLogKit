@@ -14,8 +14,8 @@ body:
     attributes:
       label: Proposed behaviour
       description: >-
-        What should happen instead. Check ROADMAP.md first - it may already
-        be planned.
+        What should happen instead. Check the open issues first - it may
+        already be planned.
     validations:
       required: true
   - type: checkboxes

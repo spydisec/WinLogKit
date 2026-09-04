@@ -1,27 +1,81 @@
-# WEC Collector
+# Collect
 
-A practical guide to the Windows Event Collector side of central
-collection: reading what a collector is already doing, understanding the
-subscription that controls it, and verifying that sources are actually
-sending. Everything here is read-only unless marked otherwise, so it is
-safe on a production collector.
+Central collection with Windows Event Forwarding (WEF): generate the
+subscription from the same selection you applied, set up the collector and
+the sources, read what an existing collector is already doing, and prove
+that events arrive. The commands under "Set up" change configuration;
+everything else on this page is read-only and safe on a production
+collector.
 
 Where this sits in the chain:
 
 ```text
-Member server                     WEC collector                      SIEM
-[audit policy + channels] --push--> [subscription -> ForwardedEvents] --agent--> [workspace]
+Source host                       WEC collector                      SIEM
+[audit policy + channels] --push--> [subscription -> ForwardedEvents] --agent--> [your platform]
         Gate 1                            Gate 2                        Gate 3
 ```
 
 The gates multiply. An event reaches the collector only if it is
-**generated** on the source (Gate 1, this kit's job) *and* **matched** by
-the subscription query (Gate 2, this page). A subscription cannot forward
+**generated** on the source (Gate 1, the baseline's job) *and* **matched**
+by the subscription query (Gate 2, this page). A subscription cannot forward
 what was never generated, and source config cannot force forwarding of a
 channel the subscription does not name. Keeping both generated from the
 same baseline selection is why
 [`New-WefSubscription.ps1`](commands.md#new-wefsubscriptionps1) exists.
-Gate 3 is covered on the [Sentinel KQL](kql.md) page.
+Gate 3, the hop from ForwardedEvents into a SIEM, is deliberately outside
+the kit: any agent or connector that reads a Windows event log will do. One
+worked example for Microsoft Sentinel is kept as an
+[extra](extras/sentinel-kql.md).
+
+## Generate the subscription
+
+```powershell
+.\New-WefSubscription.ps1 [-BaselineFile <csv>] [-Filter Channel|Baseline] [-Validate] [-SubscriptionId <name>]
+```
+
+Generates a source-initiated subscription XML with one query per selected
+channel, plus a sidecar `<name>.expected-eventids.csv` saying what it
+should deliver. Transport defaults (`Events` format, 30s/500-item batching,
+1h heartbeat, source SDDL) live in the settings table and are overridable
+per run.
+
+Two filter modes. `-Filter Channel` (default) forwards every event of each
+selected channel: the baseline's channel selection is the coarse filter and
+the right first deployment. `-Filter Baseline` narrows the Security channel
+to exactly the event IDs the baseline's enabled audit subcategories can
+produce, plus the always-on log-tamper events, and leaves every other
+channel whole; see
+[filtering with XPath](#filtering-with-xpath-matching-the-subscription-to-the-baseline)
+below. Add `-Validate` to parse each query in the local event engine before
+deploying, then prove the filter on the collector with
+`Test-WefFilter.ps1`.
+
+## Set up the collector and the sources
+
+The generator prints the full setup; the essentials:
+
+```text
+Collector:  winrm qc -q            (WinRM listener first)
+            wecutil qc /q          (then the collector service)
+            wecutil cs .\WEF\WinLogKit-Baseline.xml
+            wevtutil sl ForwardedEvents /ms:1073741824
+Sources:    winrm qc -q   (WinRM must be configured on each source too - or
+                           enable the WinRM service via GPO fleet-wide)
+            GPO > Event Forwarding > Configure target Subscription Manager
+            Server=http://<collector-fqdn>:5985/wsman/SubscriptionManager/WEC,Refresh=60
+```
+
+Per [Microsoft's source-initiated subscription procedure](https://learn.microsoft.com/windows/win32/wec/setting-up-a-source-initiated-subscription),
+both ends need WinRM: the collector to listen, the sources to forward.
+
+The classic trap: for the Security log, add NETWORK SERVICE to **Event Log
+Readers** on sources, or Security forwarding silently fails. Verify either
+side with:
+
+```powershell
+.\Test-LoggingBaseline.ps1 -WefRole Source      # forwarding host: SubscriptionManager policy present, WinRM state
+.\Test-LoggingBaseline.ps1 -WefRole Collector   # collector: Wecsvc, ForwardedEvents sizing, a subscription loaded
+```
 
 ## There is no default subscription
 
@@ -53,7 +107,7 @@ XML is what you keep. Command reference:
 | `<SubscriptionType>` | `SourceInitiated` (sources push to the collector over WinRM, the model that scales) or `CollectorInitiated` (the collector pulls; account-heavy, usually legacy) |
 | `<Query>` | The authoritative "what is forwarded" filter - one `<Select Path="channel">` per channel |
 | `<AllowedSourceDomainComputers>` | SDDL naming which computers may participate (normally an AD group) - the "who sends" control |
-| `<LogFile>` | Where events land on the collector, normally `ForwardedEvents`. This guide and the [Sentinel KQL](kql.md) page assume `ForwardedEvents`; if a subscription writes to another log, substitute that channel in every downstream step (sizing, DCR XPath) |
+| `<LogFile>` | Where events land on the collector, normally `ForwardedEvents`. This page assumes `ForwardedEvents`; if a subscription writes to another log, substitute that channel in every downstream step (sizing, agent configuration) |
 | `<ConfigurationMode>` | The delivery/latency trade-off (table below) |
 | `<ContentFormat>` | `Events` (compact, recommended) or `RenderedText` (adds locale-rendered strings, inflates volume) |
 | `<ReadExistingEvents>` | Whether a newly joined source backfills existing events or starts from now |
@@ -85,7 +139,7 @@ wildcards with no event-level filtering:
 ```
 
 `*` means every event in that channel - as open as WEF gets, and what this
-kit's generator emits. Two structural facts:
+kit's generator emits by default (`-Filter Channel`). Two structural facts:
 
 - There is **no channel wildcard**. "All channels on the machine" cannot be
   expressed; every channel must be listed as its own `Select`. Windows
@@ -170,8 +224,8 @@ the collector hands the subscription, query included, to every source, and
 each source's forwarding service sends only the events that match, before
 anything leaves the machine. Filtering
 here therefore saves network, collector disk, agent work and SIEM ingestion
-in one move. A DCR transform on the collector is a second filter after the
-fact; the subscription is the first and cheapest.
+in one move. Any SIEM-side transform is a second filter after the fact;
+the subscription is the first and cheapest.
 
 ### The XPath subset
 
@@ -268,20 +322,6 @@ Four checks, cheapest first:
    | where Channel == "Security" | where EventID !in (...)` - any row
    returned is an event the filter should have stopped.
 
-What the filter buys you is measurable with the
-[volume queries](kql.md#query-pack) before and after: the Security
-channel's share of `_BilledSize` per source is the number to compare.
-
-## Verifying from this kit
-
-- `Test-LoggingBaseline.ps1 -WefRole Source` - is this machine configured
-  to forward (SubscriptionManager present, WinRM service state)?
-- `Test-LoggingBaseline.ps1 -WefRole Collector` - is this machine
-  configured to collect?
-- `New-WefSubscription.ps1 -BaselineFile <csv>` - generate a subscription
-  whose channel list is provably identical to what the sources enable, so
-  Gates 1 and 2 cannot drift apart.
-
-Onward: [Sentinel KQL](kql.md) covers Gate 3 - confirming the collector's
-agent ships ForwardedEvents to a workspace, and the queries that prove the
-whole chain end-to-end.
+What the filter buys you is measurable before and after: the Security
+channel's share of ingested volume per source is the number to compare
+(the [Sentinel extra](extras/sentinel-kql.md#query-pack) has the queries).
