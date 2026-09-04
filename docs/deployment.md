@@ -72,10 +72,16 @@ side with:
 .\Test-LoggingBaseline.ps1 -WefRole Collector   # on the WEC
 ```
 
-Whole-channel forwarding is the deliberate starting point - your baseline
-selection is the coarse filter. Graduate to curated per-event XPath queries
-using [Microsoft's WEF intrusion-detection guidance](https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection)
-once you have observed real volume.
+Two filter modes. `-Filter Channel` (default) forwards every event of each
+selected channel - the baseline's channel selection is the coarse filter and
+the right first deployment. `-Filter Baseline` narrows the Security channel
+to exactly the event IDs the baseline's enabled audit subcategories can
+produce (Microsoft's documented per-subcategory lists, vendored in
+`data\wef\`) plus the always-on log-tamper events, and leaves every other
+channel whole. Add `-Validate` to parse each query in the local event engine
+before deploying, then prove the filter on the collector with
+`Test-WefFilter.ps1`. How the XPath works and how to confirm it:
+[WEC Collector - filtering with XPath](wec.md#filtering-with-xpath-matching-the-subscription-to-the-baseline).
 
 Beyond generating the subscription: the [WEC Collector](wec.md) page covers
 reading and verifying an existing collector (subscription anatomy, runtime

@@ -63,7 +63,8 @@ own risk.
 | `Test-LoggingBaseline.ps1` | Verification only: PASS / FAIL / NOT APPLICABLE per category, CSVs to `.\Results\`, non-zero exit on failure for pipelines. |
 | `Invoke-WELACheck.ps1` | Runs WELA as an independent second opinion, parses deviations, archives evidence per run. |
 | `New-IntuneRemediationPack.ps1` | Compiles a selection into a self-contained Intune detect + remediate script pair. |
-| `New-WefSubscription.ps1` | Generates a source-initiated WEF subscription XML plus collector/source setup steps. |
+| `New-WefSubscription.ps1` | Generates a source-initiated WEF subscription XML plus collector/source setup steps. `-Filter Baseline` narrows Security to the event IDs the baseline's subcategories produce; `-Validate` parses every query locally. |
+| `Test-WefFilter.ps1` | On the collector: proves the subscription filter is in effect from ForwardedEvents evidence, and that the deployed query is the generated one. |
 | `New-GpoPack.ps1` | Generates GPO delivery artefacts: `audit.csv` (GUID-driven) and LGPO-format `registry.txt`. |
 | `Export-AttackCoverage.ps1` | Reports which ATT&CK techniques a selection makes observable, and why the rest are not. |
 | `presets/` | Ready-made selection CSVs: ASD / Microsoft reference baselines, per-role starting points, and the blended **spydi** baselines (role x volume). |

@@ -528,6 +528,25 @@ $script:BaselineWefDefaults = @{
     ForwardedEventsRecommendedBytes = 1073741824
 }
 
+# WEF Suppress rules (optional). New-WefSubscription.ps1 appends each rule
+# to the query for its channel as <Suppress Path="...">XPath</Suppress>.
+# Suppress wins over Select, and it is evaluated on the SOURCE before the
+# event is sent - so anything listed here never reaches the collector, the
+# SIEM, or any retention. That makes this a policy decision, not a tuning
+# knob: only suppress what you have measured as noise AND can defend never
+# having. Each rule: Channel (as in the subscription), XPath (the event
+# query subset - https://learn.microsoft.com/windows/win32/wes/consuming-events),
+# Reason (written into the XML as a comment). Empty by default: the kit
+# ships no opinion about your noise.
+#
+# Example shape (not enabled):
+#   @{ Channel = 'Security'
+#      XPath   = '*[System[(EventID=4688)]] and *[EventData[Data[@Name="NewProcessName"]="C:\Windows\System32\conhost.exe"]]'
+#      Reason  = 'conhost.exe spawns per console session; measured at N/day in the pilot; no detection value' }
+$script:BaselineWefSuppress = @(
+    # TODO(human): decide the default noise-suppression rules for the kit (or leave none)
+)
+
 # -----------------------------------------------------------------------------
 # 4. AD CS AUDIT FILTER (conditional - only when Certificate Services installed)
 #

@@ -111,9 +111,32 @@ script pair. See [Fleet Deployment](deployment.md).
 
 ## New-WefSubscription.ps1
 
-Generates a source-initiated WEF subscription XML (one query per selected
-channel) plus collector/source setup guidance. See
-[Fleet Deployment](deployment.md).
+Generates a source-initiated WEF subscription XML from a selection, plus
+the collector and source setup steps, and a sidecar
+`<SubscriptionId>.expected-eventids.csv` saying what it should deliver.
+Two filter modes: `Channel` (default) forwards each selected channel whole;
+`Baseline` narrows Security to the event IDs the enabled audit
+subcategories can produce (vendored Microsoft lists in `data\wef\`) plus
+the always-on log-tamper events. `-Validate` parses every query in the
+local event engine first. See
+[filtering with XPath](wec.md#filtering-with-xpath-matching-the-subscription-to-the-baseline).
+
+```powershell
+.\New-WefSubscription.ps1 [-BaselineFile <csv>] [-Filter Channel|Baseline] [-Validate] [-SubscriptionId <name>] [-OutDir <dir>]
+```
+
+## Test-WefFilter.ps1
+
+Run on the collector: proves a subscription's filter is in effect from
+evidence. Compares the event IDs that arrived in ForwardedEvents against
+the generator's sidecar (UNEXPECTED = filter not applied), optionally
+checks the deployed subscription's query matches the generated XML
+(`-SubscriptionId`), and prints the equivalent Sentinel KQL. Non-zero exit
+on any unexpected ID or mismatch.
+
+```powershell
+.\Test-WefFilter.ps1 -ExpectedFile .\WEF\<name>.expected-eventids.csv [-SubscriptionId <name>] [-Hours 24]
+```
 
 ## New-GpoPack.ps1
 
