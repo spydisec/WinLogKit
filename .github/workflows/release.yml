@@ -28,7 +28,7 @@ jobs:
           $tag = '${{ github.ref_name }}'
           $stage = "WinLogKit-$tag"
           New-Item -ItemType Directory -Path $stage | Out-Null
-          Copy-Item *.ps1, PSScriptAnalyzerSettings.psd1, README.md, ROADMAP.md, CHANGELOG.md, LICENSE $stage
+          Copy-Item *.ps1, PSScriptAnalyzerSettings.psd1, README.md, CHANGELOG.md, LICENSE $stage
           # Data-dependent scripts (coverage mapping, presets) must work from
           # the zip, not only from a git clone.
           Copy-Item data, presets, tools, tests, addons $stage -Recurse

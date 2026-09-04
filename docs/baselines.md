@@ -35,7 +35,7 @@ same `-BaselineFile`.
 The split exists so volume decisions are made by a human with the impact in
 front of them - `Export-AttackCoverage.ps1` quantifies what the HighVolume
 tier buys (117 additional ATT&CK techniques over Core: 162 -> 279 of the
-284-technique native ceiling; see [the mapping page](mapping.md)).
+284-technique native ceiling; see [Coverage](mapping.md)).
 
 ## Building a baseline
 
@@ -223,7 +223,7 @@ Notes, stated plainly:
   validates this set at the practice level (PowerShell logging, command
   line capture, centralised collection); NIST SP 800-92 / CSF and CIS
   Benchmarks are governance or licence-restricted comparisons, cited rather
-  than vendored; a DISA STIG preset is a roadmap candidate (public domain,
+  than vendored; a DISA STIG preset is a candidate for a later release (public domain,
   subcategory-level).
 
 ## Deviations from the Yamato sources

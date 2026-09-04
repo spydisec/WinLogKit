@@ -3,6 +3,23 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
+## Unreleased
+
+### Changed
+- **Docs cut.** README reduced to one screen and reused as the site home
+  page (MkDocs snippet include, one copy of the text). The site goes from
+  13 pages to 10: the WEC Collector page absorbs the WEF section of
+  Deployment and becomes **Collect**, Architecture merges into
+  **Coverage**, FAQ merges into **Safety & FAQ**, and the Sentinel KQL
+  page moves to `docs/extras/` outside the navigation (the kit is
+  SIEM-agnostic; that page is one worked example of the last hop).
+  Landing-page hero and card styling removed.
+- `ROADMAP.md` removed; planned work is tracked in GitHub issues. The
+  release zip no longer ships it.
+- FAQ: the Sysmon answer now covers built-in Sysmon on Windows 11 and
+  Windows Server 2025 (an optional Windows feature since February 2026,
+  per [Microsoft's Sysmon overview](https://learn.microsoft.com/windows/security/operating-system-security/sysmon/overview)).
+
 ## v0.11.0 - 2026-09-04
 
 ### Added

@@ -8,6 +8,8 @@ on:
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
+      # The home page includes README.md through a snippet.
+      - 'README.md'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 

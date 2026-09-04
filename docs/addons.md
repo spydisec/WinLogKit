@@ -17,7 +17,7 @@ yesterday's, alert on an unsigned binary in a Run key, pivot on a hash.
 
 **Why it is an add-on and not a baseline setting:** the kit's core is
 native configuration only. Registry autostart locations are the one
-[Persistence gap](architecture.md#behaviour-category-mapping) native
+[Persistence gap](mapping.md#behaviour-category-mapping) native
 auditing cannot cover without per-key SACLs (the
 [Audit Registry](https://learn.microsoft.com/windows/security/threat-protection/auditing/audit-registry)
 subcategory only records access to keys that carry one), and Autoruns is
@@ -81,8 +81,8 @@ Volume, observed on one Windows 11 24H2 workstation with autorunsc 14.3
 seconds, **4.1 MB of event log per run** (event records carry overhead
 well beyond the ~1 MB CSV). Servers and hosts with many installed products
 will differ; measure your own with `-Status`. Multiply by fleet size
-before pointing it at a billable table; the roadmap has a diff mode for
-exactly that reason.
+before pointing it at a billable table; a diff mode that writes only new
+or changed entries is planned for exactly that reason.
 
 ### Collecting it centrally
 

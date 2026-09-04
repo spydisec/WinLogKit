@@ -14,7 +14,7 @@ is what tunes the presets. Open an issue with the *Field report* template.
   Use the *Bug report* template and include the transcript from `.\Logs\`
   or the Results CSVs where relevant.
 - **Docs** - unclear wording, missing steps, broken links.
-- **Code** - fixes and roadmap items ([ROADMAP.md](ROADMAP.md)). For
+- **Code** - fixes and planned work (open issues labelled `enhancement`). For
   anything non-trivial, open an issue first so the approach is agreed
   before you spend time on it.
 
