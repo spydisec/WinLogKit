@@ -40,12 +40,14 @@
 
 .PARAMETER Download
     If WELA is not found, download WELA.ps1 and its two config files from
-    github.com/Yamato-Security/WELA (main branch) into .\WELA\ beside this
-    script. Off by default so nothing is fetched without an explicit decision.
+    github.com/Yamato-Security/WELA (main branch) into WELA\ at the kit root
+    (the parent of report\), which is also where an existing WELA\ or
+    WELA-<version>\ folder is looked for. Off by default so nothing is fetched
+    without an explicit decision.
 
 .PARAMETER EvidenceDir
     Root folder for evidence. A timestamped subfolder is created per run.
-    Default: .\Evidence next to this script.
+    Default: Evidence\ at the kit root (the parent of report\).
 
 .EXAMPLE
     .\report\Invoke-WELACheck.ps1 -Download

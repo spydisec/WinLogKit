@@ -143,7 +143,7 @@ if ($auditCount -lt $totalAudit) {
     Write-Host ("PARTIAL SELECTION: audit.csv covers {0} of {1} kit subcategories. Apply semantics for the others depend on the tool " -f $auditCount, $totalAudit) -ForegroundColor Yellow
     Write-Host 'and existing policy (LGPO /ac and GPO application may not preserve unlisted subcategories). After applying, ALWAYS verify' -ForegroundColor Yellow
     $verifyArgs = ''
-    if ($null -ne $sel.Map) { $verifyArgs = " -BaselineFile `"$BaselineFile`"" }
+    if ($null -ne $sel.Map) { $verifyArgs = " -BaselineFile `"$((Resolve-Path $BaselineFile).Path)`"" }
     else {
         if ($IncludeHighVolume) { $verifyArgs += ' -IncludeHighVolume' }
         if ($IncludeOptional)   { $verifyArgs += ' -IncludeOptional' }
