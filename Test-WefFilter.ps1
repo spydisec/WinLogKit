@@ -75,19 +75,41 @@ foreach ($row in (Import-Csv $ExpectedFile)) {
 # ---- 2. what actually arrived ----------------------------------------------
 $since = (Get-Date).AddHours(-$Hours)
 Write-Host "Reading ForwardedEvents since $since (cap $MaxEvents records)..." -ForegroundColor White
-$records = @(Get-WinEvent -FilterHashtable @{ LogName = 'ForwardedEvents'; StartTime = $since } -MaxEvents $MaxEvents -ErrorAction SilentlyContinue)
+try {
+    $records = @(Get-WinEvent -FilterHashtable @{ LogName = 'ForwardedEvents'; StartTime = $since } -MaxEvents $MaxEvents -ErrorAction Stop)
+} catch {
+    if ("$($_.FullyQualifiedErrorId)" -match 'NoMatchingEventsFound') {
+        $records = @()
+    } else {
+        # Cannot read the log at all (rights, missing log): no evidence, no
+        # verdict, and a hard failure so automation never mistakes it for a pass.
+        Write-Host "Cannot read ForwardedEvents: $($_.Exception.Message) [$($_.FullyQualifiedErrorId)]" -ForegroundColor Red
+        Write-Host 'Run as an administrator or a member of Event Log Readers on the collector.' -ForegroundColor Red
+        Write-Host 'WEF filter check: FAIL (ForwardedEvents unreadable)' -ForegroundColor Red
+        exit 1
+    }
+}
 if ($records.Count -eq 0) {
-    Write-Warning 'ForwardedEvents holds no records in the window. Nothing to compare - check sources are registered (wecutil gr) before reading this as a pass.'
+    # No evidence is not a pass. Exit 2 so automation can tell "inconclusive"
+    # from "filter verified".
+    Write-Warning "ForwardedEvents holds no records in the last $Hours h. Nothing to compare - check sources are registered and active (wecutil gr) and try a wider -Hours."
+    Write-Host 'WEF filter check: INCONCLUSIVE (no forwarded events to examine)' -ForegroundColor Yellow
+    exit 2
 }
 if ($records.Count -ge $MaxEvents) { Write-Warning "Read cap of $MaxEvents hit; the comparison covers the newest $MaxEvents records only." }
 
-# Forwarded records keep the source channel in LogName (Security, System,
-# Microsoft-Windows-PowerShell/Operational ...), which is what the
-# subscription filtered on.
+# A forwarded record keeps its source channel (Security, System, ...) in the
+# event's System/Channel element, which EventLogRecord exposes as LogName;
+# ContainerLog is the log it physically sits in (ForwardedEvents). Should a
+# record ever report the container as its LogName, fall back to the XML.
+# https://learn.microsoft.com/dotnet/api/system.diagnostics.eventing.reader.eventlogrecord.containerlog
 $observed = @{}     # channel -> hashtable id -> count
 $sampleHost = @{}   # "channel|id" -> a source computer name for the report
 foreach ($r in $records) {
     $ch = $r.LogName
+    if ($ch -eq 'ForwardedEvents') {
+        try { $ch = ([xml]$r.ToXml()).Event.System.Channel } catch { Write-Verbose "channel fallback failed for record $($r.RecordId)" }
+    }
     if (-not $observed.ContainsKey($ch)) { $observed[$ch] = @{} }
     if (-not $observed[$ch].ContainsKey($r.Id)) { $observed[$ch][$r.Id] = 0; $sampleHost["$ch|$($r.Id)"] = $r.MachineName }
     $observed[$ch][$r.Id]++

@@ -113,7 +113,29 @@ foreach ($id in $otherIds) {
     $rows.Add([pscustomobject]@{ Guid = 'ALWAYS'; Subcategory = 'Eventlog service (always on)'; EventID = $id; SourceUrl = $otherUrl; Fetched = $fetched })
 }
 
-New-Item -ItemType Directory -Path (Split-Path $OutFile -Parent) -Force | Out-Null
+# Sourced supplement: events Microsoft documents in its downloadable
+# "Windows 10 and Windows Server 2016 security auditing and monitoring
+# reference" (the per-event spreadsheet) but that are missing from the Learn
+# subcategory page. Kept here, not in a second file, so the snapshot stays one
+# CSV with a source on every row. Add a row only with a Microsoft source.
+$supplementUrl = 'https://www.microsoft.com/download/details.aspx?id=52630'
+$supplement = @(
+    @{ Guid = '0CCE9221-69AE-11D9-BED3-505054503030'; Subcategory = 'Certification Services'; EventID = 4899 }   # A Certificate Services template was updated
+    @{ Guid = '0CCE9221-69AE-11D9-BED3-505054503030'; Subcategory = 'Certification Services'; EventID = 4900 }   # Certificate Services template security was updated
+)
+foreach ($s in $supplement) {
+    $dup = $rows | Where-Object { $_.Guid -eq $s.Guid -and $_.EventID -eq $s.EventID }
+    if (-not $dup) {
+        Write-Host ('{0,-36} + {1} (supplement: Microsoft auditing reference spreadsheet)' -f $s.Subcategory, $s.EventID)
+        $rows.Add([pscustomobject]@{ Guid = $s.Guid; Subcategory = $s.Subcategory; EventID = $s.EventID; SourceUrl = $supplementUrl; Fetched = $fetched })
+    }
+}
+$sorted = $rows | Sort-Object Subcategory, EventID
+$rows = New-Object System.Collections.Generic.List[object]
+foreach ($r in $sorted) { $rows.Add($r) }
+
+$outParent = Split-Path $OutFile -Parent
+if (-not [string]::IsNullOrEmpty($outParent)) { New-Item -ItemType Directory -Path $outParent -Force | Out-Null }
 $csv = ($rows | ConvertTo-Csv -NoTypeInformation) -join "`n"
 [System.IO.File]::WriteAllText($OutFile, $csv + "`n", (New-Object System.Text.UTF8Encoding($false)))
 Write-Host "Written: $OutFile ($($rows.Count) rows)" -ForegroundColor Green

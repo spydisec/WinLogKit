@@ -27,6 +27,13 @@ silently drops events the baseline deliberately turned on. The ATT&CK event
 map in `data/attack/` is curated for detection value, not completeness, so
 it is deliberately not used for this.
 
+**Supplement:** a few events Microsoft documents in its downloadable
+[security auditing and monitoring reference](https://www.microsoft.com/download/details.aspx?id=52630)
+spreadsheet are missing from the Learn subcategory pages (Certification
+Services 4899 and 4900 at the time of writing). The tool adds those from a
+short sourced list in the script, with that download page as `SourceUrl`,
+so the snapshot stays one CSV with a source on every row.
+
 **Refresh:** run the tool, review the diff (Microsoft occasionally adds or
 reclassifies an event), commit. `tests\Invoke-KitChecks.ps1` fails if any
 subcategory in the settings table has no rows here.

@@ -215,7 +215,7 @@ like:
 
 ```xml
 <Query Id="0" Path="Security">
-  <!-- Security: 260 event IDs from 33 enabled audit subcategories + Eventlog service events -->
+  <!-- Security: 262 event IDs from 33 enabled audit subcategories + Eventlog service events -->
   <Select Path="Security">*[System[(EventID=1100 or EventID=1102 or (EventID >= 1104 and EventID &lt;= 1105) or EventID=1108 or (EventID >= 4608 and EventID &lt;= 4612) ... )]]</Select>
   <Select Path="Security">*[System[((EventID >= 4661 and EventID &lt;= 4663) or (EventID >= 4670 and EventID &lt;= 4675) or EventID=4688 ... )]]</Select>
   ...

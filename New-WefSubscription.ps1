@@ -29,9 +29,11 @@
                        1104, 1105, 1108: service stopped, log cleared, log full). Every other
                        channel is still forwarded whole, because the
                        baseline enables those channels as units. Nothing the
-                       baseline turns on is dropped; nothing it did not turn
-                       on is forwarded. Suppress rules from the settings
-                       table ($BaselineWefSuppress) are appended per channel.
+                       baseline turns on is dropped and nothing it did not
+                       turn on is forwarded - with one deliberate exception:
+                       Suppress rules you configure in the settings table
+                       ($BaselineWefSuppress) are appended per channel, and a
+                       Suppress match removes the event at the source.
 
     The generated XML records which mode produced it. A sidecar file
     <SubscriptionId>.expected-eventids.csv lists what the subscription
@@ -210,6 +212,13 @@ if ($Filter -eq 'Baseline') {
         Write-Error 'Baseline filter mode needs the Security channel in the selection (it is the channel being filtered).'
         exit 1
     }
+    if ($subcategoryGuids.Count -eq 0) {
+        # A filter with no enabled subcategories would forward only the
+        # Eventlog-service tamper events - almost certainly not what was
+        # meant. Refuse rather than ship a near-empty Security feed.
+        Write-Error 'Baseline filter mode found no selected audit subcategories in this selection, so the Security query would forward only the log-tamper events. Select subcategories in the baseline, or use -Filter Channel.'
+        exit 1
+    }
     $mapPath = Join-Path (Join-Path (Join-Path $PSScriptRoot 'data') 'wef') 'audit_subcategory_events.csv'
     if (-not (Test-Path $mapPath)) { Write-Error "Event map not found: $mapPath (regenerate with tools\Update-AuditSubcategoryEvents.ps1)"; exit 1 }
     $eventMap = Import-Csv $mapPath
@@ -348,14 +357,21 @@ if ($Validate) {
             Get-WinEvent -FilterXml ([xml]$single) -MaxEvents 1 -ErrorAction Stop | Out-Null
             Write-Host "  OK        $chName (query parses; events present)"
         } catch {
-            $msg = $_.Exception.Message
-            if ($msg -match 'No events were found') {
+            # Classify on the stable error identifier, not the (localised)
+            # message text. Observed identifiers from Get-WinEvent:
+            #   NoMatchingEventsFound            valid query, nothing matched -> OK
+            #   NoMatchingLogsFound              channel absent on this host  -> UNCHECKED
+            #   System.UnauthorizedAccessException  cannot read the channel   -> UNCHECKED
+            #   ...EventLogException             the query itself is bad      -> INVALID
+            $fqid = "$($_.FullyQualifiedErrorId)"
+            $msg  = $_.Exception.Message
+            if ($fqid -match 'NoMatchingEventsFound') {
                 Write-Host "  OK        $chName (query parses; no matching events on this host)"
-            } elseif ($msg -match 'Attempted to perform an unauthorized operation|access is denied|There is not an event log|does not exist|could not be found|not found') {
+            } elseif ($fqid -match 'NoMatchingLogsFound|UnauthorizedAccessException') {
                 # Needs admin (Security, SMB audit logs) or the channel is absent here (PowerShellCore without PS7): syntax cannot be judged, so not a failure.
                 Write-Host "  UNCHECKED $chName ($msg)" -ForegroundColor Yellow
             } else {
-                Write-Host "  INVALID   $chName : $msg" -ForegroundColor Red
+                Write-Host "  INVALID   $chName : $msg [$fqid]" -ForegroundColor Red
                 $validationFailed = $true
             }
         }
