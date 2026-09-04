@@ -18,9 +18,11 @@ with its own requirements; `Invoke-WELACheck.ps1` drives it either way.)
 | `report\` | `Export-AttackCoverage.ps1`, `Invoke-WELACheck.ps1` | anywhere (coverage); the host (WELA) |
 | `tools\` | regenerators for presets, the Reference page and the WEF event map | maintainers |
 
-Every script reads the settings table and helpers from the kit root, and
-writes its output (`Intune\`, `GPO\`, `WEF\`, `Results\`, `Evidence\`)
-there too, wherever it lives.
+The root, `fleet\` and `report\` scripts read the settings table and
+helpers from the kit root and write their output (`Intune\`, `GPO\`, `WEF\`,
+`Results\`, `Evidence\`) there too, wherever they live. Two things stand
+alone by design: `Test-WefFilter.ps1` needs only its sidecar CSV, and the
+generated Intune pack carries everything it needs to the endpoint.
 
 ## Enable-LoggingBaseline.ps1
 
