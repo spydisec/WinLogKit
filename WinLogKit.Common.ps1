@@ -96,9 +96,23 @@ function Get-SmbAuditState {
 #   - the tier switches: Core is always on, HighVolume and Optional only when
 #     their switch is given
 
+# Every "ITEMTYPE|ID" key the settings table defines, as a hashtable set.
+function Get-BaselineItemKeys {
+    $keys = @{}
+    foreach ($ch in $script:BaselineChannels)          { $keys[("Channel|$($ch.Name)").ToUpper()] = $true }
+    foreach ($sub in $script:BaselineAuditSubcategories) { $keys[("AuditPolicy|$($sub.Guid)").ToUpper()] = $true }
+    foreach ($rs in $script:BaselineRegistrySettings)   { $keys[("Registry|$($rs.Id)").ToUpper()] = $true }
+    foreach ($sa in $script:BaselineSmbAuditSettings)   { $keys[("SmbAudit|$($sa.Id)").ToUpper()] = $true }
+    $keys[("Registry|$($script:BaselineAdcsAuditFilter.Id)").ToUpper()] = $true
+    return $keys
+}
+
 # Selection map from a selection CSV: "ITEMTYPE|ID" -> bool. The file is
 # checked first: the wrong CSV (a Results export, say) must stop the run,
-# not quietly select nothing.
+# not quietly select nothing. A CSV whose rows match nothing in the settings
+# table is rejected for the same reason; rows for items this kit version
+# does not know (an older CSV, a renamed setting) are warned about and
+# ignored, since unlisted items are excluded anyway.
 function Import-BaselineSelection {
     param([string]$Path)
     $rows = @(Import-Csv $Path)
@@ -127,6 +141,13 @@ function Import-BaselineSelection {
         }
         $map[$key] = ("$($row.Selected)".Trim() -match '^(Y|YES|TRUE|1)$')
     }
+    $known = Get-BaselineItemKeys
+    $unknown = @($map.Keys | Where-Object { -not $known.ContainsKey($_) } | Sort-Object)
+    if ($unknown.Count -eq $map.Count) {
+        Write-Error "No row in the baseline file matches a setting in this kit (first: $($unknown[0])): $Path (build one with New-LoggingBaseline.ps1 or use a preset)"
+        exit 1
+    }
+    foreach ($u in $unknown) { Write-Warning "Baseline file lists an item this kit does not know, ignored: $u" }
     return $map
 }
 

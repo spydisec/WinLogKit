@@ -102,7 +102,7 @@ if ($dupes) {
 # The shared helpers must stay in the common file: a copy that migrated back
 # into one script would still be a single definition, so name them.
 $commonExpected = @('Test-IsAdmin', 'Get-DomainRole', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
-    'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'Import-BaselineSelection', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
+    'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'Get-BaselineItemKeys', 'Import-BaselineSelection', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
 $notInCommon = @($commonExpected | Where-Object { -not $defs.ContainsKey($_) -or (($defs[$_] -join ';') -ne 'WinLogKit.Common.ps1') })
 if ($notInCommon) {
     Fail "shared helper not defined in WinLogKit.Common.ps1 (only): $($notInCommon -join ', ')"
@@ -163,6 +163,28 @@ try {
     $selOther  = @($r1 | Where-Object { $_.Selected -eq 'Y' -and $_.Tier -ne 'Core' }).Count
     if ($selCore -ne $coreCount -or $selOther -ne 0) { Fail "recommended defaults wrong (core=$coreCount selected-core=$selCore selected-noncore=$selOther)" } else { Pass 'recommended defaults select exactly Core' }
     if (@($r2 | Where-Object { $_.Selected -eq 'Y' }).Count -ne $r2.Count) { Fail 'all-tiers run did not select everything' } else { Pass 'all-tiers run selects everything' }
+
+    # 4b. Selection CSV validation: a file with the right columns but no row
+    #     matching this kit must be rejected (otherwise Test would report every
+    #     item NOT APPLICABLE and exit 0), while one stale row only warns.
+    #     Child process: the rejection is a terminating error in-session, and
+    #     the child's stderr is captured with ErrorActionPreference relaxed,
+    #     because Windows PowerShell 5.1 turns redirected native stderr into
+    #     a terminating error under 'Stop'.
+    $engine = (Get-Process -Id $PID).Path
+    $badCsv = Join-Path $tmp 'unknown-only.csv'
+    '"ItemType","Id","Selected"', '"Channel","No-Such-Channel/Operational","Y"' | Set-Content $badCsv
+    $staleCsv = Join-Path $tmp 'one-stale-row.csv'
+    (Get-Content $csv1) + '"Channel","No-Such-Channel/Operational","Core","All","Y","Y","","",""' | Set-Content $staleCsv
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $badOut = & $engine -NoProfile -ExecutionPolicy Bypass -File (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -Show -BaselineFile $badCsv 2>&1 | Out-String
+    $badExit = $LASTEXITCODE
+    $staleOut = & $engine -NoProfile -ExecutionPolicy Bypass -File (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -Show -BaselineFile $staleCsv 2>&1 | Out-String
+    $staleExit = $LASTEXITCODE
+    $ErrorActionPreference = $prevEap
+    if ($badExit -ne 0 -and $badOut -match 'No row in the baseline file matches') { Pass 'selection CSV with no known item is rejected' } else { Fail "selection CSV with no known item was accepted (exit $badExit): $($badOut.Trim())" }
+    if ($staleExit -eq 0 -and $staleOut -match 'does not know, ignored: CHANNEL\|NO-SUCH-CHANNEL/OPERATIONAL') { Pass 'selection CSV with one unknown row warns and continues' } else { Fail "stale-row CSV handling wrong (exit $staleExit): $($staleOut.Trim())" }
 
     # 5. Intune pack generation: files parse, placeholders replaced, selection respected
     $packDir = Join-Path $tmp 'intune'

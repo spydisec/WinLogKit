@@ -19,7 +19,10 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
   selection CSV (missing `ItemType`, `Id` or `Selected` columns), has an
   empty ItemType or Id, or lists the same item twice now stops the run with
   a message naming the problem, instead of an obscure error or a silent
-  select-nothing.
+  select-nothing. So does a CSV whose rows match nothing in the settings
+  table (Test would otherwise report everything NOT APPLICABLE and exit 0);
+  rows for items this kit version does not know are warned about and
+  ignored, so an older CSV still works.
 - **Docs cut.** README reduced to one screen and reused as the site home
   page (MkDocs snippet include, one copy of the text). The site goes from
   13 pages to 10: the WEC Collector page absorbs the WEF section of
