@@ -76,7 +76,9 @@ if ($badNewItem) {
 }
 
 # 1c. One definition per helper. Shared helpers live in WinLogKit.Common.ps1;
-# a function defined in two kit files is the copy-paste drift this fences.
+# a function defined in two kit files is the copy-paste drift this fences, and
+# a function defined twice in one file (PowerShell keeps the last, silently)
+# fails the same way.
 # The Intune pack generator embeds its helpers inside a here-string, which
 # the AST does not see as definitions - the generated pack must stay
 # self-contained, so that is intended.
@@ -90,14 +92,14 @@ foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse |
     $rel = $f.FullName.Substring($kitRootFull.Length).TrimStart([char]92)
     foreach ($fn in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)) {
         if (-not $defs.ContainsKey($fn.Name)) { $defs[$fn.Name] = @() }
-        if ($defs[$fn.Name] -notcontains $rel) { $defs[$fn.Name] += $rel }
+        $defs[$fn.Name] += $rel
     }
 }
 $dupes = @($defs.Keys | Where-Object { $defs[$_].Count -gt 1 } | Sort-Object | ForEach-Object { "$_ ($($defs[$_] -join ', '))" })
 if ($dupes) {
-    Fail "function defined in more than one file (move it to WinLogKit.Common.ps1): $($dupes -join '; ')"
+    Fail "function defined more than once (shared helpers belong in WinLogKit.Common.ps1): $($dupes -join '; ')"
 } else {
-    Pass "every helper function is defined in exactly one file ($($defs.Count) functions)"
+    Pass "every helper function is defined exactly once ($($defs.Count) functions)"
 }
 # The shared helpers must stay in the common file: a copy that migrated back
 # into one script would still be a single definition, so name them.
