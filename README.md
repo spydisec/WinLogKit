@@ -26,7 +26,8 @@ apply.
   APPLICABLE) with evidence CSVs, plus Yamato's WELA as an independent
   second opinion.
 - **Collect** centrally: a Windows Event Forwarding subscription generated
-  from the same selection, filtered to the event IDs the baseline actually
+  from the same selection. It forwards the selected channels whole by
+  default, or narrows Security to the event IDs the baseline actually
   produces. The kit ends at the collector's ForwardedEvents log; any SIEM
   picks up from there.
 - **Deploy** at fleet scale as an Intune remediation pack or GPO artefacts,
