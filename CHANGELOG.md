@@ -9,7 +9,8 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 - **`WinLogKit.Common.ps1`.** The helpers that Enable, Test, the WELA
   check, the coverage report and the fleet generators each carried their
   own copy of (admin check, host role and OS type, registry reads, the
-  auditpol reader, selection-CSV loading and the tier logic) now live in
+  auditpol and SMB audit-state readers, selection-CSV loading and the tier
+  logic) now live in
   one dot-sourced file next to the settings table. Behaviour is unchanged
   except that every generated artefact now describes its source the same
   way (`Core tier [+ HighVolume] [+ Optional]` or `baseline file X.csv`).

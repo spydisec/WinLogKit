@@ -2,7 +2,7 @@
 # WinLogKit.Common.ps1
 # Shared helpers, dot-sourced by the kit scripts right after the settings
 # table. Everything here is read-only against the host: host probes, registry
-# reads, the audit policy reader and the one selection model (tier switches
+# reads, the audit policy and SMB audit-state readers and the one selection model (tier switches
 # or a selection CSV) that Enable, Test, the coverage report and the fleet
 # generators all use. Registry writers stay in Enable-LoggingBaseline.ps1,
 # the only script that writes.
@@ -55,12 +55,36 @@ function Get-RegValue {
 function Get-AuditPolicyByGuid {
     # One auditpol call for everything; returns hashtable GUID -> inclusion setting text.
     $map = @{}
-    $csv = auditpol /get /category:* /r | Where-Object { $_ -match '\S' } | ConvertFrom-Csv
+    $lines = auditpol /get /category:* /r
+    if ($LASTEXITCODE -ne 0) {
+        throw "auditpol /get /category:* /r failed with exit code $LASTEXITCODE (run elevated): $(($lines | Select-Object -First 2) -join ' ')"
+    }
+    $csv = $lines | Where-Object { $_ -match '\S' } | ConvertFrom-Csv
     foreach ($row in $csv) {
         $guid = ($row.'Subcategory GUID' -replace '[{}]', '').ToUpper()
         $map[$guid] = $row.'Inclusion Setting'
     }
     return $map
+}
+
+# ------------------------------------------------------------ SMB auditing ---
+
+# Current state of the Server 2025+ SMB signing/encryption audit settings.
+# Returns a hashtable Id -> current bool; items missing from the hashtable are
+# unsupported on this OS (the properties only exist on Server 2025 / Win11 24H2+).
+function Get-SmbAuditState {
+    $state = @{}
+    $srv = $null; $cli = $null
+    try { $srv = Get-SmbServerConfiguration -ErrorAction Stop } catch { $srv = $null }
+    try { $cli = Get-SmbClientConfiguration -ErrorAction Stop } catch { $cli = $null }
+    foreach ($item in $script:BaselineSmbAuditSettings) {
+        $cfg = $srv
+        if ($item.Side -eq 'Client') { $cfg = $cli }
+        if ($null -ne $cfg -and ($cfg.PSObject.Properties.Name -contains $item.Id)) {
+            $state[$item.Id] = [bool]$cfg.($item.Id)
+        }
+    }
+    return $state
 }
 
 # -------------------------------------------------------------- selection ---

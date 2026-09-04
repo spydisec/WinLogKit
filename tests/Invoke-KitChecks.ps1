@@ -85,9 +85,12 @@ foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse |
     Where-Object { $_.FullName.Substring($kitRootFull.Length) -notmatch '\\(WELA[^\\]*|Baseline|Logs|Results|Evidence|Intune)\\' }) {
     $tokens = $null; $errors = $null
     $ast = [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors)
+    # Root-relative path, so two files with the same name in different
+    # folders stay distinct.
+    $rel = $f.FullName.Substring($kitRootFull.Length).TrimStart('')
     foreach ($fn in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)) {
         if (-not $defs.ContainsKey($fn.Name)) { $defs[$fn.Name] = @() }
-        if ($defs[$fn.Name] -notcontains $f.Name) { $defs[$fn.Name] += $f.Name }
+        if ($defs[$fn.Name] -notcontains $rel) { $defs[$fn.Name] += $rel }
     }
 }
 $dupes = @($defs.Keys | Where-Object { $defs[$_].Count -gt 1 } | Sort-Object | ForEach-Object { "$_ ($($defs[$_] -join ', '))" })
@@ -99,7 +102,7 @@ if ($dupes) {
 # The shared helpers must stay in the common file: a copy that migrated back
 # into one script would still be a single definition, so name them.
 $commonExpected = @('Test-IsAdmin', 'Get-DomainRole', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
-    'Get-AuditPolicyByGuid', 'Import-BaselineSelection', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
+    'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'Import-BaselineSelection', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
 $notInCommon = @($commonExpected | Where-Object { -not $defs.ContainsKey($_) -or $defs[$_] -ne @('WinLogKit.Common.ps1') })
 if ($notInCommon) {
     Fail "shared helper not defined in WinLogKit.Common.ps1 (only): $($notInCommon -join ', ')"

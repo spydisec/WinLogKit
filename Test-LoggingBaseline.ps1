@@ -217,17 +217,7 @@ foreach ($rs in $script:BaselineRegistrySettings) {
 
 # ------------------- SMB signing/encryption auditing (Server 2025+) ---------
 
-$smbState = @{}
-$srvCfg = $null; $cliCfg = $null
-try { $srvCfg = Get-SmbServerConfiguration -ErrorAction Stop } catch { $srvCfg = $null }
-try { $cliCfg = Get-SmbClientConfiguration -ErrorAction Stop } catch { $cliCfg = $null }
-foreach ($sa in $script:BaselineSmbAuditSettings) {
-    $cfg = $srvCfg
-    if ($sa.Side -eq 'Client') { $cfg = $cliCfg }
-    if ($null -ne $cfg -and ($cfg.PSObject.Properties.Name -contains $sa.Id)) {
-        $smbState[$sa.Id] = [bool]$cfg.($sa.Id)
-    }
-}
+$smbState = Get-SmbAuditState
 foreach ($sa in $script:BaselineSmbAuditSettings) {
     $expected = "$($sa.Value)"
     $skip = Get-SkipReason $sa.Tier 'SmbAudit' $sa.Id

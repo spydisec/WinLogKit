@@ -131,24 +131,6 @@ function Get-DesiredInclusion {
     return 'No Auditing'
 }
 
-# Current state of the Server 2025+ SMB signing/encryption audit settings.
-# Returns a hashtable Id -> current bool; items missing from the hashtable are
-# unsupported on this OS (the properties only exist on Server 2025 / Win11 24H2+).
-function Get-SmbAuditState {
-    $state = @{}
-    $srv = $null; $cli = $null
-    try { $srv = Get-SmbServerConfiguration -ErrorAction Stop } catch { $srv = $null }
-    try { $cli = Get-SmbClientConfiguration -ErrorAction Stop } catch { $cli = $null }
-    foreach ($item in $script:BaselineSmbAuditSettings) {
-        $cfg = $srv
-        if ($item.Side -eq 'Client') { $cfg = $cli }
-        if ($null -ne $cfg -and ($cfg.PSObject.Properties.Name -contains $item.Id)) {
-            $state[$item.Id] = [bool]$cfg.($item.Id)
-        }
-    }
-    return $state
-}
-
 function Set-SmbAuditSetting {
     param([hashtable]$Item)
     $setParams = @{ $Item.Id = $Item.Value; Force = $true }
