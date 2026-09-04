@@ -86,8 +86,11 @@
   shipped in v0.2.0; migrating the harness to Pester remains)
 - Event volume telemetry: a companion script that measures events/hour per
   setting after the pilot week, to make the HighVolume decision evidence-based
-- Optional Windows Event Forwarding (WEC/WEF) subscription templates for the
-  agentless collection path
+- [x] WEF subscription XPath filtering matched to the baseline
+  (`New-WefSubscription.ps1 -Filter Baseline`, vendored Microsoft
+  per-subcategory event lists) with local `-Validate` and collector-side
+  proof (`Test-WefFilter.ps1`). Next: measured Suppress defaults from pilot
+  volume, and per-channel filters for the non-Security channels
 - AutorunsToWinEventLog add-on, next steps: a diff mode that writes only
   new or changed entries since the last run (the full daily snapshot is
   simple and SIEM-diffable, but ~1,600 events/host/day adds up at fleet

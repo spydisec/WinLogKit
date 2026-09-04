@@ -229,6 +229,56 @@ try {
     } else {
         Fail "Autoruns add-on fixture check failed (exit $arExit). Output: $($arOut.Trim())"
     }
+
+    # 9. WEF Baseline filter: the event-ID snapshot covers every audit
+    #    subcategory in the settings table, and the generated Security query
+    #    is well-formed XML, under the 32-expression cap per Select, parses in
+    #    the local event engine (-Validate), and its sidecar matches.
+    $evMap = Import-Csv (Join-Path (Join-Path (Join-Path $KitRoot 'data') 'wef') 'audit_subcategory_events.csv')
+    $mapGuids = @($evMap | ForEach-Object { $_.Guid }) | Sort-Object -Unique
+    $missingSubs = @($script:BaselineAuditSubcategories | Where-Object { $mapGuids -notcontains $_.Guid.ToUpper() } | ForEach-Object { $_.Name })
+    # Content anchors: well-known IDs that must sit under their subcategory,
+    # so a page-layout change that silently emptied the extractor is caught.
+    $anchorChecks = @(
+        @{ Guid = '0CCE9215-69AE-11D9-BED3-505054503030'; Id = 4624; Name = 'Logon' }
+        @{ Guid = '0CCE922B-69AE-11D9-BED3-505054503030'; Id = 4688; Name = 'Process Creation' }
+        @{ Guid = '0CCE922F-69AE-11D9-BED3-505054503030'; Id = 4719; Name = 'Audit Policy Change' }
+        @{ Guid = '0CCE9235-69AE-11D9-BED3-505054503030'; Id = 4720; Name = 'User Account Management' }
+        @{ Guid = 'ALWAYS';                               Id = 1102; Name = 'Eventlog service' }
+    )
+    $anchorMisses = @($anchorChecks | Where-Object { $g = $_.Guid; $i = $_.Id; -not ($evMap | Where-Object { $_.Guid -eq $g -and [int]$_.EventID -eq $i }) } | ForEach-Object { "$($_.Name)/$($_.Id)" })
+    if ($missingSubs.Count -eq 0 -and $mapGuids -contains 'ALWAYS' -and $anchorMisses.Count -eq 0 -and $evMap.Count -ge 250) {
+        Pass "WEF event snapshot covers all $($script:BaselineAuditSubcategories.Count) subcategories + always-on events ($($evMap.Count) rows, anchors present)"
+    } else {
+        Fail "WEF event snapshot problem: missing subcategories [$($missingSubs -join ', ')], missing anchors [$($anchorMisses -join ', ')], $($evMap.Count) rows (rerun tools\Update-AuditSubcategoryEvents.ps1)"
+    }
+
+    $wefB = Join-Path $tmp 'wefB'
+    $wefOut = & (Join-Path $KitRoot 'New-WefSubscription.ps1') -OutDir $wefB -BaselineFile (Join-Path $KitRoot 'presets\spydi_Server_Heavy.csv') -Filter Baseline -Validate -SubscriptionId 'CheckB' 2>&1 | Out-String
+    if ($wefOut -match 'INVALID') { Fail "WEF Baseline filter: a generated query failed local validation: $wefOut" }
+    try {
+        [xml]$wb = Get-Content (Join-Path $wefB 'CheckB.xml') -Raw
+        [xml]$ql = $wb.Subscription.Query.InnerText
+        $secQ = $ql.QueryList.Query | Where-Object { $_.Path -eq 'Security' }
+        $selects = @($secQ.Select)
+        $tooBig = @($selects | Where-Object { ([regex]::Matches($_.'#text', 'EventID')).Count -gt 32 }).Count
+        $side = @(Import-Csv (Join-Path $wefB 'CheckB.expected-eventids.csv') | Where-Object { $_.Channel -eq 'Security' } | ForEach-Object { [int]$_.EventID })
+        # Expand the XML's singles and ranges back into the full ID set: it
+        # must equal the sidecar exactly, or the two would disagree about
+        # what the subscription forwards.
+        $xmlText = ($selects.'#text' -join ' ')
+        $fromXml = New-Object 'System.Collections.Generic.HashSet[int]'
+        foreach ($m in [regex]::Matches($xmlText, 'EventID=(\d+)')) { [void]$fromXml.Add([int]$m.Groups[1].Value) }
+        foreach ($m in [regex]::Matches($xmlText, 'EventID >= (\d+) and EventID <= (\d+)')) {
+            for ($n = [int]$m.Groups[1].Value; $n -le [int]$m.Groups[2].Value; $n++) { [void]$fromXml.Add($n) }
+        }
+        $sideSet = New-Object 'System.Collections.Generic.HashSet[int]' (,[int[]]$side)
+        if ($selects.Count -ge 2 -and $tooBig -eq 0 -and $side.Count -ge 200 -and $fromXml.SetEquals($sideSet)) {
+            Pass "WEF Baseline filter: $($selects.Count) Security selects within the 32-expression cap, XML expands to exactly the sidecar's $($side.Count) IDs"
+        } else {
+            Fail "WEF Baseline filter looks wrong: $($selects.Count) selects, $tooBig over cap, sidecar $($side.Count) IDs, XML expands to $($fromXml.Count) IDs (set equal: $($fromXml.SetEquals($sideSet)))"
+        }
+    } catch { Fail "WEF Baseline filter XML invalid: $($_.Exception.Message)" }
 }
 finally {
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue

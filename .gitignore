@@ -1,11 +1,12 @@
-# Per-host runtime output - never commit
-Logs/
-Results/
-Evidence/
-Baseline/
-WEF/
-Intune/
-GPO/
+# Per-host runtime output - never commit. Anchored to the repo root: an
+# unanchored WEF/ would also swallow data/wef/ (Windows matches case-insensitively).
+/Logs/
+/Results/
+/Evidence/
+/Baseline/
+/WEF/
+/Intune/
+/GPO/
 
 # MkDocs build output (deployed by CI, never committed)
 site/
