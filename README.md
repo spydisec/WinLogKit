@@ -13,7 +13,7 @@ The baselines are built from the [Yamato Security](https://github.com/Yamato-Sec
 logging guides, the Australian Signals Directorate and Microsoft's own
 recommendations, with every setting's purpose, volume risk and source
 recorded in one table. Targets Windows Server 2019 / 2022 / 2025 and
-Windows 10 / 11, standalone or domain joined; version- and role-specific
+Windows 10 / 11, standalone or domain-joined; version- and role-specific
 items are detected at runtime and reported NOT APPLICABLE where they do not
 apply.
 
@@ -58,8 +58,8 @@ per role).
 
 If scripts are blocked, `Set-ExecutionPolicy -Scope Process RemoteSigned`
 unblocks the current window without persisting anything; downloaded zips
-also need `Unblock-File`, and a Group Policy-enforced policy needs the
-per-invocation form. Details in
+also need `Unblock-File`, and a policy enforced by Group Policy cannot be
+overridden locally (signing or a policy change is needed). Details in
 [Getting Started](https://spydisec.github.io/WinLogKit/getting-started/#if-scripts-are-blocked-running-scripts-is-disabled-on-this-system).
 
 ## Documentation

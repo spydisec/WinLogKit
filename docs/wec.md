@@ -3,9 +3,9 @@
 Central collection with Windows Event Forwarding (WEF): generate the
 subscription from the same selection you applied, set up the collector and
 the sources, read what an existing collector is already doing, and prove
-that events arrive. The commands under "Set up" change configuration;
-everything else on this page is read-only and safe on a production
-collector.
+that events arrive. The commands under "Set up" change collector and source configuration;
+everything else only reads it (two commands write export files to the
+current folder), so it is safe on a production collector.
 
 Where this sits in the chain:
 
@@ -222,10 +222,9 @@ do it is the subscription, because of one fact about how WEF works:
 [source-initiated subscription](https://learn.microsoft.com/windows/win32/wec/setting-up-a-source-initiated-subscription)
 the collector hands the subscription, query included, to every source, and
 each source's forwarding service sends only the events that match, before
-anything leaves the machine. Filtering
-here therefore saves network, collector disk, agent work and SIEM ingestion
-in one move. Any SIEM-side transform is a second filter after the fact;
-the subscription is the first and cheapest.
+anything leaves the machine. An event dropped here never reaches the
+network, the collector or the SIEM; any SIEM-side transform runs after
+forwarding, so the subscription is the earliest filter in the chain.
 
 ### The XPath subset
 

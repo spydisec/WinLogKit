@@ -60,7 +60,8 @@ No elevation needed; changes nothing.
 
 Joins a selection against the vendored MITRE ATT&CK snapshot and reports
 which techniques it makes observable - and why the rest are not
-(NotSelected / NotInKit / RequiresSysmon). See [Coverage](mapping.md).
+(NotSelected, NotInKit, RequiresSysmon, NotNative or Unmapped). See
+[Coverage](mapping.md).
 
 ```powershell
 .\Export-AttackCoverage.ps1 [-IncludeHighVolume] [-IncludeOptional] [-BaselineFile <csv>]

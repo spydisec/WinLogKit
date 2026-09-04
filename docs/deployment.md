@@ -3,7 +3,7 @@
 How to roll a baseline out to many machines through Intune or Group Policy.
 Both generators compile from the settings table, or from the same
 `-BaselineFile` selection CSV used everywhere else, so deployed artefacts
-cannot drift from the tested baseline. Regenerate after any settings
+are generated to match the tested baseline. Regenerate after any settings
 change; the generated files say not to edit them by hand.
 
 Central collection (WEF / WEC) has its own page: [Collect](wec.md).

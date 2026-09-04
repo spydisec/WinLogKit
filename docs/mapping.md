@@ -113,7 +113,9 @@ The kit organises settings by **behaviour category** rather than by channel,
 so a monitoring requirement ("we must see scheduled task abuse") traces to
 the exact settings that satisfy it. "Subcategory" = advanced audit policy
 subcategory (Security log). DC = generated on domain controllers only.
-HV = HighVolume tier.
+HV = HighVolume tier. The Channels column is shorthand (for example
+`AppLocker x4` for the four AppLocker channels); the exact channel names
+are in the settings table and on the [Reference page](reference.md).
 
 | Category | Audit subcategories | Channels | Registry | Coverage |
 |---|---|---|---|---|

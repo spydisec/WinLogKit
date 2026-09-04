@@ -68,9 +68,13 @@ Same settings, operationalised: idempotent apply with `-WhatIf` and
 rollback, tiered volume decisions, read-only verification with evidence
 CSVs, per-role baseline files, fleet delivery (Intune/WEF/GPO) compiled
 from one settings table, and ATT&CK coverage numbers for the selection.
-Plus a handful of documented fixes to upstream quirks (e.g. the batch
-sizes PrintService/Operational but never enables it; WELA's `configure`
-sets an NTLM value that *blocks* rather than audits).
+Plus a handful of documented fixes to upstream quirks, each listed with
+its reason in the
+[deviations table](baselines.md#deviations-from-the-yamato-sources): the
+batch sizes PrintService/Operational but never enables it, and WELA's
+`configure` sets `RestrictSendingNTLMTraffic` to 2 (Deny all) where the
+kit sets 1 (Audit all), per
+[Microsoft's values for that policy](https://learn.microsoft.com/windows/security/threat-protection/security-policy-settings/network-security-restrict-ntlm-outgoing-ntlm-traffic-to-remote-servers).
 
 ### Why isn't Sysmon included?
 
@@ -139,13 +143,16 @@ NOT APPLICABLE. Two related notes:
 
 - **NTLM**: NTLMv1 is removed in Server 2025 and the SMB client supports
   NTLM blocking. The kit's NTLM values stay audit-only
-  (`RestrictSendingNTLMTraffic = 1`), safe on all supported versions, and
+  (`RestrictSendingNTLMTraffic = 1`, the documented "Audit all" value),
+  a logging-only change on every supported version, and
   feed the evidence you need before turning any blocking on.
 - **Alignment**: Microsoft's own Server 2025 security baseline
-  ([OSConfig](https://learn.microsoft.com/windows-server/security/osconfig/osconfig-overview))
+  ([OSConfig security baselines](https://learn.microsoft.com/windows-server/security/osconfig/osconfig-how-to-configure-security-baselines))
   audits Success and Failure on nearly all subcategories, captures 4688
-  command lines, and requires the Security log at 192 MB minimum. This kit
-  meets or exceeds all of that (Security at 1 GB).
+  command lines, and requires the Security log at 192 MB minimum. The
+  kit's 1 GB Security log exceeds that minimum; 4688 with command line is
+  the HighVolume tier (`-IncludeHighVolume`), and every `spydi_*` preset
+  includes it.
 
 On workstations generally, volume calibration differs from servers: far
 fewer logons and connections make the HighVolume tier more affordable per

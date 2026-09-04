@@ -282,7 +282,8 @@ it is evidence, not proof, of a machine's state):
     - **ForwardedEvents is empty or stale** -> the WEF half is broken:
       run `wecutil es` on that collector, then `wecutil gr <name>` for each
       subscription it lists. No subscriptions
-      = it was never set up; subscriptions with zero or Inactive sources
+      = none is currently registered (never set up, or since removed);
+      subscriptions with zero or Inactive sources
       = work the [WEC page's](../wec.md) reconciliation and silent-failures
       table (GPO scope, WinRM, the Security-log permission). It is
       entirely possible for some collectors in an estate to have

@@ -78,8 +78,11 @@ Notes:
   the two blockers look identical but have different fixes. `git clone`
   produces unmarked files, so cloning avoids that half entirely.
 - If the error says the policy is **set by Group Policy**, your organisation
-  enforces it: use Option 2 per invocation, or have the scripts signed per
-  your org's process. The Intune remediation pack is unaffected (Intune
+  enforces it and nothing local overrides it: `MachinePolicy` and
+  `UserPolicy` sit above the Process scope that Options 1 and 2 use, per
+  [about_Execution_Policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies).
+  Have the scripts signed per your org's process, or ask for the policy to
+  be changed. The Intune remediation pack is unaffected (Intune
   executes remediations with its own bypass), and none of this weakens
   anything the kit configures - execution policy is a usability guardrail,
   not a security boundary, per Microsoft's own documentation.
