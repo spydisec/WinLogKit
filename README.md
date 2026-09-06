@@ -4,6 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/spydisec/WinLogKit?include_prereleases)](https://github.com/spydisec/WinLogKit/releases)
 [![Docs](https://img.shields.io/badge/docs-spydisec.github.io%2FWinLogKit-1b3a4b)](https://spydisec.github.io/WinLogKit/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/spydisec/WinLogKit/blob/main/LICENSE)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/spydisec/WinLogKit)
 
 Turn on the Windows event logging that security monitoring needs, prove it
 is being recorded, and roll it back if you change your mind. Plain
