@@ -328,10 +328,11 @@ try {
         $added2 = Add-NewItemsToFirstRun -Path $firstJson
         $after = Get-Content $firstJson -Raw | ConvertFrom-Json
         $ps7Rows = @($after.Registry | Where-Object { $_.Name -eq 'UseWindowsPowerShellPolicySetting' -and $_.PSObject.Properties.Name -contains 'Existed' -and $_.AddedUtc })
-        if ($stateFns.Count -eq 2 -and $added1 -eq 4 -and $added2 -eq 0 -and $ps7Rows.Count -eq 4 -and @($after.Registry).Count -eq @($allState.Registry).Count) {
-            Pass 'rollback baseline adds settings new in this kit version once (4 PowerShell 7 items)'
+        $swapClean = (Test-Path -LiteralPath "$firstJson.bak") -and -not (Test-Path -LiteralPath "$firstJson.tmp")
+        if ($stateFns.Count -eq 2 -and $added1 -eq 4 -and $added2 -eq 0 -and $ps7Rows.Count -eq 4 -and @($after.Registry).Count -eq @($allState.Registry).Count -and $swapClean) {
+            Pass 'rollback baseline adds settings new in this kit version once (4 PowerShell 7 items), swapped in with a .bak kept'
         } else {
-            Fail "rollback baseline extension wrong (functions $($stateFns.Count), first run added $added1, second $added2, PS7 rows $($ps7Rows.Count), registry rows $(@($after.Registry).Count)/$(@($allState.Registry).Count))"
+            Fail "rollback baseline extension wrong (functions $($stateFns.Count), first run added $added1, second $added2, PS7 rows $($ps7Rows.Count), registry rows $(@($after.Registry).Count)/$(@($allState.Registry).Count), .bak kept and no .tmp: $swapClean)"
         }
     } catch { Fail "rollback baseline extension check errored: $($_.Exception.Message)" }
 

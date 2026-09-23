@@ -113,7 +113,7 @@ $script:BaselineChannels = @(
        Categories = @('Scripting and command line','Execution')
        Purpose = 'Classic PowerShell engine lifecycle log (400/403/600). Older but still used by detections for downgrade attacks.' }
 
-    @{ Name = 'PowerShellCore/Operational';                                             TargetBytes = $oneGB; MustEnable = $false; Tier = 'Core'; DefaultSize = '15 MB'; MayBeAbsent = $true
+    @{ Name = 'PowerShellCore/Operational';                                             TargetBytes = $oneGB; MustEnable = $true;  Tier = 'Core'; DefaultSize = '15 MB'; MayBeAbsent = $true
        Categories = @('Scripting and command line','Execution')
        Purpose = 'PowerShell 7+ equivalent of the Operational log (4103/4104 from pwsh, with the PS7 policy items). Exists only once PowerShell 7''s event manifest is registered: absent is NOT APPLICABLE without PowerShell 7, and a FAIL when PowerShell 7 is installed but unregistered (run $PSHOME\RegisterManifest.ps1 as admin).' }
 

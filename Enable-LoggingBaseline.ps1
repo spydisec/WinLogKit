@@ -340,7 +340,7 @@ try {
     # items were added.
     function Add-NewItemsToFirstRun {
         param([string]$Path)
-        $first = Get-Content $Path -Raw | ConvertFrom-Json
+        $first = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
         $now = Get-CurrentKitState
         $known = @{}
         foreach ($r in @($first.Registry)) { if ($null -ne $r) { $known[("R|$($r.Path)|$($r.Name)").ToUpper()] = $true } }
@@ -354,13 +354,27 @@ try {
         if ($count -eq 0) { return 0 }
         $smbOld = @(); if ($first.PSObject.Properties.Name -contains 'SmbAudit') { $smbOld = @($first.SmbAudit | Where-Object { $null -ne $_ }) }
         $chOld  = @(); if ($first.PSObject.Properties.Name -contains 'Channels') { $chOld = @($first.Channels | Where-Object { $null -ne $_ }) }
-        @{
+        $json = @{
             CapturedUtc = $first.CapturedUtc
             Host        = $first.Host
             Channels    = @($chOld + $newCh)
             Registry    = @(@($first.Registry | Where-Object { $null -ne $_ }) + $newReg)
             SmbAudit    = @($smbOld + $newSmb)
-        } | ConvertTo-Json -Depth 5 | Set-Content -Path $Path -Encoding UTF8
+        } | ConvertTo-Json -Depth 5
+        # Never leave -Rollback without a readable baseline: write a temp copy
+        # beside it, check it parses, then swap it in atomically, keeping the
+        # previous version as .bak. A failure leaves the original untouched.
+        # Full paths: File.Replace resolves relative ones against the process
+        # directory, not the PowerShell location.
+        $full = (Resolve-Path -LiteralPath $Path).Path
+        $tmpPath = "$full.tmp"
+        try {
+            Set-Content -LiteralPath $tmpPath -Value $json -Encoding UTF8
+            $null = Get-Content -LiteralPath $tmpPath -Raw | ConvertFrom-Json
+            [System.IO.File]::Replace($tmpPath, $full, "$full.bak")
+        } finally {
+            if (Test-Path -LiteralPath $tmpPath) { Remove-Item -LiteralPath $tmpPath -Force }
+        }
         return $count
     }
 
