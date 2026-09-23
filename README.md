@@ -26,10 +26,8 @@ apply.
 - **Verify** the live state per behaviour category (PASS / FAIL / NOT
   APPLICABLE) with evidence CSVs.
 - **Collect** centrally: a Windows Event Forwarding subscription generated
-  from the same selection. It forwards the selected channels whole by
-  default, or narrows Security to the event IDs the baseline actually
-  produces. The kit ends at the collector's ForwardedEvents log; any SIEM
-  picks up from there.
+  from the same selection, forwarding the selected channels whole. The kit
+  ends at the collector's ForwardedEvents log; any SIEM picks up from there.
 - **Deploy** at fleet scale as an Intune remediation pack or GPO artefacts,
   compiled from the same table so deployed config cannot drift from the
   tested baseline.
@@ -73,7 +71,7 @@ Full documentation: <https://spydisec.github.io/WinLogKit/>
 | [Getting Started](https://spydisec.github.io/WinLogKit/getting-started/) | Install, first run, execution policy, where output lands |
 | [Baselines](https://spydisec.github.io/WinLogKit/baselines/) | Tiers, presets, deviations from the sources |
 | [Commands](https://spydisec.github.io/WinLogKit/commands/) | Every script and its switches |
-| [Collect](https://spydisec.github.io/WinLogKit/wec/) | WEF / WEC: subscription, collector and source setup, XPath filtering |
+| [Collect](https://spydisec.github.io/WinLogKit/wec/) | WEF / WEC: subscription, collector and source setup, reading a collector |
 | [Deploy](https://spydisec.github.io/WinLogKit/deployment/) | Intune and GPO rollout |
 | [Coverage](https://spydisec.github.io/WinLogKit/mapping/) | How the pieces fit, behaviour categories, ATT&CK technique coverage |
 | [Reference](https://spydisec.github.io/WinLogKit/reference/) | Every setting: event IDs, sizes, volume, preset membership |

@@ -28,25 +28,19 @@ the kit: any agent or connector that reads a Windows event log will do.
 ## Generate the subscription
 
 ```powershell
-.\fleet\New-WefSubscription.ps1 [-BaselineFile <csv>] [-Filter Channel|Baseline] [-Validate] [-SubscriptionId <name>]
+.\fleet\New-WefSubscription.ps1 [-BaselineFile <csv>] [-Validate] [-SubscriptionId <name>]
 ```
 
 Generates a source-initiated subscription XML with one query per selected
-channel, plus a sidecar `<name>.expected-eventids.csv` saying what it
-should deliver. Transport defaults (`Events` format, 30s/500-item batching,
+channel. Transport defaults (`Events` format, 30s/500-item batching,
 1h heartbeat, source SDDL) live in the settings table and are overridable
 per run.
 
-Two filter modes. `-Filter Channel` (default) forwards every event of each
-selected channel: the baseline's channel selection is the coarse filter and
-the right first deployment. `-Filter Baseline` narrows the Security channel
-to exactly the event IDs the baseline's enabled audit subcategories can
-produce, plus the always-on log-tamper events, and leaves every other
-channel whole; see
-[filtering with XPath](#filtering-with-xpath-matching-the-subscription-to-the-baseline)
-below. Add `-Validate` to parse each query in the local event engine before
-deploying, then prove the filter on the collector with
-`Test-WefFilter.ps1`.
+Every event of each selected channel is forwarded: the baseline's channel
+selection is the filter. Add `-Validate` to parse each query in the local
+event engine before deploying, then check the plumbing with
+`Test-LoggingBaseline.ps1 -WefRole Collector` (and `-WefRole Source` on
+a source).
 
 ## Set up the collector and the sources
 
@@ -137,7 +131,7 @@ wildcards with no event-level filtering:
 ```
 
 `*` means every event in that channel - as open as WEF gets, and what this
-kit's generator emits by default (`-Filter Channel`). Two structural facts:
+kit's generator emits. Two structural facts:
 
 - There is **no channel wildcard**. "All channels on the machine" cannot be
   expressed; every channel must be listed as its own `Select`. Windows
@@ -210,114 +204,16 @@ Get-WinEvent -ListLog ForwardedEvents | Select-Object RecordCount, FileSize, IsL
 | Collection stops after working fine | ForwardedEvents full with non-circular retention |
 | Volume far above estimate | `RenderedText` content format, or a high-volume source-side setting (see the [volume table](safety.md#volume-impact-settings-the-highvolume-tier-and-friends)) |
 
-## Filtering with XPath: matching the subscription to the baseline
+## Filtering
 
-Whole-channel forwarding is complete but blunt. The next step is a query
-that forwards only what the baseline meant to generate - and the place to
-do it is the subscription, because of one fact about how WEF works:
-
-**The subscription's XPath is evaluated on each source.** In a
-[source-initiated subscription](https://learn.microsoft.com/windows/win32/wec/setting-up-a-source-initiated-subscription)
-the collector hands the subscription, query included, to every source, and
-each source's forwarding service sends only the events that match, before
-anything leaves the machine. An event dropped here never reaches the
-network, the collector or the SIEM; any SIEM-side transform runs after
-forwarding, so the subscription is the earliest filter in the chain.
-
-### The XPath subset
-
-Windows Event Log accepts a
-[subset of XPath 1.0](https://learn.microsoft.com/windows/win32/wes/consuming-events)
-over the event's XML. In practice a subscription needs three shapes:
-
-| Shape | Example | Meaning |
-|---|---|---|
-| Whole channel | `*` | every event |
-| By event ID | `*[System[(EventID=4688 or (EventID >= 4720 and EventID <= 4726))]]` | the listed IDs and ranges |
-| By event data | `*[EventData[Data[@Name="TargetUserName"]="svc-backup"]]` | field-level match |
-
-Two rules shape how queries are written. **Suppress beats Select**: an
-event matching any `<Suppress>` is dropped even if a `<Select>` wants it.
-And each `<Select>` or `<Suppress>` is
-[limited to 32 expressions](https://learn.microsoft.com/windows/win32/wes/queryschema-querytype-complextype),
-where `EventID=N` costs one and a range `(EventID >= a and EventID <= b)`
-costs two - so long ID lists are split across several `<Select>` elements
-in the same `<Query>`, and consecutive IDs are collapsed into ranges.
-Inside the subscription XML the query sits in CDATA, but the query is
-itself XML: write `<=` as `&lt;=`.
-
-### Matching the filter to the baseline
-
-The baseline selects *audit subcategories*; each subcategory produces a
-fixed, Microsoft-documented set of Security event IDs. That makes the
-Security filter derivable rather than hand-written:
-
-```text
-baseline CSV  ->  enabled subcategory GUIDs
-              ->  union of their documented event IDs   (data\wef\audit_subcategory_events.csv)
-              +   the always-on Eventlog-service events  (1100, 1102, 1104, 1105, 1108)
-              ->  <Select Path="Security"> elements, ranges collapsed, 20 expressions each
-```
-
-`New-WefSubscription.ps1 -Filter Baseline -BaselineFile <csv>` does exactly
-that; every other channel stays `*`, because the baseline enables those
-channels as units. The generated `<Query>` for a full server preset looks
-like:
-
-```xml
-<Query Id="0" Path="Security">
-  <!-- Security: 262 event IDs from 33 enabled audit subcategories + Eventlog service events -->
-  <Select Path="Security">*[System[(EventID=1100 or EventID=1102 or (EventID >= 1104 and EventID &lt;= 1105) or EventID=1108 or (EventID >= 4608 and EventID &lt;= 4612) ... )]]</Select>
-  <Select Path="Security">*[System[((EventID >= 4661 and EventID &lt;= 4663) or (EventID >= 4670 and EventID &lt;= 4675) or EventID=4688 ... )]]</Select>
-  ...
-</Query>
-```
-
-Why the *complete* documented set and not a curated "interesting events"
-list: the two gates must agree. If the baseline enables a subcategory, the
-filter must forward everything that subcategory can produce, or it silently
-drops events someone decided to generate. The table below is the whole
-contract:
-
-| Baseline (Gate 1) | Filter (Gate 2) | Result |
-|---|---|---|
-| Subcategory enabled | Its IDs selected | Forwarded - the intended case |
-| Subcategory enabled | Not selected | Cannot happen: the filter is derived from the same selection |
-| Subcategory not enabled | Its IDs not selected | Never generated, nothing to filter |
-| Event outside any enabled subcategory | Not selected | Generated by something else, stays local |
-
-The event map is a vendored snapshot with the source URL on every row
-(`data\wef\README.md`); the kit refuses to build a Baseline filter for a
-subcategory it has no documented IDs for, rather than drop them.
-
-**Suppress** is the other half, and it is a policy decision, not a tuning
-knob: anything suppressed never reaches the collector, the SIEM, or any
-retention. The kit ships no suppress rules; `$BaselineWefSuppress` in the
-settings table is where measured, defensible noise rules go (channel,
-XPath, reason), and the generator writes them into the query with the
-reason as a comment.
-
-### Confirming it works
-
-Four checks, cheapest first:
-
-1. **Does it parse?** `New-WefSubscription.ps1 ... -Validate` runs every
-   generated query through the local event engine (`Get-WinEvent
-   -FilterXml`). A bad expression fails the run before anything is
-   written; "no events found" and "access denied" mean the syntax is fine.
-2. **Is it the deployed query?** On the collector, `wecutil gs <name>
-   /f:xml` shows the registered `<Query>`; `Test-WefFilter.ps1
-   -SubscriptionId <name>` compares it to the generated file, so a hand
-   edit or a stale registration shows up.
-3. **Is it in effect?** `Test-WefFilter.ps1 -ExpectedFile
-   <name>.expected-eventids.csv` reads ForwardedEvents and lists every
-   Security event ID that arrived but is not in the expected set. Any
-   UNEXPECTED row means the filter is not applied (or another subscription
-   forwards more). Expected-but-unseen IDs are informational: the sources
-   may simply not have produced them in the window.
-4. **Same check at the SIEM end.** The script prints the KQL: `WindowsEvent
-   | where Channel == "Security" | where EventID !in (...)` - any row
-   returned is an event the filter should have stopped.
-
-What the filter buys you is measurable before and after: the Security
-channel's share of ingested volume per source is the number to compare.
+The kit forwards whole channels and stops there. To cut volume, filter at
+your SIEM's ingest layer (for example a Sentinel data collection rule
+transform), where a mistake is visible and can be undone. Filtering inside
+the subscription happens on each source before anything is sent, so an
+XPath that is slightly wrong drops events silently and nobody finds out
+until they are needed. v1 of the kit generated a Security event-ID filter
+and Suppress rules; v2 removed both for that reason
+([ADR-002](https://github.com/spydisec/WinLogKit/blob/main/docs/adr/0002-scope-and-simplification.md)).
+If you do filter at the source, Microsoft's
+[WEF intrusion-detection guidance](https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection)
+is the place to start.

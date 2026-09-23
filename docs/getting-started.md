@@ -145,9 +145,7 @@ Or start from a published reference: see
 The three host scripts sit at the kit root. Fleet generators are in
 `fleet\` and the coverage report in `report\`; see
 [Commands](commands.md#where-the-scripts-live). Wherever a script lives, it
-reads the settings table from the root and writes its output there; the
-one that needs neither is `Test-WefFilter.ps1`, which runs on the collector
-from its sidecar CSV alone.
+reads the settings table from the root and writes its output there.
 
 ## Where things land
 

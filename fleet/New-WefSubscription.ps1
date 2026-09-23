@@ -11,34 +11,12 @@
     ForwardedEvents log (transport); your SIEM picks them up from the
     collector (ingest - out of scope for this kit by design).
 
-    The subscription query is evaluated ON EACH SOURCE by the forwarding
-    service before anything is sent, so filtering here is filtering at the
-    origin: it saves network, collector disk, agent work and SIEM ingestion
-    all at once. Two filter modes:
-
-      -Filter Channel  (default) forwards every event of each selected
-                       channel: <Select Path="Security">*</Select>. The
-                       baseline's channel selection is the coarse filter.
-                       Simple, complete, and the right first deployment.
-
-      -Filter Baseline forwards, for the Security channel, exactly the event
-                       IDs the baseline's enabled audit subcategories can
-                       produce (from data\wef\audit_subcategory_events.csv,
-                       Microsoft's documented per-subcategory event lists),
-                       plus the always-on Eventlog-service events (1100, 1102,
-                       1104, 1105, 1108: service stopped, log cleared, log full). Every other
-                       channel is still forwarded whole, because the
-                       baseline enables those channels as units. Nothing the
-                       baseline turns on is dropped and nothing it did not
-                       turn on is forwarded - with one deliberate exception:
-                       Suppress rules you configure in the settings table
-                       ($BaselineWefSuppress) are appended per channel, and a
-                       Suppress match removes the event at the source.
-
-    The generated XML records which mode produced it. A sidecar file
-    <SubscriptionId>.expected-eventids.csv lists what the subscription
-    should deliver per channel; Test-WefFilter.ps1 reads it on the collector
-    to prove the filter is in effect (unexpected IDs = filter not applied).
+    Every event of each selected channel is forwarded:
+    <Select Path="Security">*</Select>. The baseline's channel selection is
+    the filter. To cut volume further, filter at your SIEM's ingest layer,
+    where a mistake can be seen and undone. (v1's -Filter Baseline, which
+    narrowed Security to documented event IDs at the source, was removed in
+    v2: it failed silently when wrong - ADR-002, as were Suppress rules.)
 
     -Validate runs each generated query through this machine's event log
     engine (Get-WinEvent -FilterXml). A query that does not parse fails the
@@ -69,13 +47,13 @@
 
 .PARAMETER BaselineFile
     Optional selection CSV from New-LoggingBaseline.ps1. Selected = Y channel
-    rows are forwarded; Selected = Y audit-subcategory rows drive the Security
-    filter in Baseline mode. Without it, the kit's Core tier is used (plus
+    rows are forwarded. Without it, the kit's Core tier is used (plus
     HighVolume items if -IncludeHighVolume is given).
 
 .PARAMETER Filter
-    Channel (default): whole-channel forwarding. Baseline: Security events
-    filtered to the enabled subcategories' documented event IDs.
+    Kept for v1 command lines: 'Channel' is the only mode and is accepted
+    silently; 'Baseline' was removed in v2 and stops the run with a pointer
+    to the migration note.
 
 .PARAMETER Validate
     Parse every generated query with this machine's event log engine.
@@ -84,7 +62,7 @@
     Subscription name shown in wecutil / Event Viewer. Default: WinLogKit-Baseline.
 
 .PARAMETER OutDir
-    Where the XML and sidecar are written. Default: WEF\ at the kit root (the parent of fleet\).
+    Where the XML is written. Default: WEF\ at the kit root (the parent of fleet\).
 
 .PARAMETER ContentFormat
     Events (binary, locale-independent, smaller on the wire - default) or
@@ -106,15 +84,11 @@
 
 .EXAMPLE
     .\fleet\New-WefSubscription.ps1
-    Core-tier channels, whole-channel forwarding, into .\WEF\WinLogKit-Baseline.xml.
+    Core-tier channels into .\WEF\WinLogKit-Baseline.xml.
 
 .EXAMPLE
-    .\fleet\New-WefSubscription.ps1 -BaselineFile .\presets\MemberServer.csv -Filter Baseline -Validate
-    Security filtered to exactly what that preset enables; every query parsed locally.
-
-.EXAMPLE
-    .\fleet\New-WefSubscription.ps1 -BaselineFile .\presets\ASD.csv -SubscriptionId ASD-Baseline
-    Subscription covering exactly the channels the ASD preset selects.
+    .\fleet\New-WefSubscription.ps1 -BaselineFile .\presets\MemberServer.csv -Validate
+    The channels that preset selects; every query parsed locally.
 #>
 [CmdletBinding()]
 param(
@@ -145,6 +119,11 @@ $ErrorActionPreference = 'Stop'
 $kitRoot = Split-Path $PSScriptRoot -Parent
 if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $kitRoot 'WEF' }
 
+if ($Filter -eq 'Baseline') {
+    Write-Error '-Filter Baseline was removed in v2 (ADR-002): the subscription forwards whole channels. Filter at your SIEM ingest layer instead; see the v2.0.0 CHANGELOG entry.'
+    exit 1
+}
+
 . (Join-Path $kitRoot 'WinLogKit.Settings.ps1')
 . (Join-Path $kitRoot 'WinLogKit.Common.ps1')
 
@@ -159,23 +138,12 @@ if ($MaxItems -le 0)          { $MaxItems          = $wefDefaults.MaxItems }
 if ($HeartbeatSeconds -le 0)  { $HeartbeatSeconds  = $wefDefaults.HeartbeatSeconds }
 if ([string]::IsNullOrEmpty($AllowedSourceDomainComputersSddl)) { $AllowedSourceDomainComputersSddl = $wefDefaults.AllowedSourceDomainComputersSddl }
 
-# Windows caps an event query at 32 expressions per Select/Suppress
-# (https://learn.microsoft.com/windows/win32/wes/queryschema-querytype-complextype).
-# A single EventID test is one expression, a range is two; packing to 20
-# leaves headroom for the surrounding boolean structure.
-$maxExpressionsPerSelect = 20
-
 # ------------------------------------------------------ selection (what) ---
 
 $channels = New-Object System.Collections.Generic.List[string]
-$subcategoryGuids = New-Object System.Collections.Generic.List[string]
-
 $sel = Resolve-BaselineSelection -BaselineFile $BaselineFile -IncludeHighVolume $IncludeHighVolume -IncludeOptional $IncludeOptional
 foreach ($ch in $script:BaselineChannels) {
     if (Test-ItemSelected $sel 'Channel' $ch.Name $ch.Tier) { $channels.Add($ch.Name) }
-}
-foreach ($sub in $script:BaselineAuditSubcategories) {
-    if (Test-ItemSelected $sel 'AuditPolicy' $sub.Guid $sub.Tier) { $subcategoryGuids.Add($sub.Guid.ToUpper()) }
 }
 $sourceDesc = $sel.Description
 
@@ -184,89 +152,9 @@ if ($channels.Count -eq 0) {
     exit 1
 }
 
-# ------------------------------------------- Security filter (Baseline mode) ---
-
-# Expected delivery per channel, for the sidecar: channel -> list of event
-# IDs, or the single entry '*' for whole-channel forwarding.
-$expected = [ordered]@{}
-foreach ($chName in $channels) { $expected[$chName] = @('*') }
-$coverageLines = New-Object System.Collections.Generic.List[string]
-$securityIds = @()
-
-if ($Filter -eq 'Baseline') {
-    if ($channels -notcontains 'Security') {
-        Write-Error 'Baseline filter mode needs the Security channel in the selection (it is the channel being filtered).'
-        exit 1
-    }
-    if ($subcategoryGuids.Count -eq 0) {
-        # A filter with no enabled subcategories would forward only the
-        # Eventlog-service tamper events - almost certainly not what was
-        # meant. Refuse rather than ship a near-empty Security feed.
-        Write-Error 'Baseline filter mode found no selected audit subcategories in this selection, so the Security query would forward only the log-tamper events. Select subcategories in the baseline, or use -Filter Channel.'
-        exit 1
-    }
-    $mapPath = Join-Path (Join-Path (Join-Path $kitRoot 'data') 'wef') 'audit_subcategory_events.csv'
-    if (-not (Test-Path $mapPath)) { Write-Error "Event map not found: $mapPath (regenerate with tools\Update-AuditSubcategoryEvents.ps1)"; exit 1 }
-    $eventMap = Import-Csv $mapPath
-    $idSet = New-Object 'System.Collections.Generic.SortedSet[int]'
-    $subNames = @{}
-    foreach ($sub in $script:BaselineAuditSubcategories) { $subNames[$sub.Guid.ToUpper()] = $sub.Name }
-
-    foreach ($guid in ($subcategoryGuids | Sort-Object -Unique)) {
-        $rows = @($eventMap | Where-Object { $_.Guid -eq $guid })
-        $name = if ($subNames.ContainsKey($guid)) { $subNames[$guid] } else { $guid }
-        if ($rows.Count -eq 0) {
-            # Refusing is the safe failure: a filter that cannot name this
-            # subcategory's events would silently drop everything it produces.
-            Write-Error "No documented event IDs for enabled subcategory '$name' in $mapPath. Regenerate the snapshot (tools\Update-AuditSubcategoryEvents.ps1) before using -Filter Baseline."
-            exit 1
-        }
-        foreach ($r in $rows) { [void]$idSet.Add([int]$r.EventID) }
-        $coverageLines.Add(('  {0,-36} {1,3} event IDs' -f $name, $rows.Count))
-    }
-    $alwaysRows = @($eventMap | Where-Object { $_.Guid -eq 'ALWAYS' })
-    foreach ($r in $alwaysRows) { [void]$idSet.Add([int]$r.EventID) }
-    $coverageLines.Add(('  {0,-36} {1,3} event IDs (always forwarded)' -f 'Eventlog service', $alwaysRows.Count))
-    $securityIds = @($idSet)
-    $expected['Security'] = $securityIds
-}
-
 # --------------------------------------------------------------- build XML ---
 
 function ConvertTo-XmlEscaped { param([string]$s) [System.Security.SecurityElement]::Escape($s) }
-
-function ConvertTo-EventIdSelectXml {
-    # Sorted IDs -> as few Select elements as the 32-expression cap allows:
-    # consecutive runs collapse to a range (two expressions), singles stay as
-    # EventID=N (one). '<' must be written as &lt; inside the query XML;
-    # '>' is legal as-is.
-    param([int[]]$Ids, [string]$Path, [int]$MaxExpressions)
-    $terms = New-Object System.Collections.Generic.List[object]
-    $i = 0
-    while ($i -lt $Ids.Count) {
-        $start = $Ids[$i]; $end = $start
-        while (($i + 1) -lt $Ids.Count -and $Ids[$i + 1] -eq ($end + 1)) { $i++; $end = $Ids[$i] }
-        if ($end -gt $start) { $terms.Add(@{ Text = "(EventID >= $start and EventID &lt;= $end)"; Cost = 2 }) }
-        else                 { $terms.Add(@{ Text = "EventID=$start"; Cost = 1 }) }
-        $i++
-    }
-    $selects = New-Object System.Collections.Generic.List[string]
-    $group = New-Object System.Collections.Generic.List[string]
-    $cost = 0
-    foreach ($t in $terms) {
-        if ($cost + $t.Cost -gt $MaxExpressions -and $group.Count -gt 0) {
-            $selects.Add("      <Select Path=`"$Path`">*[System[($($group -join ' or '))]]</Select>")
-            $group.Clear(); $cost = 0
-        }
-        $group.Add($t.Text); $cost += $t.Cost
-    }
-    if ($group.Count -gt 0) { $selects.Add("      <Select Path=`"$Path`">*[System[($($group -join ' or '))]]</Select>") }
-    return $selects
-}
-
-# Suppress rules: optional, from the settings table, applied per channel.
-$suppressRules = @()
-if (Get-Variable -Name BaselineWefSuppress -Scope Script -ErrorAction SilentlyContinue) { $suppressRules = @($script:BaselineWefSuppress) }
 
 $queryParts = New-Object System.Collections.Generic.List[string]
 $queryId = 0
@@ -274,17 +162,7 @@ foreach ($chName in $channels) {
     $esc = ConvertTo-XmlEscaped $chName
     $lines = New-Object System.Collections.Generic.List[string]
     $lines.Add("    <Query Id=`"$queryId`" Path=`"$esc`">")
-    if ($Filter -eq 'Baseline' -and $chName -eq 'Security') {
-        $lines.Add("      <!-- Security: $($securityIds.Count) event IDs from $($subcategoryGuids.Count) enabled audit subcategories + Eventlog service events -->")
-        foreach ($s in (ConvertTo-EventIdSelectXml -Ids $securityIds -Path $esc -MaxExpressions $maxExpressionsPerSelect)) { $lines.Add($s) }
-    } else {
-        $lines.Add("      <Select Path=`"$esc`">*</Select>")
-    }
-    foreach ($rule in $suppressRules) {
-        if ($rule.Channel -ne $chName) { continue }
-        $lines.Add("      <!-- Suppress: $(($rule.Reason -replace '--', '- -')) -->")
-        $lines.Add("      <Suppress Path=`"$esc`">$($rule.XPath)</Suppress>")
-    }
+    $lines.Add("      <Select Path=`"$esc`">*</Select>")
     $lines.Add('    </Query>')
     $queryParts.Add(($lines -join "`r`n"))
     $queryId++
@@ -296,14 +174,13 @@ if ($ReadExistingEvents) { $readExisting = 'true' }
 
 $subIdEsc = ConvertTo-XmlEscaped $SubscriptionId
 $sddlEsc  = ConvertTo-XmlEscaped $AllowedSourceDomainComputersSddl
-$descEsc  = ConvertTo-XmlEscaped "WinLogKit logging baseline forwarding ($sourceDesc, $Filter filter)"
+$descEsc  = ConvertTo-XmlEscaped "WinLogKit logging baseline forwarding ($sourceDesc)"
 # XML comments must not contain '--'; neutralise any from user-supplied names.
 $commentDesc = ($sourceDesc -replace '--', '- -')
-$modeComment = if ($Filter -eq 'Baseline') { "Baseline filter: Security limited to $($securityIds.Count) documented event IDs of the enabled subcategories; other channels whole." } else { 'Channel filter: every event of each selected channel.' }
 
 $xml = @"
 <!-- Generated by WinLogKit New-WefSubscription.ps1 from $commentDesc ($($channels.Count) channels). -->
-<!-- $modeComment Regenerate from the kit rather than editing by hand; verify on the collector with Test-WefFilter.ps1. -->
+<!-- Every event of each selected channel is forwarded. Regenerate from the kit rather than editing by hand. -->
 <Subscription xmlns="http://schemas.microsoft.com/2006/03/windows/events/subscription">
   <SubscriptionId>$subIdEsc</SubscriptionId>
   <SubscriptionType>SourceInitiated</SubscriptionType>
@@ -370,29 +247,12 @@ if ($Validate) {
 New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
 $outDirFull = (Resolve-Path $OutDir).Path
 $outFile = Join-Path $outDirFull "$SubscriptionId.xml"
-$sidecar = Join-Path $outDirFull "$SubscriptionId.expected-eventids.csv"
-$utf8 = New-Object System.Text.UTF8Encoding($false)
 # UTF-8 without BOM, consistent with the Intune pack outputs.
-[System.IO.File]::WriteAllText($outFile, $xml, $utf8)
-
-$sideRows = New-Object System.Collections.Generic.List[string]
-$sideRows.Add('Channel,EventID')
-foreach ($chName in $expected.Keys) {
-    foreach ($id in $expected[$chName]) { $sideRows.Add(('"{0}",{1}' -f ($chName -replace '"', '""'), $id)) }
-}
-[System.IO.File]::WriteAllText($sidecar, (($sideRows -join "`n") + "`n"), $utf8)
+[System.IO.File]::WriteAllText($outFile, $xml, (New-Object System.Text.UTF8Encoding($false)))
 
 # ------------------------------------------------------------------ output ---
 
-Write-Host "WEF subscription written: $outFile ($($channels.Count) channels, $Filter filter, from $sourceDesc)" -ForegroundColor Green
-Write-Host "Expected-delivery sidecar: $sidecar (feed it to Test-WefFilter.ps1 on the collector)"
-if ($Filter -eq 'Baseline') {
-    Write-Host ''
-    Write-Host "Security channel filtered to $($securityIds.Count) event IDs from:" -ForegroundColor White
-    foreach ($l in $coverageLines) { Write-Host $l }
-    Write-Host '  Every other selected channel is forwarded whole.'
-}
-if ($suppressRules.Count -gt 0) { Write-Host "Suppress rules applied: $($suppressRules.Count) (from `$BaselineWefSuppress)" }
+Write-Host "WEF subscription written: $outFile ($($channels.Count) channels, from $sourceDesc)" -ForegroundColor Green
 Write-Host ''
 Write-Host 'Collector setup (domain-joined server):' -ForegroundColor White
 Write-Host '  winrm qc -q          # WinRM listener first - sources connect to it'
@@ -407,6 +267,6 @@ Write-Host "    Server=http://<collector-fqdn>:5985/wsman/SubscriptionManager/WE
 Write-Host '    (optionally HTTPS: Server=https://<collector-fqdn>:5986/... - needs a server certificate on the collector)'
 Write-Host '  For the Security log: add NETWORK SERVICE to "Event Log Readers" on sources, or Security forwarding silently fails.' -ForegroundColor Yellow
 Write-Host ''
-Write-Host "Prove the filter on the collector:  & `"$(Join-Path $PSScriptRoot 'Test-WefFilter.ps1')`" -ExpectedFile `"$sidecar`" -SubscriptionId $SubscriptionId"
+Write-Host "Verify: on the collector, Test-LoggingBaseline.ps1 -WefRole Collector; on a source, -WefRole Source."
 Write-Host 'SIEM handoff point: the ForwardedEvents log on the collector. Ingestion beyond that is out of kit scope.'
 exit 0
