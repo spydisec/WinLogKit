@@ -26,7 +26,7 @@ sensors and cloud logs are outside native host logging); anything else ->
 Unmapped (reported, so curation gaps stay visible instead of silently
 counting either way).
 
-**Curation status:** 0 Unmapped analytic rows as of 2026-09-24 (ATT&CK
+**Curation status:** 0 Unmapped analytic rows or codes as of 2026-09-24 (ATT&CK
 v19.2). Where ATT&CK attributes an event to the wrong log (Security 1074 is
 User32's shutdown event in the System log; Security 3033 is a Code
 Integrity event), the row maps it to the log that actually produces it and

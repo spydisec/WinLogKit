@@ -108,10 +108,11 @@ foreach ($p in @($analyticsCsv, $mapCsv)) {
     if (-not (Test-Path $p)) { Write-Error "Mapping data not found: $p (see data\attack\README.md)"; exit 1 }
 }
 
-# Lookup: "source|event" exact, then "source|" fallback. A row with a
-# technique_id applies to that technique only and is tried first: some
-# ATT&CK analytics name a source without an event code (a bare
-# "WinEventLog:Security"), and only the technique says what they mean.
+# Lookup: "source|event" exact, then "source|" fallback (see Resolve-One).
+# A row with a technique_id applies to that technique only and wins over
+# the general row of the same kind: some ATT&CK analytics name a source
+# without an event code (a bare "WinEventLog:Security"), and only the
+# technique says what they mean.
 $eventMap = @{}
 foreach ($m in (Import-Csv $mapCsv)) {
     $scope = ''
@@ -162,13 +163,17 @@ foreach ($r in (Import-Csv $analyticsCsv)) {
     if ($codes.Count -eq 0) { $codes = @([regex]::Matches("$($r.channel_detail)", 'EventCode=(\d+)') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique) }
     if ($codes.Count -eq 0) { $codes = @('') }
     $best = $null
+    # Codes that resolve Unmapped are kept even when another code in the
+    # same analytic is mapped, so a curation gap can't hide behind it.
+    $unmappedCodes = New-Object System.Collections.Generic.List[string]
     foreach ($c in $codes) {
         $res = Resolve-One -Technique $r.technique_id -Source $r.log_source -Code $c
+        if ($res.Status -eq 'Unmapped') { $unmappedCodes.Add($(if ($c -eq '') { '(any)' } else { $c })) }
         if ($null -eq $best -or $rank[$res.Status] -gt $rank[$best.Status]) { $best = $res }
     }
     $detail.Add([pscustomobject]@{
         TechniqueId = $r.technique_id; Technique = $r.technique; Tactics = $r.tactics
-        LogSource = $r.log_source; EventCodes = $r.event_codes; Status = $best.Status; ProvidedBy = $best.Via
+        LogSource = $r.log_source; EventCodes = $r.event_codes; Status = $best.Status; ProvidedBy = $best.Via; UnmappedCodes = ($unmappedCodes -join ';')
     })
 }
 $mappingDesc = 'MITRE ATT&CK v19.2 (snapshot 2026-08-31) + kit event map'

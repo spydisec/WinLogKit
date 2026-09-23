@@ -48,9 +48,10 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
       overrides it (`MachinePolicy` and `UserPolicy` sit above the Process
       scope, per
       [about_Execution_Policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies)).
-      Have the scripts signed, or ask for the policy to change. Fleet
-      delivery through the Intune Settings catalog or Group Policy runs no
-      kit scripts on the endpoints, so it isn't affected.
+      Have the scripts signed, or ask for the policy to change. The Intune
+      Settings catalog and the GPO pack's policy settings run no kit
+      scripts on the endpoints, so they aren't affected; a startup script
+      you add for the other log sizes is, like any script.
     - Execution policy is a usability guardrail, not a security boundary;
       none of this weakens anything the kit configures.
 

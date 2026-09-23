@@ -198,7 +198,8 @@ per-setting breakdown is in the detail CSV's `ProvidedBy` column.
 ## Outputs
 
 - `Results\AttackCoverage_Detail_*.csv` - every analytic mapping row with
-  status and which kit item provides it
+  status, which kit item provides it, and any of its event codes the map
+  doesn't cover yet (`UnmappedCodes`, empty when curation is complete)
 - `Results\AttackCoverage_Gaps_*.csv` - techniques not observable, with the
   dominant reason
 
