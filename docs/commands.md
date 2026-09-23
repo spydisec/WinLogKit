@@ -31,7 +31,7 @@ Applies the baseline. Idempotent - already-correct items are reported and
 left alone; log sizes are only ever raised.
 
 ```powershell
-.\Enable-LoggingBaseline.ps1 [-IncludeHighVolume] [-IncludeOptional]
+.\Enable-LoggingBaseline.ps1 [-IncludeHighVolume]
                              [-BaselineFile <csv>] [-WhatIf] [-Rollback]
 ```
 
@@ -51,7 +51,7 @@ registry values, SMB audit settings. Per-behaviour-category PASS/FAIL/NOT
 APPLICABLE, detail + summary CSVs, non-zero exit on any failure.
 
 ```powershell
-.\Test-LoggingBaseline.ps1 [-IncludeHighVolume] [-IncludeOptional]
+.\Test-LoggingBaseline.ps1 [-IncludeHighVolume]
                            [-BaselineFile <csv>] [-WefRole Source|Collector]
 ```
 
@@ -81,7 +81,7 @@ which techniques it makes observable - and why the rest are not
 [Coverage](mapping.md).
 
 ```powershell
-.\report\Export-AttackCoverage.ps1 [-IncludeHighVolume] [-IncludeOptional] [-BaselineFile <csv>]
+.\report\Export-AttackCoverage.ps1 [-IncludeHighVolume] [-BaselineFile <csv>]
 ```
 
 ## Invoke-WELACheck.ps1

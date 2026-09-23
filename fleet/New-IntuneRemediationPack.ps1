@@ -39,13 +39,14 @@
 .PARAMETER BaselineFile
     Optional selection CSV from New-LoggingBaseline.ps1. Only Selected = Y
     items are embedded. Without it, the recommended set is used (Core, plus
-    HighVolume/Optional tiers if the matching switches are given).
+    HighVolume if -IncludeHighVolume is given).
 
 .PARAMETER IncludeHighVolume
     Without -BaselineFile: also embed HighVolume tier items.
 
 .PARAMETER IncludeOptional
-    Without -BaselineFile: also embed Optional tier items.
+    Deprecated, ignored with a warning (the Optional tier was folded into
+    HighVolume in v2, ADR-002; use -IncludeHighVolume).
 
 .EXAMPLE
     .\fleet\New-IntuneRemediationPack.ps1

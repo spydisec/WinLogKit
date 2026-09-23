@@ -38,7 +38,7 @@
 
 .PARAMETER AcceptRecommended
     Non-interactive: write the CSV with every item set to its recommended
-    default (Core = Y, HighVolume/Optional = N) and exit. Use this to get a
+    default (Core = Y, HighVolume = N) and exit. Use this to get a
     starting file to edit in Excel.
 
 .PARAMETER IncludeHighVolume
@@ -46,7 +46,8 @@
     interactively; with -AcceptRecommended they are written as Y).
 
 .PARAMETER IncludeOptional
-    Same as above for Optional tier items.
+    Deprecated, ignored with a warning. The Optional tier was folded into
+    HighVolume in v2 (ADR-002); use -IncludeHighVolume.
 
 .PARAMETER Force
     Overwrite an existing OutFile.
@@ -93,6 +94,7 @@ if ([string]::IsNullOrEmpty($OutFile)) { $OutFile = Join-Path $PSScriptRoot 'MyB
 
 . (Join-Path $PSScriptRoot 'WinLogKit.Settings.ps1')
 . (Join-Path $PSScriptRoot 'WinLogKit.Common.ps1')
+Write-IncludeOptionalWarning $IncludeOptional
 
 if ((Test-Path $OutFile) -and -not $Force -and -not $Show) {
     Write-Error "$OutFile already exists. Use -Force to overwrite, or pick another -OutFile."
@@ -102,7 +104,7 @@ if ((Test-Path $OutFile) -and -not $Force -and -not $Show) {
 function Get-DefaultSelected {
     # The kit recommendation: Core is in, heavier tiers are opt-in.
     param([string]$Tier)
-    Test-TierSelected -Tier $Tier -IncludeHighVolume $IncludeHighVolume -IncludeOptional $IncludeOptional
+    Test-TierSelected -Tier $Tier -IncludeHighVolume $IncludeHighVolume
 }
 
 function Get-ItemField {
@@ -235,7 +237,7 @@ if ($Show) {
         # treat unlisted items - so a partial CSV cannot overstate coverage.
         foreach ($it in $items) { $decided["$($it.ItemType)|$($it.Id)"] = (Test-ItemSelected $sel $it.ItemType $it.Id $it.Tier) }
     } else {
-        Write-Host "Showing the kit recommendation (Core$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'}))"
+        Write-Host "Showing the kit recommendation (Core$(if ($IncludeHighVolume) {' + HighVolume'}))"
         foreach ($it in $items) { $decided["$($it.ItemType)|$($it.Id)"] = Get-DefaultSelected $it.Tier }
     }
     Show-BaselineTree -Decided $decided
@@ -248,7 +250,7 @@ $selections = @{}   # "ItemType|Id" -> bool
 
 if ($AcceptRecommended) {
     foreach ($it in $items) { $selections["$($it.ItemType)|$($it.Id)"] = Get-DefaultSelected $it.Tier }
-    Write-Host "Non-interactive: recommended defaults applied (Core = Y$(if ($IncludeHighVolume) {', HighVolume = Y'})$(if ($IncludeOptional) {', Optional = Y'}))."
+    Write-Host "Non-interactive: recommended defaults applied (Core = Y$(if ($IncludeHighVolume) {', HighVolume = Y'}))."
 } else {
     Write-Host ''
     Write-Host 'Build your logging baseline' -ForegroundColor White

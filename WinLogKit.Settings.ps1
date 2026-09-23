@@ -19,11 +19,11 @@
 #
 # Field meanings:
 #   Tier       - Core       : applied/tested by default
-#                HighVolume : material event volume or performance impact.
-#                             Only applied with -IncludeHighVolume so a human
-#                             decides, not the script.
-#                Optional   : recommended by the sources but situational.
-#                             Only applied with -IncludeOptional.
+#                HighVolume : material event volume, performance impact, or only
+#                             useful in some environments (v2 folded the old
+#                             Optional tier in here, ADR-002). Only applied
+#                             with -IncludeHighVolume so a human decides, not
+#                             the script.
 #   Scope      - All | DomainController. DomainController items are skipped
 #                (NOT APPLICABLE) on standalone and member servers.
 #   Condition  - extra runtime requirement, e.g. 'ADCS' = only when the
@@ -204,9 +204,9 @@ $script:BaselineChannels = @(
        Categories = @('Remote access','Network flow and sessions')
        Purpose = 'SMB client audit events, including Windows Server 2025 signing/encryption capability auditing (31998/31999) and NTLM-blocking diagnostics.' }
 
-    @{ Name = 'Microsoft-Windows-Crypto-DPAPI/Debug';                                   TargetBytes = $mb128; MustEnable = $true;  Tier = 'Optional'; DefaultSize = '1 MB'; MayBeAbsent = $true
+    @{ Name = 'Microsoft-Windows-Crypto-DPAPI/Debug';                                   TargetBytes = $mb128; MustEnable = $true;  Tier = 'HighVolume'; DefaultSize = '1 MB'; MayBeAbsent = $true
        Categories = @('Certificates and keys')
-       Purpose = 'DPAPI key operations. Added by WELA v2.1 configure. A debug-class channel, so Optional: enable only if DPAPI theft (e.g. Mimikatz backup key export) is a monitored scenario.'
+       Purpose = 'DPAPI key operations. Added by WELA v2.1 configure. A debug-class channel, so opt-in: enable only if DPAPI theft (e.g. Mimikatz backup key export) is a monitored scenario.'
        Risk = 'Debug-class channels carry a small constant tracing overhead and are not designed for always-on production use. Enable deliberately, not by default.' }
 )
 
@@ -350,9 +350,9 @@ $script:BaselineAuditSubcategories = @(
        Risk = 'Known to flood on hosts running backup agents and monitoring software (backup/restore privileges fire constantly). Test on one host per server role before fleet rollout.' }
 
     # --- System ---
-    @{ Name = 'IPsec Driver';                         Guid = '0CCE9213-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Optional'
+    @{ Name = 'IPsec Driver';                         Guid = '0CCE9213-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'HighVolume'
        Categories = @('Network flow and sessions')
-       Purpose = 'IPsec driver packet events (4960-4963, 4965) and IPsec service start/stop and filter-processing events (5478-5480, 5483-5485). In Microsoft''s baseline recommendation (and the Microsoft_Client baseline in Yamato''s EventLog-Baseline-Guide) but not in the Yamato set, so Optional: enable where IPsec is actually used.' }
+       Purpose = 'IPsec driver packet events (4960-4963, 4965) and IPsec service start/stop and filter-processing events (5478-5480, 5483-5485). In Microsoft''s baseline recommendation (and the Microsoft_Client baseline in Yamato''s EventLog-Baseline-Guide) but not in the Yamato set, so opt-in: enable where IPsec is actually used.' }
 
     @{ Name = 'Security State Change';                Guid = '0CCE9210-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'Core'
        Categories = @('Logging tampered with')

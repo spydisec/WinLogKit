@@ -5,6 +5,15 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
 ## Unreleased
 
+### Changed
+- **Two tiers: Core and HighVolume** ([ADR-002](docs/adr/0002-scope-and-simplification.md)).
+  The Optional tier is gone. Its two remaining items, the
+  Crypto-DPAPI debug channel and IPsec Driver auditing, are now
+  HighVolume, so **`-IncludeHighVolume` now also turns them on**. Preset
+  selections are unchanged. `-IncludeOptional` is still accepted by every
+  script for one release, but it only prints a deprecation warning and
+  selects nothing.
+
 ### Removed
 - **PowerShell transcription** (`Transcription64`, `TranscriptionHeader64`,
   `Transcription32`, `TranscriptionHeader32`;

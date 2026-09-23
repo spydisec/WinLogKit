@@ -16,7 +16,7 @@ Everything else is a **selection** of that table:
 
 | Selection mechanism | When to use |
 |---|---|
-| Tier switches (`-IncludeHighVolume`, `-IncludeOptional`) | Fastest route to the recommended baseline |
+| Tier switch (`-IncludeHighVolume`) | Fastest route to the recommended baseline |
 | A selection CSV from `New-LoggingBaseline.ps1` | Per-setting control, per-role baselines, review in Excel/git |
 | A shipped preset (`presets\*.csv`) | Start from a published reference baseline |
 
@@ -29,8 +29,7 @@ same `-BaselineFile`.
 | Tier | Default | Contents |
 |---|---|---|
 | Core | applied | everything with low or justified volume |
-| HighVolume | ask first | process creation + command line, PowerShell script block + module logging, WFP connections, sensitive privilege use |
-| Optional | ask first | Crypto-DPAPI debug channel, IPsec Driver auditing |
+| HighVolume | ask first | process creation + command line, PowerShell script block + module logging, WFP connections, sensitive privilege use, plus the situational Crypto-DPAPI debug channel and IPsec Driver auditing |
 
 PowerShell transcription is deliberately not in the kit. It writes text
 files outside the event log (its own folder, permissions, retention and
@@ -113,7 +112,7 @@ and the Yamato guide):
 | Module logging (4103) | - | - | - | The heaviest setting in the kit; opt-in after a pilot, everywhere |
 | Sensitive Privilege Use | - | - | - | Known to flood with backup agents; opt-in per server role after a pilot |
 | DC-scope subcategories | - | - | ✓ | Only generate events on domain controllers |
-| Optional tier (DPAPI debug, IPsec Driver) | - | - | - | Situational by definition |
+| DPAPI debug channel, IPsec Driver | - | - | - | Situational: enable where DPAPI theft is monitored or IPsec is used |
 
 Usage is identical to any baseline CSV:
 

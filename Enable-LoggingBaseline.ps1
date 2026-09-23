@@ -12,11 +12,9 @@
 
     1. Tier switches (simple):
       Core        applied by default.
-      HighVolume  material event volume / performance impact. NOT applied
-                  unless -IncludeHighVolume is given - listed as PENDING
-                  DECISION so a human chooses.
-      Optional    situational (Crypto-DPAPI debug channel, IPsec Driver).
-                  Applied only with -IncludeOptional.
+      HighVolume  material event volume / performance impact, or only useful
+                  in some environments. NOT applied unless -IncludeHighVolume
+                  is given - listed as PENDING DECISION so a human chooses.
 
     2. A custom baseline file (precise): build a selection CSV with
        New-LoggingBaseline.ps1 (interactively, or -AcceptRecommended then edit
@@ -48,11 +46,12 @@
 .PARAMETER IncludeHighVolume
     Also apply HighVolume tier items (process creation + command line,
     PowerShell script block and module logging, Filtering Platform
-    Connection, Sensitive Privilege Use).
+    Connection, Sensitive Privilege Use, Crypto-DPAPI debug channel, IPsec
+    Driver auditing).
 
 .PARAMETER IncludeOptional
-    Also apply Optional tier items (Crypto-DPAPI debug channel, IPsec
-    Driver auditing).
+    Deprecated, ignored with a warning. The Optional tier was folded into
+    HighVolume in v2 (ADR-002); use -IncludeHighVolume.
 
 .PARAMETER BaselineFile
     Path to a selection CSV produced by New-LoggingBaseline.ps1 (columns
@@ -206,7 +205,7 @@ try {
     if ($null -ne $script:Selection.Map) {
         Write-Host "Baseline file      : $BaselineFile ($(@($script:Selection.Map.Values | Where-Object { $_ }).Count) items selected; tier switches ignored)"
     } else {
-        Write-Host "Tiers selected     : Core$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
+        Write-Host "Tiers selected     : Core$(if ($IncludeHighVolume) {' + HighVolume'})"
     }
     Write-Host "Transcript         : $transcriptFile"
     Write-Host ''
@@ -540,9 +539,9 @@ try {
     $pending = @($results | Where-Object { $_.Action -eq 'PendingDecision' })
     if ($pending.Count -gt 0) {
         Write-Host ''
-        Write-Host 'PENDING DECISION - high volume / optional settings NOT applied (deliberate; a human decides):' -ForegroundColor Yellow
+        Write-Host 'PENDING DECISION - high volume settings NOT applied (deliberate; a human decides):' -ForegroundColor Yellow
         $pending | ForEach-Object { Write-Host "  - $($_.Item)  [$($_.Detail)]" -ForegroundColor Yellow }
-        Write-Host '  Review the volume impact section in README.md, then rerun with -IncludeHighVolume and/or -IncludeOptional.' -ForegroundColor Yellow
+        Write-Host '  Review the volume impact section in README.md, then rerun with -IncludeHighVolume.' -ForegroundColor Yellow
     }
 
     Write-Host ''
