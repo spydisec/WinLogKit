@@ -32,8 +32,9 @@ Things to know before you start:
 - **A policy sets a log size outright.** The kit only ever raises sizes;
   a size policy also lowers a log that was bigger. Set the larger value
   if your hosts already have one.
-- **SMB auditing needs Windows 11 24H2 or Windows Server 2025**; older
-  versions don't have those settings.
+- **SMB auditing needs Windows 11 24H2 (build 26100.3613) or later, or
+  Windows Server 2025**, per Microsoft's LanmanServer and
+  LanmanWorkstation CSP pages; older builds don't have those settings.
 - **Mind the Tier column.** Leave HighVolume rows out unless you apply
   that tier (see [Baselines](baselines.md)).
 
