@@ -133,5 +133,5 @@ The deciding question is whether a component helps someone **turn on, prove or d
 8. [ ] #42 Move `report/Export-AttackCoverage.ps1` to `tools/`; drop the empty `report/` folder.
 9. [ ] #43 README: new one-sentence goal, the "pick a role preset" quick start, and a "not in scope" list.
 10. [ ] #43 CHANGELOG (then tag **v2.0.0** after merge) with a migration table (old name, new name or replacement).
-11. [ ] Create GitHub issues for the ADR-001 roadmap items that still apply after this cut.
+11. [x] Create GitHub issues for the ADR-001 roadmap items that still apply after this cut (#44 to #52; the WEF filter, Autoruns and Sentinel KQL items were dropped by this ADR).
 12. [ ] #43 Add `docs/adr/0001-v1-layout.md` as a short record pointing at PR #30, so both ADRs live in the repo.
