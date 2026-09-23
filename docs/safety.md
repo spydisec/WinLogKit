@@ -188,7 +188,7 @@ Detection needs rules on top (Sigma, SIEM analytics). The
 Your selection CSVs and per-host output folders are separate from the kit
 scripts. Read the release notes in the
 [CHANGELOG](https://github.com/spydisec/WinLogKit/blob/main/CHANGELOG.md)
-(v2.0.0 has an upgrade table), pull the new release, keep your CSVs, rerun
+(releases that change how you work have an "Upgrading" table), pull the new release, keep your CSVs, rerun
 `Test-LoggingBaseline.ps1 -BaselineFile <yours>` - the settings table may
 have new items, which show as unlisted/excluded until you re-run the
 builder and re-select.
