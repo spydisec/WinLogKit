@@ -83,14 +83,13 @@ Full documentation: <https://spydisec.github.io/WinLogKit/>
 
 | Page | Covers |
 |---|---|
-| [Getting Started](https://spydisec.github.io/WinLogKit/getting-started/) | Install, first run, execution policy, where output lands |
-| [Baselines](https://spydisec.github.io/WinLogKit/baselines/) | Tiers, presets, deviations from the sources |
-| [Commands](https://spydisec.github.io/WinLogKit/commands/) | Every script and its switches |
-| [Collect](https://spydisec.github.io/WinLogKit/wec/) | WEF / WEC: subscription, collector and source setup, reading a collector |
-| [Deploy](https://spydisec.github.io/WinLogKit/deployment/) | Intune and GPO rollout |
-| [Coverage](https://spydisec.github.io/WinLogKit/mapping/) | How the pieces fit, behaviour categories, ATT&CK technique coverage |
-| [Reference](https://spydisec.github.io/WinLogKit/reference/) | Every setting: event IDs, sizes, volume, preset membership |
-| [Safety & FAQ](https://spydisec.github.io/WinLogKit/safety/) | Never-do list, volume impact, known limits, common questions |
+| [Get started](https://spydisec.github.io/WinLogKit/getting-started/) | Install, first run with a role preset, execution policy |
+| [Baselines](https://spydisec.github.io/WinLogKit/baselines/) | The presets, the two tiers, building your own, deviations from the sources |
+| [Deploy](https://spydisec.github.io/WinLogKit/deployment/) | Rolling out with Intune or Group Policy |
+| [Collect](https://spydisec.github.io/WinLogKit/wec/) | Central collection with Windows Event Forwarding |
+| [Reference](https://spydisec.github.io/WinLogKit/commands/) | Commands, every setting, ATT&CK coverage |
+| [Safety & FAQ](https://spydisec.github.io/WinLogKit/safety/) | What the kit never does, volume impact, known limits |
+| [Credits](https://spydisec.github.io/WinLogKit/credits/) | The projects WinLogKit is built from, and their licences |
 
 ## Safety
 
@@ -115,7 +114,8 @@ for what changed. Planned work is tracked in
 ## License
 
 [MIT](https://github.com/spydisec/WinLogKit/blob/main/LICENSE). Not
-affiliated with or endorsed by Yamato Security, the ASD or Microsoft; the
-Yamato projects the settings derive from are also MIT licensed, and the
-kit's deliberate deviations from them are
+affiliated with or endorsed by Yamato Security, the ASD, Microsoft or MITRE.
+What the kit is built from, and each source's licence, is on the
+[Credits](https://spydisec.github.io/WinLogKit/credits/) page; the kit's
+deliberate deviations from the Yamato sources are
 [documented with reasons](https://spydisec.github.io/WinLogKit/baselines/#deviations-from-the-yamato-sources).

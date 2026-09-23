@@ -1,45 +1,20 @@
-# Getting Started
+# Get started
 
-Three commands get you from nothing to a verified logging baseline:
-preview (`-WhatIf`), apply, test. Everything on this page fits in ten
-minutes on one machine.
-
-## The words we use
-
-Eight terms cover the whole kit - each defined once, in plain English:
-
-| Term | Meaning |
-|---|---|
-| Event channel | A named log Windows writes to (Security, System, ...) |
-| Audit subcategory | A Windows switch deciding which security events get recorded |
-| Tier | How much logging: **Core** (safe default), **HighVolume** (more events, more disk, or only useful in some environments) |
-| Baseline / selection CSV | A spreadsheet listing which settings are on (Y) or off (N) - the kit's unit of decision |
-| Preset | A ready-made baseline we ship: one per host role (`Workstation`, `MemberServer`, `DomainController`) plus `ASD` |
-| WEF / collector | Windows' built-in way to push events to one central server, agent-free |
-| SIEM | The security platform that ultimately analyses the logs (outside this kit) |
-| ATT&CK technique | A catalogued attacker behaviour - the kit counts how many your logs could see |
-
-*Plain-language shorthand; the formal definitions live in
-[Microsoft's audit policy documentation](https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration)
-and [MITRE ATT&CK](https://attack.mitre.org/).*
+From nothing to a verified logging baseline on one machine in about ten
+minutes: pick the preset for the host's role, preview, apply, verify.
 
 ## Requirements
 
-- Windows Server 2019 / 2022 / 2025, or Windows 10 / 11
-- PowerShell: [PowerShell 7](https://learn.microsoft.com/powershell/scripting/whats-new/migrating-from-windows-powershell-51-to-powershell-7)
-  where installed, or the stock Windows PowerShell 5.1 that ships with
-  every supported Windows version - both work, and CI tests both. 5.1 is
-  the compatibility floor because it is always present (and
-  [Intune remediations run under Windows PowerShell](https://learn.microsoft.com/intune/intune-service/fundamentals/remediations),
-  so the generated packs must stay 5.1-clean), not a requirement to use
-  it.
-- Local Administrator for applying and verifying (the builders and
-  generators need no elevation)
-- No modules, no agents, no internet access required
+- Windows 10 / 11, or Windows Server 2019 / 2022 / 2025
+- PowerShell 7 or the Windows PowerShell 5.1 that ships with Windows (both
+  are tested)
+- Local Administrator to apply and verify (building a baseline or
+  generating fleet files needs no elevation)
+- No modules, no agents, no internet access
 
 ## Install
 
-Either grab the versioned zip (with SHA256 checksum) from the
+Download the zip (with its SHA256 checksum) from the
 [Releases page](https://github.com/spydisec/WinLogKit/releases), or clone:
 
 ```powershell
@@ -47,7 +22,7 @@ git clone https://github.com/spydisec/WinLogKit.git
 cd WinLogKit
 ```
 
-If a downloaded zip is blocked, unblock the files once:
+A downloaded zip is marked as coming from the internet; unblock it once:
 
 ```powershell
 Get-ChildItem -Recurse | Unblock-File
@@ -55,108 +30,91 @@ Get-ChildItem -Recurse | Unblock-File
 
 ## If scripts are blocked: "running scripts is disabled on this system"
 
-PowerShell's execution policy blocks `.ps1` files by default on client
-Windows (`Restricted`; servers default to `RemoteSigned` - see
-[about_Execution_Policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies)).
-Pick the least-invasive option that fits:
+Allow scripts for the current window only; nothing is saved:
 
 ```powershell
-# Option 1 - this window only, nothing persisted (recommended for a first look):
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
-
-# Option 2 - one-off invocation without touching any policy:
-powershell.exe -ExecutionPolicy Bypass -File .\Enable-LoggingBaseline.ps1 -WhatIf
-
-# Option 3 - persist for your user account:
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 ```
 
-Notes:
+??? note "Other options, and policies set by Group Policy"
+    - One-off run without touching any policy:
+      `powershell.exe -ExecutionPolicy Bypass -File .\Enable-LoggingBaseline.ps1 -WhatIf`
+    - Keep it for your user account:
+      `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
+    - Under `RemoteSigned`, downloaded files stay blocked until the
+      `Unblock-File` step above. The two errors look the same but have
+      different fixes; `git clone` avoids the download one.
+    - If the error says the policy is **set by Group Policy**, nothing local
+      overrides it (`MachinePolicy` and `UserPolicy` sit above the Process
+      scope, per
+      [about_Execution_Policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies)).
+      Have the scripts signed, or ask for the policy to change. The Intune
+      pack is unaffected when uploaded with **Enforce script signature
+      check: No**, per
+      [Microsoft's remediation prerequisites](https://learn.microsoft.com/intune/device-management/tools/deploy-remediations#prerequisites).
+    - Execution policy is a usability guardrail, not a security boundary;
+      none of this weakens anything the kit configures.
 
-- Under `RemoteSigned`, files downloaded from the internet still carry the
-  Mark of the Web and stay blocked until the `Unblock-File` step above -
-  the two blockers look identical but have different fixes. `git clone`
-  produces unmarked files, so cloning avoids that half entirely.
-- If the error says the policy is **set by Group Policy**, your organisation
-  enforces it and nothing local overrides it: `MachinePolicy` and
-  `UserPolicy` sit above the Process scope that Options 1 and 2 use, per
-  [about_Execution_Policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies).
-  Have the scripts signed per your org's process, or ask for the policy to
-  be changed. The Intune remediation pack is unaffected as long as the
-  package is uploaded with **Enforce script signature check** set to No:
-  Intune then runs the (unsigned) scripts under `Bypass`; with it set to
-  Yes, the device's own policy applies and the scripts must be signed by a
-  trusted publisher, per
-  [Microsoft's remediation prerequisites](https://learn.microsoft.com/intune/device-management/tools/deploy-remediations#prerequisites).
-  None of this weakens anything the kit configures - execution policy is a usability guardrail,
-  not a security boundary, per Microsoft's own documentation.
+## Your first baseline
 
-## First run - see everything before changing anything
-
-From an **elevated** PowerShell prompt in the kit folder, pick the preset
-for the host's role (`Workstation` for Windows 10/11, `MemberServer`,
-`DomainController`; see [Baselines](baselines.md#role-presets)):
+From an **elevated** PowerShell prompt in the kit folder, choose the preset
+for the host's role: `Workstation` (Windows 10/11), `MemberServer` or
+`DomainController` (see [Baselines](baselines.md#role-presets)).
 
 ```powershell
 $preset = '.\presets\Workstation.csv'
 
-# Full diff of what would change. Nothing is changed.
+# 1. Preview: the full list of changes. Nothing is changed.
 .\Enable-LoggingBaseline.ps1 -BaselineFile $preset -WhatIf
-```
 
-## Apply and verify (the 10-minute path)
-
-```powershell
-# 1. Apply. The first real run captures a rollback baseline
-#    (audit policy backup, channel sizes, registry values) to .\Baseline\.
+# 2. Apply. The first real run saves a rollback copy of the current
+#    settings to .\Baseline\ before changing anything.
 .\Enable-LoggingBaseline.ps1 -BaselineFile $preset
 
-# 2. Verify: per-category PASS/FAIL to console, evidence CSVs to .\Results\.
+# 3. Verify: PASS/FAIL per behaviour category, evidence CSVs in .\Results\.
 .\Test-LoggingBaseline.ps1 -BaselineFile $preset
 
-# Escape hatch: restore everything captured at first run.
+# Undo everything, back to the state saved at step 2.
 .\Enable-LoggingBaseline.ps1 -Rollback
 ```
 
-After the pilot week, adjust your copy of the preset: the HighVolume rows
-it leaves off (module logging, sensitive privilege use, and so on) are the
-next decisions, and the [Coverage](mapping.md) page shows what they buy
-(162 -> 279 observable ATT&CK techniques from Core to Core + HighVolume).
 `Test-LoggingBaseline.ps1` exits non-zero on any failure, so it can gate a
 pipeline or an Intune/RMM check as-is.
 
-## Build your own baseline instead
+## Next steps
 
-When you want per-setting control (or per-role baselines), build a selection
-CSV first - the kit recommendation is shown per item, with the volume and
-stability risk, and `t` shows the whole tree at any point:
-
-```powershell
-.\New-LoggingBaseline.ps1                       # interactive walk-through
-.\New-LoggingBaseline.ps1 -Show                 # view the recommendation as a tree
-.\Enable-LoggingBaseline.ps1 -BaselineFile .\MyBaseline.csv -WhatIf
-.\Enable-LoggingBaseline.ps1 -BaselineFile .\MyBaseline.csv
-.\Test-LoggingBaseline.ps1   -BaselineFile .\MyBaseline.csv
-```
-
-Or start from a published reference: see
-[Baselines & Presets](baselines.md).
-
-## Where the scripts live
-
-The three host scripts sit at the kit root. Fleet generators are in
-`fleet\` and maintainer tools in `tools\`; see
-[Commands](commands.md#where-the-scripts-live). Wherever a script lives, it
-reads the settings table from the root and writes its output there.
+1. **Pilot for a week** on a machine that mirrors production, and watch
+   disk and event volume ([Safety](safety.md#volume-impact-settings-the-highvolume-tier-and-friends)).
+2. **Adjust your copy of the preset.** The HighVolume rows it leaves off
+   (module logging, sensitive privilege use and so on) are the next
+   decisions; [Coverage](mapping.md) shows what they add. To build a
+   selection from scratch instead, run `.\New-LoggingBaseline.ps1`
+   ([Baselines](baselines.md#building-your-own)).
+3. **Roll it out** with Intune or Group Policy ([Deploy](deployment.md)).
+4. **Collect it centrally**, if you use Windows Event Forwarding
+   ([Collect](wec.md)).
 
 ## Where things land
 
 | Folder | Contents |
 |---|---|
-| `Baseline\` | First-run rollback capture (auditpol backup + JSON); `snapshots\<timestamp>\` holds an automatic pre-change snapshot from every later apply |
+| `Baseline\` | The rollback copy from the first run; `snapshots\<timestamp>\` holds a copy from before every later run |
 | `Results\` | Test and coverage CSVs, timestamped |
-| `Logs\` | Enable transcripts (every run, including `-WhatIf`) |
-| `Intune\`, `WEF\`, `GPO\` | Generated deployment artefacts |
+| `Logs\` | A log of every Enable run, including `-WhatIf` |
+| `Intune\`, `WEF\`, `GPO\` | Generated deployment files |
 
-All of these are per-host output and gitignored - only the kit itself and
-your baseline CSVs belong in version control.
+These are per-host output and git-ignored; only the kit and your own
+baseline CSVs belong in version control.
+
+## The words we use
+
+| Term | Meaning |
+|---|---|
+| Event channel | A named log Windows writes to (Security, System, ...) |
+| Audit subcategory | A Windows switch deciding which security events get recorded |
+| Tier | How much logging: **Core** (safe default) or **HighVolume** (more events and disk, or only useful in some environments) |
+| Baseline / selection CSV | A spreadsheet listing which settings are on (Y) or off (N) |
+| Preset | A ready-made baseline: one per host role, plus `ASD` |
+| WEF / collector | Windows' built-in way to push events to one central server, agent-free |
+| SIEM | The security platform that analyses the logs (outside this kit) |
+| ATT&CK technique | A catalogued attacker behaviour; the kit counts how many your logs could see |

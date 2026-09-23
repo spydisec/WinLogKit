@@ -1,7 +1,8 @@
 site_name: WinLogKit
 site_description: >-
-  Enable, verify, collect and deploy Windows event logging baselines with
-  plain PowerShell - no modules, no agents.
+  Turn on the native Windows event logging security monitoring needs, prove
+  it is recording, and undo it. Plain PowerShell - no modules, no agents,
+  no downloads.
 site_url: https://spydisec.github.io/WinLogKit/
 repo_url: https://github.com/spydisec/WinLogKit
 repo_name: spydisec/WinLogKit
@@ -41,11 +42,16 @@ theme:
         icon: material/weather-sunny
         name: Light mode
 
+# Architecture decision records live in the repo (docs/adr/), not on the site.
+exclude_docs: |
+  adr/
+
 extra_css:
   - stylesheets/extra.css
 
 markdown_extensions:
   - admonition
+  - pymdownx.details
   - attr_list
   - md_in_html
   - tables
@@ -60,15 +66,17 @@ markdown_extensions:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
-# Ordered as a reader journey: try it, pick a baseline, look up commands,
-# collect it, roll it out, measure it, stay safe.
+# Ordered as a user's path: try it, pick a baseline, roll it out, collect
+# it; then look things up; then who made it possible.
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
+  - Get started: getting-started.md
   - Baselines: baselines.md
-  - Commands: commands.md
-  - Collect: wec.md
   - Deploy: deployment.md
-  - Coverage: mapping.md
-  - Reference: reference.md
+  - Collect: wec.md
+  - Reference:
+      - Commands: commands.md
+      - Settings: reference.md
+      - Coverage: mapping.md
   - Safety & FAQ: safety.md
+  - Credits: credits.md

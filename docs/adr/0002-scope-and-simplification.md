@@ -1,6 +1,6 @@
 # ADR-002: Project scope and simplification for v2
 
-**Status:** Accepted (Option B, 2026-09-23)
+**Status:** Accepted (Option B, 2026-09-23); implemented in v2.0.0
 **Date:** 2026-09-23
 **Deciders:** Maintainer (@spydisec)
 **Supersedes:** nothing. Follows [ADR-001](https://github.com/spydisec/WinLogKit/pull/30) (v1.0 layout and docs cut).
@@ -123,15 +123,15 @@ The deciding question is whether a component helps someone **turn on, prove or d
 
 ## Action items
 
-1. [ ] Merge #36 (transcription removal).
+1. [x] Merge #36 (transcription removal).
 2. [x] Accept this ADR (Option B; WEF whole channels only, 3 role presets + ASD, ATT&CK report as a maintainer tool, Autoruns add-on deleted).
-3. [ ] #38 Tiers: move Crypto-DPAPI debug and IPsec Driver to HighVolume; make `-IncludeOptional` accepted-but-ignored with a warning.
-4. [ ] #39 Presets: generate 4 (`Workstation`, `MemberServer`, `DomainController`, `ASD`); delete the other 6; update docs and field-report template.
-5. [ ] #53 Delete the Autoruns add-on: `addons/`, `docs/addons.md`, its self-check and fixture (history stays in git).
-6. [ ] #40 Remove `report/Invoke-WELACheck.ps1`, `docs/extras/sentinel-kql.md`, `data/ossem/` (with the coverage report's `-UseOssem` mode).
-7. [ ] #41 WEF: remove `-Filter Baseline`, `Test-WefFilter.ps1`, `tools/Update-AuditSubcategoryEvents.ps1`, `data/wef/` and `$BaselineWefSuppress` (added at the maintainer's request); add a short "filter at the SIEM ingest layer" note to Collect.
-8. [ ] #42 Move `report/Export-AttackCoverage.ps1` to `tools/`; drop the empty `report/` folder.
-9. [ ] #43 README: new one-sentence goal, the "pick a role preset" quick start, and a "not in scope" list.
-10. [ ] #43 CHANGELOG (then tag **v2.0.0** after merge) with a migration table (old name, new name or replacement).
+3. [x] #38 Tiers: move Crypto-DPAPI debug and IPsec Driver to HighVolume; make `-IncludeOptional` accepted-but-ignored with a warning.
+4. [x] #39 Presets: generate 4 (`Workstation`, `MemberServer`, `DomainController`, `ASD`); delete the other 6; update docs and field-report template.
+5. [x] #53 Delete the Autoruns add-on: `addons/`, `docs/addons.md`, its self-check and fixture (history stays in git).
+6. [x] #40 Remove `report/Invoke-WELACheck.ps1`, `docs/extras/sentinel-kql.md`, `data/ossem/` (with the coverage report's `-UseOssem` mode).
+7. [x] #41 WEF: remove `-Filter Baseline`, `Test-WefFilter.ps1`, `tools/Update-AuditSubcategoryEvents.ps1`, `data/wef/` and `$BaselineWefSuppress` (added at the maintainer's request); add a short "filter at the SIEM ingest layer" note to Collect.
+8. [x] #42 Move `report/Export-AttackCoverage.ps1` to `tools/`; drop the empty `report/` folder.
+9. [x] #43 README: new one-sentence goal, the "pick a role preset" quick start, and a "not in scope" list.
+10. [x] #43 CHANGELOG, dated and tagged **v2.0.0** (review fixes in #54) with a migration table (old name, new name or replacement).
 11. [x] Create GitHub issues for the ADR-001 roadmap items that still apply after this cut (#44 to #52; the WEF filter, Autoruns and Sentinel KQL items were dropped by this ADR).
-12. [ ] #43 Add `docs/adr/0001-v1-layout.md` as a short record pointing at PR #30, so both ADRs live in the repo.
+12. [x] #43 Add `docs/adr/0001-v1-layout.md` as a short record pointing at PR #30, so both ADRs live in the repo.

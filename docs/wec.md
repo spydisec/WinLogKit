@@ -1,219 +1,112 @@
 # Collect
 
-Central collection with Windows Event Forwarding (WEF): generate the
-subscription from the same selection you applied, set up the collector and
-the sources, read what an existing collector is already doing, and prove
-that events arrive. The commands under "Set up" change collector and source configuration;
-everything else only reads it (two commands write export files to the
-current folder), so it is safe on a production collector.
-
-Where this sits in the chain:
+Send the events your baseline turns on to one central server with Windows
+Event Forwarding (WEF), the collection method built into Windows. No agent
+is installed on the sources.
 
 ```text
-Source host                       WEC collector                      SIEM
+Source host                       Collector (WEC)                    SIEM
 [audit policy + channels] --push--> [subscription -> ForwardedEvents] --agent--> [your platform]
-        Gate 1                            Gate 2                        Gate 3
+     1. generated                      2. forwarded                    3. ingested
 ```
 
-The gates multiply. An event reaches the collector only if it is
-**generated** on the source (Gate 1, the baseline's job) *and* **matched**
-by the subscription query (Gate 2, this page). A subscription cannot forward
-what was never generated, and source config cannot force forwarding of a
-channel the subscription does not name. Keeping both generated from the
-same baseline selection is why
-[`New-WefSubscription.ps1`](commands.md#new-wefsubscriptionps1) exists.
-Gate 3, the hop from ForwardedEvents into a SIEM, is deliberately outside
-the kit: any agent or connector that reads a Windows event log will do.
+An event reaches the collector only if it is **generated** on the source
+(the baseline's job) *and* **forwarded** by the subscription (this page).
+Generating the subscription from the same baseline CSV keeps the two in
+step. Step 3, getting events from the collector into your SIEM, is outside
+the kit: any agent or connector that reads a Windows event log works.
 
-## Generate the subscription
+## 1. Generate the subscription
 
 ```powershell
-.\fleet\New-WefSubscription.ps1 [-BaselineFile <csv>] [-Validate] [-SubscriptionId <name>]
+.\fleet\New-WefSubscription.ps1 -BaselineFile .\presets\MemberServer.csv -Validate
 ```
 
-Generates a source-initiated subscription XML with one query per selected
-channel. Transport defaults (`Events` format, 30s/500-item batching,
-1h heartbeat, source SDDL) live in the settings table and are overridable
-per run.
+This writes `.\WEF\WinLogKit-Baseline.xml`, a source-initiated subscription
+that forwards every event of each channel the baseline selects.
+`-Validate` checks each query against this machine's event log engine
+first. Batching, heartbeat and the format live in the settings table and
+can be overridden per run (see [Commands](commands.md#new-wefsubscriptionps1)).
 
-Every event of each selected channel is forwarded: the baseline's channel
-selection is the filter. Add `-Validate` to parse each query in the local
-event engine before deploying, then check the plumbing with
-`Test-LoggingBaseline.ps1 -WefRole Collector` (and `-WefRole Source` on
-a source).
+## 2. Set up the collector and the sources
 
-## Set up the collector and the sources
-
-The generator prints the full setup; the essentials:
+The script prints these steps too:
 
 ```text
 Collector:  winrm qc -q            (WinRM listener first)
             wecutil qc /q          (then the collector service)
             wecutil cs .\WEF\WinLogKit-Baseline.xml
             wevtutil sl ForwardedEvents /ms:1073741824
-Sources:    winrm qc -q   (WinRM must be configured on each source too - or
-                           enable the WinRM service via GPO fleet-wide)
-            GPO > Event Forwarding > Configure target Subscription Manager
+Sources:    winrm qc -q            (or enable WinRM fleet-wide by GPO)
+            GPO > Event Forwarding > Configure target Subscription Manager:
             Server=http://<collector-fqdn>:5985/wsman/SubscriptionManager/WEC,Refresh=60
 ```
 
-Per [Microsoft's source-initiated subscription procedure](https://learn.microsoft.com/windows/win32/wec/setting-up-a-source-initiated-subscription),
-both ends need WinRM: the collector to listen, the sources to forward.
+Both ends need WinRM, per
+[Microsoft's source-initiated subscription procedure](https://learn.microsoft.com/windows/win32/wec/setting-up-a-source-initiated-subscription).
 
-The classic trap: for the Security log, add NETWORK SERVICE to **Event Log
-Readers** on sources, or Security forwarding silently fails. Verify either
-side with:
+!!! warning "The classic trap"
+    For the Security log, add NETWORK SERVICE to the **Event Log Readers**
+    group on every source. Without it, every other channel forwards and
+    Security silently doesn't.
 
-```powershell
-.\Test-LoggingBaseline.ps1 -WefRole Source      # forwarding host: SubscriptionManager policy present, WinRM state
-.\Test-LoggingBaseline.ps1 -WefRole Collector   # collector: Wecsvc, ForwardedEvents sizing, a subscription loaded
-```
-
-## There is no default subscription
-
-A Windows box ships with zero subscriptions; the Windows Event Collector
-service is not even configured until `wecutil qc` runs. Whatever exists on
-a collector today was put there by someone. Reading it back is the first
-step of any assessment:
+## 3. Verify
 
 ```powershell
-wecutil es                          # enumerate all subscription names
-wecutil gs "<SubName>" /f:xml       # full configuration as XML
-wecutil gr "<SubName>"              # runtime status: sources, state, heartbeats
+.\Test-LoggingBaseline.ps1 -WefRole Source      # on a source: forwarding policy set, WinRM running
+.\Test-LoggingBaseline.ps1 -WefRole Collector   # on the collector: service, ForwardedEvents size, a subscription loaded
 ```
 
-Evidence-grade export of everything in one go:
+On the collector, `wecutil gr WinLogKit-Baseline` lists every source that
+has registered, with its state and last heartbeat.
 
-```powershell
-wecutil es | ForEach-Object { wecutil gs $_ /f:xml | Out-File ".\WEF-Sub-$($_ -replace '[\\/:*?\"<>|]','_').xml" }
-```
-
-The same information is in Event Viewer under **Subscriptions**, but the
-XML is what you keep. Command reference:
-[wecutil](https://learn.microsoft.com/windows-server/administration/windows-commands/wecutil).
-
-## Reading a subscription: the fields that matter
-
-| Field in the XML | What it controls |
-|---|---|
-| `<SubscriptionType>` | `SourceInitiated` (sources push to the collector over WinRM, the model that scales) or `CollectorInitiated` (the collector pulls; account-heavy, usually legacy) |
-| `<Query>` | The authoritative "what is forwarded" filter - one `<Select Path="channel">` per channel |
-| `<AllowedSourceDomainComputers>` | SDDL naming which computers may participate (normally an AD group) - the "who sends" control |
-| `<LogFile>` | Where events land on the collector, normally `ForwardedEvents`. This page assumes `ForwardedEvents`; if a subscription writes to another log, substitute that channel in every downstream step (sizing, agent configuration) |
-| `<ConfigurationMode>` | The delivery/latency trade-off (table below) |
-| `<ContentFormat>` | `Events` (compact, recommended) or `RenderedText` (adds locale-rendered strings, inflates volume) |
-| `<ReadExistingEvents>` | Whether a newly joined source backfills existing events or starts from now |
-
-Delivery modes set the latency floor for everything downstream - no SIEM
-query can see an event before the source has batched and sent it. The
-values below are the documented approximate defaults (per the
-[wecutil reference](https://learn.microsoft.com/windows-server/administration/windows-commands/wecutil));
-treat them as order-of-magnitude, not guarantees:
-
-| ConfigurationMode | Batching behaviour (approximate defaults) |
-|---|---|
-| `MinLatency` | ~30 seconds |
-| `Normal` | batched delivery, up to ~15 minutes |
-| `MinBandwidth` | up to ~6 hours |
-| `Custom` | Whatever `<Delivery>` specifies |
-
-## "Wide open" queries
-
-A subscription must contain a query, but the query can be per-channel
-wildcards with no event-level filtering:
-
-```xml
-<Query Id="0">
-  <Select Path="Security">*</Select>
-  <Select Path="Microsoft-Windows-PowerShell/Operational">*</Select>
-  <Select Path="Microsoft-Windows-TaskScheduler/Operational">*</Select>
-</Query>
-```
-
-`*` means every event in that channel - as open as WEF gets, and what this
-kit's generator emits. Two structural facts:
-
-- There is **no channel wildcard**. "All channels on the machine" cannot be
-  expressed; every channel must be listed as its own `Select`. Windows
-  [limits a query to 32 expressions](https://learn.microsoft.com/windows/win32/wes/queryschema-querytype-complextype)
-  (`Select`/`Suppress` combined), so a channel list beyond that needs
-  additional `<Query>` elements or subscriptions.
-- Whole-channel forwarding makes the **source configuration the effective
-  filter**, which is easy to verify ("every event in channels X, Y, Z
-  present on a source = forwarded") but means volume is governed entirely
-  upstream. Starting wide open and tightening with evidence after a pilot
-  is a defensible sequence; Microsoft's
-  [WEF intrusion-detection guidance](https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection)
-  has curated per-event queries to graduate to.
-
-## Who sends: two lists that must agree
-
-With source-initiated WEF, a machine forwards only if **both** hold:
-
-1. It received the **SubscriptionManager** policy pointing at this
-   collector (GPO: Computer Configuration > Policies > Administrative
-   Templates > Windows Components > Event Forwarding). On a source, the
-   applied value is readable at
-   `HKLM:\SOFTWARE\Policies\Microsoft\Windows\EventLog\EventForwarding\SubscriptionManager`.
-2. Its computer account is inside the subscription's
-   `<AllowedSourceDomainComputers>` SDDL.
-
-When these are scoped by two different AD groups they drift independently -
-worth a standing check.
-
-## Runtime status: the reconciliation
-
-`wecutil gr "<SubName>"` lists every registered source with its state and
-last heartbeat. The health assertion worth writing down as an acceptance
-criterion is a three-way count:
-
-> AD group membership = registered sources = sources in state Active.
-
-Machines in the group but never registered have a broken hop (GPO not
-applied, WinRM unreachable, or the Security-log permission below) - but
-first allow the SubscriptionManager refresh interval to elapse, since a
-source does not appear until it has checked in.
-Machines registered but Inactive have not met the subscription's activity
-and heartbeat criteria - the cause can be connectivity, authentication or
-simply nothing to send, so investigate rather than assume. Name the
-discrepancies; do not just record the counts.
-
-## ForwardedEvents channel health
-
-```powershell
-wevtutil gl ForwardedEvents
-Get-WinEvent -ListLog ForwardedEvents | Select-Object RecordCount, FileSize, IsLogFull, LastWriteTime
-```
-
-- **Size it like a busy log.** All forwarded volume concentrates here.
-- **Retention must stay circular** (overwrite as needed). "Do not
-  overwrite" silently stops collection when full - the same trap
-  [Test-LoggingBaseline flags](safety.md#what-the-kit-will-never-do) on
-  any channel.
-- **Know the headroom**: at the observed events/hour, how many hours does
-  the channel hold? That is the buffer available if the onward SIEM hop
-  goes down.
-
-## Classic silent failures
+## When events don't arrive
 
 | Symptom | Cause |
 |---|---|
-| Every channel forwards except Security, no loud error anywhere | NETWORK SERVICE cannot read the Security log on the source. Fix: add it to the **Event Log Readers** group, or grant read via the channel's SDDL where group membership alone is not honoured (both per [Microsoft's WEF guidance](https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection)). |
-| Sources registered, zero events arriving | Gate 1: the subscribed channels are not enabled/generating on the sources - verify with [`Test-LoggingBaseline.ps1`](commands.md#test-loggingbaselineps1) |
-| Some machines never register | SubscriptionManager GPO scope vs `AllowedSourceDomainComputers` mismatch, or WinRM (5985/5986) blocked |
-| Collection stops after working fine | ForwardedEvents full with non-circular retention |
-| Volume far above estimate | `RenderedText` content format, or a high-volume source-side setting (see the [volume table](safety.md#volume-impact-settings-the-highvolume-tier-and-friends)) |
+| Every channel forwards except Security | NETWORK SERVICE can't read the Security log on the source: add it to **Event Log Readers** (or grant read in the channel's SDDL), per [Microsoft's WEF guidance](https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection) |
+| Sources registered, no events | The channels aren't enabled or generating on the sources: run [`Test-LoggingBaseline.ps1`](commands.md#test-loggingbaselineps1) there |
+| Some machines never register | The Subscription Manager GPO and the subscription's allowed-computers list cover different machines, or WinRM (5985/5986) is blocked. Allow for the refresh interval before judging |
+| Collection stops after working fine | ForwardedEvents is full and set to "do not overwrite"; it must be circular |
+| Far more volume than expected | `RenderedText` content format, or a HighVolume setting (see the [volume table](safety.md#volume-impact-settings-the-highvolume-tier-and-friends)) |
 
 ## Filtering
 
 The kit forwards whole channels and stops there. To cut volume, filter at
 your SIEM's ingest layer (for example a Sentinel data collection rule
-transform), where a mistake is visible and can be undone. Filtering inside
-the subscription happens on each source before anything is sent, so an
-XPath that is slightly wrong drops events silently and nobody finds out
-until they are needed. v1 of the kit generated a Security event-ID filter
-and Suppress rules; v2 removed both for that reason
-([ADR-002](https://github.com/spydisec/WinLogKit/blob/main/docs/adr/0002-scope-and-simplification.md)).
-If you do filter at the source, Microsoft's
-[WEF intrusion-detection guidance](https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection)
-is the place to start.
+transform), where a mistake is visible and can be undone. A filter inside
+the subscription runs on each source before anything is sent, so a
+slightly wrong XPath drops events silently. If you do filter at the source,
+start from Microsoft's
+[WEF intrusion-detection guidance](https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection).
+
+## Checking an existing collector
+
+A Windows server has no subscriptions until someone creates one, so
+whatever a collector runs today was put there deliberately. To read it
+back:
+
+```powershell
+wecutil es                          # list subscription names
+wecutil gs "<name>" /f:xml          # full configuration as XML
+wecutil gr "<name>"                 # runtime status: sources, state, heartbeats
+wevtutil gl ForwardedEvents         # size and retention of the destination log
+```
+
+What to look at in the XML
+([wecutil reference](https://learn.microsoft.com/windows-server/administration/windows-commands/wecutil)):
+
+| Field | What it tells you |
+|---|---|
+| `<SubscriptionType>` | `SourceInitiated` (sources push; the model that scales) or `CollectorInitiated` (the collector pulls) |
+| `<Query>` | What is forwarded: one `<Select Path="channel">` per channel; `*` means every event in it |
+| `<AllowedSourceDomainComputers>` | Which computers may send (normally an AD group) |
+| `<LogFile>` | Where events land, normally `ForwardedEvents` |
+| `<ConfigurationMode>` | Delivery speed: `MinLatency` about 30 seconds, `Normal` up to about 15 minutes, `MinBandwidth` up to about 6 hours, `Custom` as `<Delivery>` sets |
+| `<ContentFormat>` | `Events` (compact) or `RenderedText` (adds message text, larger) |
+
+A healthy collector passes one check: **computers in the allowed AD group =
+registered sources = sources in state Active.** Name the machines that
+differ rather than just counting them. Size ForwardedEvents like a busy
+log, keep it circular, and know how many hours it holds at the current
+event rate: that's your buffer if the SIEM connection goes down.

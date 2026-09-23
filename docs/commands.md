@@ -97,6 +97,10 @@ Where WELA disagrees with the kit, it isn't always drift:
 Compiles the selection into a self-contained Intune detection + remediation
 script pair. See [Deploy](deployment.md).
 
+```powershell
+.\fleet\New-IntuneRemediationPack.ps1 [-BaselineFile <csv>] [-IncludeHighVolume] [-OutDir <dir>]
+```
+
 ## New-WefSubscription.ps1
 
 Generates a source-initiated WEF subscription XML from a selection, plus
@@ -112,6 +116,10 @@ See [Collect](wec.md).
 
 Generates the advanced audit policy `audit.csv` and an LGPO-format
 `registry.txt` from the selection. See [Deploy](deployment.md).
+
+```powershell
+.\fleet\New-GpoPack.ps1 [-BaselineFile <csv>] [-IncludeHighVolume] [-OutDir <dir>]
+```
 
 ## Maintainer tools (`tools\`)
 

@@ -39,7 +39,12 @@ decision.
 
 - **English-language OS assumed for verification**: `auditpol` output text
   is localised; setting uses GUIDs and is locale-safe. Locale-neutral
-  verification is planned.
+  verification is tracked in [#45](https://github.com/spydisec/WinLogKit/issues/45).
+- **PowerShell 7 isn't logged yet**: the kit turns on script block and
+  module logging through the Windows PowerShell policy, which PowerShell 7
+  (`pwsh.exe`) ignores. Sessions in PowerShell 7 produce no 4104/4103
+  events until [#44](https://github.com/spydisec/WinLogKit/issues/44) is fixed; Windows PowerShell 5.1 is fully
+  covered.
 - **Native gaps**: registry autoruns (Run keys, IFEO) need SACLs for change
   auditing, which the kit doesn't set; no file hashes or DLL loads without
   agents; no flow statistics. These are the recognised limits
@@ -87,7 +92,7 @@ also a
 [built-in optional feature](https://learn.microsoft.com/windows/security/operating-system-security/sysmon/overview)
 of Windows 11 and Windows Server 2025, which removes the third-party-agent
 objection on those versions; supporting it as a tier of the baseline is
-planned. Earlier versions still need the standalone Sysinternals build,
+proposed in [#52](https://github.com/spydisec/WinLogKit/issues/52). Earlier versions still need the standalone Sysinternals build,
 which stays out of scope.
 
 ### Something broke / I want out. How do I undo everything?
@@ -160,7 +165,9 @@ Detection needs rules on top (Sigma, SIEM analytics). The
 ### How do I update the kit without losing my baselines?
 
 Your selection CSVs and per-host output folders are separate from the kit
-scripts. Pull the new release, keep your CSVs, rerun
+scripts. Read the release notes in the
+[CHANGELOG](https://github.com/spydisec/WinLogKit/blob/main/CHANGELOG.md)
+(v2.0.0 has an upgrade table), pull the new release, keep your CSVs, rerun
 `Test-LoggingBaseline.ps1 -BaselineFile <yours>` - the settings table may
 have new items, which show as unlisted/excluded until you re-run the
 builder and re-select.

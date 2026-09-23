@@ -3,7 +3,7 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
-## v2.0.0 - Unreleased
+## v2.0.0 - 2026-09-23
 
 The scope reset from [ADR-002](docs/adr/0002-scope-and-simplification.md):
 WinLogKit turns on the native Windows event logging that security
@@ -27,6 +27,17 @@ Transcription settings, if you applied them, are removed by `-Rollback` or
 by hand (see Removed).
 
 ### Changed
+- **Simpler docs site.** Navigation follows a user's path (Get started,
+  Baselines, Deploy, Collect), with Commands, Settings and Coverage grouped
+  under Reference. Get started is one straight path with the
+  execution-policy detail folded away; Collect leads with setup and
+  compresses the existing-collector checks. Known limits now name the
+  PowerShell 7 logging gap (#44) and link the open issues. ADRs stay in the
+  repository and are excluded from the site.
+- **Credits page** listing every source the kit is built from, what it
+  takes from each, and each licence. This corrects the README, which said
+  all the Yamato sources were MIT: EnableWindowsLogSettings is GPL-3.0
+  (WELA and EventLog-Baseline-Guide are MIT).
 - **README and Getting Started lead with the role presets**: pick
   `Workstation`, `MemberServer` or `DomainController`, preview, apply,
   verify. The README states the goal in one sentence and lists what is out

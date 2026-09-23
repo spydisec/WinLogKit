@@ -10,6 +10,11 @@ Central collection (WEF / WEC) has its own page: [Collect](wec.md).
 
 ## Intune (workstations and cloud-managed servers)
 
+!!! note
+    The Intune pack is generated from the tested settings table and
+    checked in CI, but hasn't yet been field-tested in a real tenant
+    ([#46](https://github.com/spydisec/WinLogKit/issues/46)). Pilot it on a small device group first.
+
 ```powershell
 .\fleet\New-IntuneRemediationPack.ps1 [-BaselineFile <csv>] [-IncludeHighVolume]
 ```
