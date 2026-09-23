@@ -426,7 +426,7 @@ $script:BaselineRegistrySettings = @(
     @{ Id = 'Transcription64'
        Path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription'; Name = 'EnableTranscripting'; Kind = 'DWord'; Value = 1
        Scope = 'All'; Tier = 'Optional'; Categories = @('Scripting and command line')
-       Purpose = 'Writes a text transcript of every PowerShell session to disk. Storage-cheap and survives event log clearing, but transcripts land in user Documents unless OutputDirectory is set. [Output directory to be agreed with the client.]' }
+       Purpose = 'Writes a text transcript of every PowerShell session to disk. Storage-cheap and survives event log clearing. Pair with TranscriptionDir64/32: without an OutputDirectory, transcripts land in each user''s Documents folder (and sync to OneDrive where Known Folder Move is on).' }
 
     @{ Id = 'TranscriptionHeader64'
        Path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription'; Name = 'EnableInvocationHeader'; Kind = 'DWord'; Value = 1
@@ -441,6 +441,26 @@ $script:BaselineRegistrySettings = @(
     @{ Id = 'TranscriptionHeader32'
        Path = 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\Transcription'; Name = 'EnableInvocationHeader'; Kind = 'DWord'; Value = 1
        Scope = 'All'; Tier = 'Optional'; Categories = @('Scripting and command line')
+       Purpose = 'Same as above for 32-bit PowerShell hosts.' }
+
+    # Where transcripts go. PowerShell uses this value as a literal path (no
+    # environment variable expansion; a relative path resolves under the
+    # user's Documents) and adds a yyyyMMdd subfolder per day itself. To
+    # collect centrally, point it at a write-only share instead.
+    # CreateFolder: the kit pre-creates the folder with the hardened ACL in
+    # $script:BaselineTranscriptFolderAcl BEFORE writing the value. Left to
+    # PowerShell, the first user to start a session creates it under
+    # ProgramData, where it inherits Users: Read - everyone could read
+    # everyone's transcripts.
+    @{ Id = 'TranscriptionDir64'
+       Path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription'; Name = 'OutputDirectory'; Kind = 'String'; Value = 'C:\ProgramData\WinLogKit\Transcripts'
+       Scope = 'All'; Tier = 'Optional'; Categories = @('Scripting and command line'); CreateFolder = $true
+       Purpose = 'Sends transcripts to one machine-wide folder instead of each user''s Documents. The kit creates it as a drop box: every account can write its own transcript, nobody but SYSTEM and Administrators can list, read or delete them.'
+       Risk = 'Transcripts are never pruned by PowerShell; size the system drive (or add retention) on hosts that start PowerShell constantly.' }
+
+    @{ Id = 'TranscriptionDir32'
+       Path = 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\Transcription'; Name = 'OutputDirectory'; Kind = 'String'; Value = 'C:\ProgramData\WinLogKit\Transcripts'
+       Scope = 'All'; Tier = 'Optional'; Categories = @('Scripting and command line'); CreateFolder = $true
        Purpose = 'Same as above for 32-bit PowerShell hosts.' }
 
     # -- NTLM auditing (populates Microsoft-Windows-NTLM/Operational) --
@@ -465,6 +485,33 @@ $script:BaselineRegistrySettings = @(
        Path = 'HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters'; Name = 'AuditNTLMInDomain'; Kind = 'DWord'; Value = 7
        Scope = 'DomainController'; Tier = 'Core'; Categories = @('Authentication')
        Purpose = 'Audit all NTLM authentication passing through this domain controller (7 = all). Audit-only.' }
+)
+
+# -----------------------------------------------------------------------------
+# 3a. TRANSCRIPT FOLDER ACL
+#
+# Applied to the folder of every registry item with CreateFolder = $true.
+# Inheritance from the parent is switched off and the ACL is exactly this
+# list (SIDs, so it is locale-neutral):
+#   - SYSTEM and Administrators: full control.
+#   - Authenticated Users: create files and subfolders (PowerShell makes the
+#     yyyyMMdd folder) and read attributes, on folders only - no listing, no
+#     reading.
+#   - CREATOR OWNER: read and write on files only, so each account reaches
+#     just the transcripts it created. Read is needed: PowerShell 7 reopens
+#     its own transcript to detect the encoding and retries forever when that
+#     is denied.
+#   - OWNER RIGHTS: replaces the owner's implicit READ_CONTROL/WRITE_DAC, so
+#     nobody can re-grant themselves delete on their own transcript.
+# Tested with a real pwsh session writing policy transcripts into the folder.
+# -----------------------------------------------------------------------------
+$script:BaselineTranscriptFolderOwner = 'S-1-5-32-544'   # BUILTIN\Administrators
+$script:BaselineTranscriptFolderAcl = @(
+    @{ Sid = 'S-1-5-18';     Label = 'SYSTEM';              Rights = 'FullControl';                                               Inherit = 'ContainerInherit, ObjectInherit'; Propagate = 'None' }
+    @{ Sid = 'S-1-5-32-544'; Label = 'Administrators';      Rights = 'FullControl';                                               Inherit = 'ContainerInherit, ObjectInherit'; Propagate = 'None' }
+    @{ Sid = 'S-1-5-11';     Label = 'Authenticated Users'; Rights = 'CreateFiles, AppendData, ReadAttributes, Traverse, Synchronize'; Inherit = 'ContainerInherit';                Propagate = 'None' }
+    @{ Sid = 'S-1-3-0';      Label = 'CREATOR OWNER';       Rights = 'Read, Write, Synchronize';                                  Inherit = 'ObjectInherit';                   Propagate = 'InheritOnly' }
+    @{ Sid = 'S-1-3-4';      Label = 'OWNER RIGHTS';        Rights = 'ReadAttributes, Synchronize';                               Inherit = 'ContainerInherit, ObjectInherit'; Propagate = 'None' }
 )
 
 # -----------------------------------------------------------------------------

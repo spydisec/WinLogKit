@@ -104,7 +104,7 @@ if ($dupes) {
 # The shared helpers must stay in the common file: a copy that migrated back
 # into one script would still be a single definition, so name them.
 $commonExpected = @('Test-IsAdmin', 'Get-DomainRole', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
-    'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'Get-BaselineItemKeySet', 'Import-BaselineSelection', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
+    'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'ConvertTo-TranscriptFolderAce', 'Get-TranscriptFolderState', 'Get-BaselineItemKeySet', 'Import-BaselineSelection', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
 $notInCommon = @($commonExpected | Where-Object { -not $defs.ContainsKey($_) -or (($defs[$_] -join ';') -ne 'WinLogKit.Common.ps1') })
 if ($notInCommon) {
     Fail "shared helper not defined in WinLogKit.Common.ps1 (only): $($notInCommon -join ', ')"
@@ -128,6 +128,20 @@ if ($bad) { Fail "unknown category tags: $($bad -join ', ')" } else { Pass 'cate
 
 $noteMissing = @($BaselineCategories | Where-Object { -not $BaselineCategoryNotes.ContainsKey($_) })
 if ($noteMissing) { Fail "missing coverage notes: $($noteMissing -join ', ')" } else { Pass 'coverage notes complete' }
+
+# CreateFolder items: PowerShell reads OutputDirectory literally (no %VAR%
+# expansion, relative = user's Documents), so the value must be an absolute
+# local or UNC path, and every ACL entry must build into a valid rule.
+$folderItems = @($BaselineRegistrySettings | Where-Object { $_.ContainsKey('CreateFolder') -and $_.CreateFolder })
+$badFolder = @($folderItems | Where-Object { $_.Kind -ne 'String' -or "$($_.Value)" -notmatch '^([A-Za-z]:\\|\\\\)' -or "$($_.Value)" -match '%' } | ForEach-Object { $_.Id })
+if ($folderItems.Count -eq 0) { Fail 'no CreateFolder item (transcription OutputDirectory) in the settings table' }
+elseif ($badFolder) { Fail "CreateFolder items need an absolute String path without %VARS%: $($badFolder -join ', ')" }
+else { Pass "transcript OutputDirectory items well-formed ($($folderItems.Count))" }
+. (Join-Path $KitRoot 'WinLogKit.Common.ps1')
+try {
+    $null = $BaselineTranscriptFolderAcl | ForEach-Object { ConvertTo-TranscriptFolderAce $_ }
+    Pass "transcript folder ACL entries build ($(@($BaselineTranscriptFolderAcl).Count) ACEs)"
+} catch { Fail "transcript folder ACL entry invalid: $($_.Exception.Message)" }
 
 $guids = @($BaselineAuditSubcategories | ForEach-Object { $_.Guid.ToUpper() })
 if (@($guids | Sort-Object -Unique).Count -ne $guids.Count) { Fail 'duplicate audit subcategory GUIDs' } else { Pass 'audit GUIDs unique' }
@@ -197,8 +211,26 @@ try {
         $tokens = $null; $errors = $null
         [System.Management.Automation.Language.Parser]::ParseFile($p, [ref]$tokens, [ref]$errors) | Out-Null
         if ($errors.Count -gt 0) { Fail "generated $f has parse errors: $($errors[0].Message)" } else { Pass "generated $f parses" }
-        if ((Get-Content $p -Raw) -match '__(MODE|ITEMS|COUNT|SOURCE|FILENAME)__') { Fail "generated $f has unreplaced placeholders" }
+        if ((Get-Content $p -Raw) -match '__(MODE|ITEMS|COUNT|SOURCE|FILENAME|FOLDEROWNER|FOLDERACL)__') { Fail "generated $f has unreplaced placeholders" }
     }
+    # With transcription selected, the folder item must come before the
+    # OutputDirectory value it secures (remediation runs items in order).
+    $packDir3 = Join-Path $tmp 'intune-all'
+    & (Join-Path $KitRoot 'fleet\New-IntuneRemediationPack.ps1') -OutDir $packDir3 -BaselineFile $csv2 | Out-Null
+    $remediate3 = Get-Content (Join-Path $packDir3 'Remediate-LoggingBaseline.ps1') -Raw
+    $folderPos = $remediate3.IndexOf("Type='Folder'")
+    $outDirPos = $remediate3.IndexOf("Name='OutputDirectory'")
+    if ($folderPos -ge 0 -and $outDirPos -gt $folderPos) { Pass 'Intune pack creates the transcript folder before setting OutputDirectory' }
+    else { Fail "Intune pack transcript folder ordering wrong (Folder at $folderPos, OutputDirectory at $outDirPos)" }
+
+    # 5b. Transcript folder state reader: a missing folder and a plain folder
+    #     (inheriting its parent's ACL) must both be reported as not OK.
+    $plainDir = Join-Path $tmp 'plain-folder'
+    $stMissing = Get-TranscriptFolderState -Path $plainDir
+    New-Item -ItemType Directory -Path $plainDir -Force | Out-Null
+    $stPlain = Get-TranscriptFolderState -Path $plainDir
+    if (-not $stMissing.Ok -and $stMissing.Detail -eq 'folder missing' -and -not $stPlain.Ok -and $stPlain.Detail -match 'inherits') { Pass 'transcript folder check flags missing and unhardened folders' }
+    else { Fail "transcript folder check wrong: missing=[$($stMissing.Detail)] plain=[$($stPlain.Detail)]" }
     $packDir2 = Join-Path $tmp 'intune-csv'
     & (Join-Path $KitRoot 'fleet\New-IntuneRemediationPack.ps1') -OutDir $packDir2 -BaselineFile $csv1 | Out-Null
     $detect2 = Get-Content (Join-Path $packDir2 'Detect-LoggingBaseline.ps1') -Raw

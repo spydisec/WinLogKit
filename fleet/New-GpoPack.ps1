@@ -106,6 +106,7 @@ foreach ($sub in $script:BaselineAuditSubcategories) {
 $policyPathPattern = '^HKLM:\\SOFTWARE\\(Wow6432Node\\)?Policies\\|^HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\'
 $regEntries = New-Object System.Collections.Generic.List[string]
 $skipped = New-Object System.Collections.Generic.List[string]
+$folderNotes = New-Object System.Collections.Generic.List[string]
 $regCount = 0
 foreach ($rs in $script:BaselineRegistrySettings) {
     if (-not (Test-ItemSelected $sel 'Registry' $rs.Id $rs.Tier)) { continue }
@@ -113,6 +114,7 @@ foreach ($rs in $script:BaselineRegistrySettings) {
         $skipped.Add("$($rs.Path)\$($rs.Name) (GPO Security Options territory - set in GPMC, not a registry.pol value)")
         continue
     }
+    if ($rs.ContainsKey('CreateFolder') -and $rs.CreateFolder -and $folderNotes -notcontains $rs.Value) { $folderNotes.Add($rs.Value) }
     $keyPath = $rs.Path -replace '^HKLM:\\', ''
     $typeData = "DWORD:$($rs.Value)"
     if ($rs.Kind -eq 'String') { $typeData = "SZ:$($rs.Value)" }
@@ -135,6 +137,14 @@ if ($skipped.Count -gt 0) {
     Write-Host ''
     Write-Host 'Selected but NOT in this pack (different GPO mechanisms):' -ForegroundColor Yellow
     $skipped | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
+}
+if ($folderNotes.Count -gt 0) {
+    Write-Host ''
+    Write-Host 'Transcript folder: registry.txt sets OutputDirectory, but LGPO/GPO cannot create or secure the folder.' -ForegroundColor Yellow
+    Write-Host 'Pre-create it with the kit ACL BEFORE the value lands (Enable-LoggingBaseline -IncludeOptional, the Intune pack,' -ForegroundColor Yellow
+    Write-Host 'or GPP Folder + File System security matching WinLogKit.Settings.ps1). Otherwise PowerShell creates it and it' -ForegroundColor Yellow
+    Write-Host 'inherits Users: Read from ProgramData, so every user can read every transcript:' -ForegroundColor Yellow
+    $folderNotes | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
 }
 Write-Host 'Also not in GPO packs by design: channel sizes/enablement (startup script or Intune pack), SMB auditing (Set-Smb*Configuration), AD CS AuditFilter.' -ForegroundColor Yellow
 $totalAudit = @($script:BaselineAuditSubcategories).Count

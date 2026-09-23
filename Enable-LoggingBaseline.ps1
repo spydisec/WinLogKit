@@ -52,7 +52,9 @@
 
 .PARAMETER IncludeOptional
     Also apply Optional tier items (PowerShell transcription, Crypto-DPAPI
-    debug channel).
+    debug channel). Transcription writes to C:\ProgramData\WinLogKit\Transcripts,
+    which is created first with a hardened ACL; -Rollback leaves that folder
+    and its transcripts in place.
 
 .PARAMETER BaselineFile
     Path to a selection CSV produced by New-LoggingBaseline.ps1 (columns
@@ -121,6 +123,19 @@ function Remove-RegValue {
     if ($null -ne $key) {
         try { $key.DeleteValue($Name, $false) } finally { $key.Close() }
     }
+}
+
+# Create (if needed) and harden a transcript folder: Administrators as owner,
+# parent inheritance off, exactly the ACEs in the settings table. Set-Acl
+# propagates the new inheritable ACEs to anything already inside.
+function Set-TranscriptFolder {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Container)) { New-Item -ItemType Directory -Path $Path -Force | Out-Null }
+    $acl = New-Object System.Security.AccessControl.DirectorySecurity
+    $acl.SetOwner((New-Object System.Security.Principal.SecurityIdentifier $script:BaselineTranscriptFolderOwner))
+    $acl.SetAccessRuleProtection($true, $false)
+    foreach ($entry in $script:BaselineTranscriptFolderAcl) { $acl.AddAccessRule((ConvertTo-TranscriptFolderAce $entry)) }
+    Set-Acl -LiteralPath $Path -AclObject $acl
 }
 
 function Get-DesiredInclusion {
@@ -264,6 +279,13 @@ try {
                     }
                 }
             } catch { Add-Result 'Registry' "$($rv.Path)\$($rv.Name)" 'Error' $_.Exception.Message; $exitCode = 1 }
+        }
+
+        # Transcript folders hold evidence: rollback stops new transcripts
+        # (the registry values above) but never deletes what was recorded.
+        $kitFolders = @($script:BaselineRegistrySettings | Where-Object { $_.ContainsKey('CreateFolder') -and $_.CreateFolder } | ForEach-Object { $_.Value } | Sort-Object -Unique)
+        foreach ($kf in $kitFolders) {
+            if (Test-Path -LiteralPath $kf) { Add-Result 'Folder' $kf 'Warning' 'Left in place with its transcripts (evidence) - archive or remove it deliberately' }
         }
 
         Write-Host ''
@@ -440,6 +462,7 @@ try {
     # ---------------------------------------------------- registry settings ---
     Write-Host ''
     Write-Host '=== Registry settings ===' -ForegroundColor White
+    $foldersDone = @{}; $foldersFailed = @{}
     foreach ($rs in $script:BaselineRegistrySettings) {
         $itemLabel = "$($rs.Path)\$($rs.Name)"
         if ($rs.Scope -eq 'DomainController' -and $domainRole -ne 'DomainController') {
@@ -453,6 +476,32 @@ try {
         }
         if ($decision -eq 'Excluded')  { Add-Result 'Registry' $itemLabel 'Excluded' 'Selected = N in baseline file'; continue }
         if ($decision -eq 'NotListed') { Add-Result 'Registry' $itemLabel 'Excluded' 'Not listed in baseline file'; continue }
+
+        # Folder first: once the value points at a missing folder, the next
+        # PowerShell session would create it with inherited (readable) ACLs.
+        # A folder that cannot be hardened leaves the value unwritten.
+        if ($rs.ContainsKey('CreateFolder') -and $rs.CreateFolder -and -not $foldersDone.ContainsKey($rs.Value)) {
+            $foldersDone[$rs.Value] = $true
+            $fs = Get-TranscriptFolderState -Path $rs.Value
+            if ($fs.Ok) {
+                Add-Result 'Folder' $rs.Value 'AlreadyCorrect' $fs.Detail
+            } elseif ($PSCmdlet.ShouldProcess($rs.Value, "Create/harden transcript folder ($($fs.Detail))")) {
+                try {
+                    Set-TranscriptFolder -Path $rs.Value
+                    Add-Result 'Folder' $rs.Value 'Changed' "$($fs.Detail) -> hardened transcript ACL"
+                } catch {
+                    Add-Result 'Folder' $rs.Value 'Error' "$($_.Exception.Message) (OutputDirectory not written)"
+                    $foldersFailed[$rs.Value] = $true
+                    $exitCode = 1
+                }
+            } else {
+                Add-Result 'Folder' $rs.Value 'WouldChange' "$($fs.Detail) -> hardened transcript ACL"
+            }
+        }
+        if ($rs.ContainsKey('CreateFolder') -and $rs.CreateFolder -and $foldersFailed.ContainsKey($rs.Value)) {
+            Add-Result 'Registry' $itemLabel 'Error' 'Skipped: its folder could not be hardened'
+            continue
+        }
 
         $current = Get-RegValue -Path $rs.Path -Name $rs.Name
         if ("$current" -eq "$($rs.Value)") {

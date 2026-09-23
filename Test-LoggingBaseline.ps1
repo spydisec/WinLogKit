@@ -9,6 +9,8 @@
       - each advanced audit policy subcategory has at least the required
         success/failure auditing (more auditing than required still passes)
       - each registry value is present with the expected data
+      - the transcript folder (when transcription is assessed) exists with
+        the kit's hardened ACL
 
     Results roll up to a PASS / FAIL / NOT APPLICABLE per Baseline behaviour
     category, printed to the console and written to CSV (detail rows plus a
@@ -192,6 +194,7 @@ foreach ($sub in $script:BaselineAuditSubcategories) {
 
 # ---------------------------------------------------- registry settings -----
 
+$foldersChecked = @{}
 foreach ($rs in $script:BaselineRegistrySettings) {
     $label = "$($rs.Path)\$($rs.Name)"
     $expected = "$($rs.Value) ($($rs.Kind))"
@@ -203,6 +206,13 @@ foreach ($rs in $script:BaselineRegistrySettings) {
     if ($null -ne $skip) {
         Add-Row $rs.Categories 'Registry' $label $expected '' 'NOT APPLICABLE' $skip
         continue
+    }
+
+    if ($rs.ContainsKey('CreateFolder') -and $rs.CreateFolder -and -not $foldersChecked.ContainsKey($rs.Value)) {
+        $foldersChecked[$rs.Value] = $true
+        $fs = Get-TranscriptFolderState -Path $rs.Value
+        $folderResult = 'FAIL'; if ($fs.Ok) { $folderResult = 'PASS' }
+        Add-Row $rs.Categories 'Folder' $rs.Value 'present, hardened transcript ACL' $fs.Detail $folderResult
     }
 
     $current = Get-RegValue -Path $rs.Path -Name $rs.Name

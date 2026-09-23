@@ -100,6 +100,8 @@ Reading the columns:
 | `Policies\Microsoft\Windows\PowerShell\Transcription\EnableInvocationHeader` | Registry | - | - | Low | - | - | - |
 | `Wow6432Node\Policies\Microsoft\Windows\PowerShell\Transcription\EnableTranscripting` | Registry | - | - | Low | - | - | - |
 | `Wow6432Node\Policies\Microsoft\Windows\PowerShell\Transcription\EnableInvocationHeader` | Registry | - | - | Low | - | - | - |
+| `Policies\Microsoft\Windows\PowerShell\Transcription\OutputDirectory` | Registry | - | - | Watch | - | - | - |
+| `Wow6432Node\Policies\Microsoft\Windows\PowerShell\Transcription\OutputDirectory` | Registry | - | - | Low | - | - | - |
 | `CurrentControlSet\Control\Lsa\MSV1_0\RestrictSendingNTLMTraffic` | Registry | - | - | Low | - | :material-check: | :material-check: |
 | `CurrentControlSet\Control\Lsa\MSV1_0\AuditReceivingNTLMTraffic` | Registry | - | - | Low | - | :material-check: | :material-check: |
 | `CurrentControlSet\Services\Netlogon\Parameters\AuditNTLMInDomain (DC)` | Registry | - | - | Low | - | :material-check: | :material-check: |

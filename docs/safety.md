@@ -28,6 +28,7 @@ kit never touches them, in any mode:
 | Sensitive Privilege Use (4673/4674) | Floods with backup agents. Pilot per server role. |
 | File Share / SAM / Removable Storage / RPC Events | Steady streams on file servers, DCs, USB-heavy or RPC-heavy hosts respectively - watch during the pilot week. |
 | 1 GB Security + 1 GB PowerShell logs | Up to ~3 GB extra disk per host. |
+| PowerShell transcription (Optional) | One text file per PowerShell session in `C:\ProgramData\WinLogKit\Transcripts`, never pruned by PowerShell. Small on interactive hosts; can grow steadily on hosts where agents or scheduled tasks start PowerShell constantly. See [where transcripts go](#where-do-powershell-transcripts-go-and-who-can-read-them). |
 
 Pilot guidance (from the Yamato README): run the full set on a test box
 mirroring production for at least a week, then use event ID metrics (e.g.
@@ -104,7 +105,9 @@ is.
 ```
 
 restores the audit policy, channel sizes/state and registry values captured
-on the first real run. Nothing in the kit requires a reboot.
+on the first real run. Nothing in the kit requires a reboot. The transcript
+folder, if transcription was applied, is left in place with its contents:
+transcripts are evidence, so archive or remove them deliberately.
 
 Backups are automatic, and always taken **before** any change: the first
 real apply captures the complete pre-kit state to `.\Baseline\` (that is
@@ -116,6 +119,25 @@ intermediate state rather than the very beginning:
 registry and SMB audit values recorded in that snapshot's `State.json`
 (restore each `SmbAudit` entry with `Set-SmbServerConfiguration` or
 `Set-SmbClientConfiguration` per its `Side`).
+
+### Where do PowerShell transcripts go, and who can read them?
+
+With the Optional tier, transcripts go to `C:\ProgramData\WinLogKit\Transcripts`,
+one `yyyyMMdd` subfolder per day. Without an `OutputDirectory`, PowerShell
+would write them to each user's Documents folder, which OneDrive Known
+Folder Move or folder redirection then copies off the host.
+
+The kit creates the folder before pointing PowerShell at it, with
+inheritance switched off. SYSTEM and Administrators have full control.
+Every other account can create its own transcript but can't list the
+folder, read other people's transcripts, or delete or re-permission its
+own. `Test-LoggingBaseline.ps1` fails the item if that ACL drifts. To
+collect centrally, change the `TranscriptionDir64`/`32` value in
+`WinLogKit.Settings.ps1` to a write-only share (PowerShell uses the value
+literally, so no `%VARIABLES%`).
+
+PowerShell never deletes transcripts, and neither does the kit. Set
+retention per deployment, in line with your log retention policy.
 
 ### Can I run this on a domain controller?
 

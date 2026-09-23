@@ -2,7 +2,7 @@
 # WinLogKit.Common.ps1
 # Shared helpers, dot-sourced by the kit scripts right after the settings
 # table. Everything here is read-only against the host: host probes, registry
-# reads, the audit policy and SMB audit-state readers and the one selection model (tier switches
+# reads, the audit policy, SMB audit-state and transcript folder readers and the one selection model (tier switches
 # or a selection CSV) that Enable, Test, the coverage report and the fleet
 # generators all use. Registry writers stay in Enable-LoggingBaseline.ps1,
 # the only script that writes.
@@ -85,6 +85,43 @@ function Get-SmbAuditState {
         }
     }
     return $state
+}
+
+# ------------------------------------------------------ transcript folder ---
+
+# One entry of $script:BaselineTranscriptFolderAcl as an access rule object
+# (in memory only). Enable builds the ACL from these and the state check
+# compares against them, so both read the rights the same way.
+function ConvertTo-TranscriptFolderAce {
+    param([hashtable]$Entry)
+    New-Object System.Security.AccessControl.FileSystemAccessRule(
+        (New-Object System.Security.Principal.SecurityIdentifier $Entry.Sid),
+        [System.Security.AccessControl.FileSystemRights]$Entry.Rights,
+        [System.Security.AccessControl.InheritanceFlags]$Entry.Inherit,
+        [System.Security.AccessControl.PropagationFlags]$Entry.Propagate,
+        [System.Security.AccessControl.AccessControlType]::Allow)
+}
+
+# Is the folder there, owned by Administrators, cut off from its parent's
+# inheritance and carrying exactly the kit's ACEs? Returns @{ Ok; Detail }.
+function Get-TranscriptFolderState {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Container)) { return @{ Ok = $false; Detail = 'folder missing' } }
+    $sidType = [System.Security.Principal.SecurityIdentifier]
+    $acl = Get-Acl -LiteralPath $Path
+    $problems = @()
+    $owner = $acl.GetOwner($sidType).Value
+    if ($owner -ne $script:BaselineTranscriptFolderOwner) { $problems += "owner is $owner, not Administrators" }
+    if (-not $acl.AreAccessRulesProtected) { $problems += 'inherits permissions from its parent' }
+    $keyOf = { param($r) '{0}|{1}|{2}|{3}|{4}' -f $r.IdentityReference.Value, [int]$r.FileSystemRights, [int]$r.InheritanceFlags, [int]$r.PropagationFlags, $r.AccessControlType }
+    $want = @($script:BaselineTranscriptFolderAcl | ForEach-Object { & $keyOf (ConvertTo-TranscriptFolderAce $_) })
+    $have = @($acl.GetAccessRules($true, $false, $sidType) | ForEach-Object { & $keyOf $_ })
+    $missing = @($want | Where-Object { $have -notcontains $_ }).Count
+    $extra   = @($have | Where-Object { $want -notcontains $_ }).Count
+    if ($missing -gt 0) { $problems += "$missing kit ACE(s) missing" }
+    if ($extra -gt 0)   { $problems += "$extra extra ACE(s)" }
+    if ($problems.Count -eq 0) { return @{ Ok = $true; Detail = 'hardened transcript ACL' } }
+    return @{ Ok = $false; Detail = ($problems -join '; ') }
 }
 
 # -------------------------------------------------------------- selection ---

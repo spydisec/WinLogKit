@@ -3,6 +3,26 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
+## Unreleased
+
+### Changed
+- **PowerShell transcription gets an output folder**
+  ([#34](https://github.com/spydisec/WinLogKit/issues/34)). New Optional
+  tier items `TranscriptionDir64`/`TranscriptionDir32` set `OutputDirectory`
+  to `C:\ProgramData\WinLogKit\Transcripts`. Before this, applying the
+  transcription items sent every session transcript to the user's
+  Documents folder (and to OneDrive where Known Folder Move is on).
+  Selection CSVs built before this change don't list the new items, so
+  rebuild them or add the two rows.
+- **Hardened transcript folder.** Enable creates the folder before writing
+  the value: Administrators as owner, no inherited permissions, a
+  write-only drop box for every other account (details in
+  `WinLogKit.Settings.ps1`, section 3a). If the folder can't be hardened,
+  the value isn't written. Test fails the item when the ACL drifts, the
+  Intune pack detects and remediates it, and the GPO pack prints a
+  pre-create note because LGPO can't make folders. `-Rollback` leaves the
+  folder and its transcripts in place.
+
 ## v1.0.0 - 2026-09-04
 
 The v1.0 restructure ([ADR-001](https://github.com/spydisec/WinLogKit/pull/30)):
