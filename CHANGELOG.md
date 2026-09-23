@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
+## [Unreleased]
+
+### Added
+
+- 🐚 **PowerShell 7 is logged too.** Four new HighVolume settings make PowerShell 7 (`pwsh.exe`) follow the Windows PowerShell script block and module logging policies through its `UseWindowsPowerShellPolicySetting` option, so running `pwsh` instead of `powershell.exe` no longer escapes script block logging. The role presets turn on the two script block ones alongside the settings they follow; `ASD.csv` stays faithful to the ASD script, which predates PowerShell 7. [#44](https://github.com/spydisec/WinLogKit/issues/44)
+- 🚨 **Unregistered PowerShell 7 event log caught.** `Test-LoggingBaseline.ps1` now fails `PowerShellCore/Operational` when PowerShell 7 is installed but its event log isn't registered (Store and zip installs), where it used to report it as not applicable, and says how to register it. [#44](https://github.com/spydisec/WinLogKit/issues/44)
+
+### Fixed
+
+- ↩️ **Rollback covers settings added by later versions.** The rollback copy is taken on the first run, so a setting added by a later kit version, like the PowerShell 7 ones, was left behind by `-Rollback`. Every later run now records any setting the copy doesn't know yet, in its current state, before changing anything. [#44](https://github.com/spydisec/WinLogKit/issues/44)
+
 ## [2.0.0] - 2026-09-23
 
 A scope reset ([ADR-002](docs/adr/0002-scope-and-simplification.md)): WinLogKit turns on the native Windows event logging that security monitoring needs, proves it is recording, and can undo it. Anything outside that (files outside the event log, downloads, source-side filtering, SIEM content) is gone. This is a major version because presets are renamed and scripts, switches and data folders are removed.

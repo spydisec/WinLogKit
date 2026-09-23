@@ -30,6 +30,18 @@ function Get-DomainRole {
     return 'Standalone'
 }
 
+# Is PowerShell 7 (pwsh.exe) on this host? True when this script is itself
+# running in PowerShell 7; otherwise MSI installs register under
+# PowerShellCore\InstalledVersions, zip installs usually sit in Program
+# Files, and Store installs put pwsh.exe on the PATH. A portable copy
+# unpacked anywhere else, and not running this script, can't be found.
+function Test-PowerShell7Installed {
+    if ($PSVersionTable.PSEdition -eq 'Core' -and $PSVersionTable.PSVersion.Major -ge 7) { return $true }
+    if (Test-Path 'HKLM:\SOFTWARE\Microsoft\PowerShellCore\InstalledVersions') { return $true }
+    if ($env:ProgramFiles -and (Test-Path (Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe'))) { return $true }
+    return ($null -ne (Get-Command pwsh.exe -CommandType Application -ErrorAction SilentlyContinue))
+}
+
 function Get-OsType {
     # Win32_OperatingSystem.ProductType: 1 workstation, 2 domain controller, 3 server
     $pt = (Get-CimInstance -ClassName Win32_OperatingSystem).ProductType

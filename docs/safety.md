@@ -40,12 +40,16 @@ decision.
 - **English-language OS assumed for verification**: `auditpol` output text
   is localised; setting uses GUIDs and is locale-safe. Locale-neutral
   verification is tracked in [#45](https://github.com/spydisec/WinLogKit/issues/45).
-- **PowerShell 7 isn't logged yet**: the kit turns on script block and
-  module logging through the Windows PowerShell policy, which PowerShell 7
-  (`pwsh.exe`) ignores: it has its own Group Policy settings, per
-  [about_Group_Policy_Settings](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_group_policy_settings). Sessions in PowerShell 7 produce no 4104/4103
-  events until [#44](https://github.com/spydisec/WinLogKit/issues/44) is fixed; Windows PowerShell 5.1 is fully
-  covered.
+- **PowerShell 7 needs its event log registered**: PowerShell 7 (`pwsh.exe`)
+  has its own Group Policy settings (per
+  [about_Group_Policy_Settings](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_group_policy_settings)).
+  The kit's PowerShell 7 items point them at the Windows PowerShell policy,
+  so both engines log the same way. PowerShell 7 writes to
+  `PowerShellCore/Operational`, which exists only once PowerShell 7's event
+  manifest is registered (the MSI installer offers to; Store and zip installs
+  don't); `Test-LoggingBaseline.ps1` fails that channel when
+  PowerShell 7 is installed without it. Register it once, as admin, in
+  PowerShell 7: `& "$PSHOME\RegisterManifest.ps1"`.
 - **Native gaps**: registry autoruns (Run keys, IFEO) need SACLs for change
   auditing, which the kit doesn't set; no file hashes or DLL loads without
   agents; no flow statistics. These are the recognised limits

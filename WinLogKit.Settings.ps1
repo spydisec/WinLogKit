@@ -113,9 +113,9 @@ $script:BaselineChannels = @(
        Categories = @('Scripting and command line','Execution')
        Purpose = 'Classic PowerShell engine lifecycle log (400/403/600). Older but still used by detections for downgrade attacks.' }
 
-    @{ Name = 'PowerShellCore/Operational';                                             TargetBytes = $oneGB; MustEnable = $false; Tier = 'Core'; DefaultSize = '15 MB'; MayBeAbsent = $true
+    @{ Name = 'PowerShellCore/Operational';                                             TargetBytes = $oneGB; MustEnable = $true;  Tier = 'Core'; DefaultSize = '15 MB'; MayBeAbsent = $true
        Categories = @('Scripting and command line','Execution')
-       Purpose = 'PowerShell 7+ equivalent of the Operational log. Only exists if PowerShell 7 is installed - absent is NOT APPLICABLE.' }
+       Purpose = 'PowerShell 7+ equivalent of the Operational log (4103/4104 from pwsh, with the PS7 policy items). Exists only once PowerShell 7''s event manifest is registered: absent is NOT APPLICABLE without PowerShell 7, and a FAIL when PowerShell 7 is installed but unregistered (run $PSHOME\RegisterManifest.ps1 as admin).' }
 
     @{ Name = 'System';                                                                 TargetBytes = $mb128; MustEnable = $false; Tier = 'Core'; DefaultSize = '20 MB'
        Categories = @('Software and service install','Persistence','Logging tampered with')
@@ -426,6 +426,38 @@ $script:BaselineRegistrySettings = @(
        Path = 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\ModuleLogging\ModuleNames'; Name = '*'; Kind = 'String'; Value = '*'
        Scope = 'All'; Tier = 'HighVolume'; Categories = @('Scripting and command line')
        Purpose = 'Same as above for 32-bit PowerShell hosts.' }
+
+    # -- PowerShell 7 (pwsh.exe) follows the Windows PowerShell policies above --
+    # PowerShell 7 reads its own policy keys (...\Policies\Microsoft\PowerShellCore)
+    # and ignores the Windows PowerShell ones. UseWindowsPowerShellPolicySetting = 1
+    # under its key makes it read the matching Windows PowerShell key instead
+    # (PowerShell source: Utils.GetPolicySettingFromGPOImpl), so one setting
+    # stays the source of truth for both engines (#44). Harmless when
+    # PowerShell 7 isn't installed. PowerShell 7 writes to
+    # PowerShellCore/Operational, which only exists once its event manifest is
+    # registered: the MSI installer offers to, Store and zip installs need
+    # $PSHOME\RegisterManifest.ps1 run once as admin (Test flags it).
+    @{ Id = 'PS7ScriptBlock64'
+       Path = 'HKLM:\SOFTWARE\Policies\Microsoft\PowerShellCore\ScriptBlockLogging'; Name = 'UseWindowsPowerShellPolicySetting'; Kind = 'DWord'; Value = 1
+       Scope = 'All'; Tier = 'HighVolume'; Categories = @('Scripting and command line')
+       Purpose = 'Makes PowerShell 7 (pwsh.exe) follow the Windows PowerShell script block logging policy (ScriptBlock64), so pwsh sessions log 4104 too. Without it, running pwsh instead of powershell.exe avoids script block logging.'
+       Risk = 'Same volume profile as script block logging, for PowerShell 7 sessions. No effect unless PowerShell 7 is installed.' }
+
+    @{ Id = 'PS7ScriptBlock32'
+       Path = 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\PowerShellCore\ScriptBlockLogging'; Name = 'UseWindowsPowerShellPolicySetting'; Kind = 'DWord'; Value = 1
+       Scope = 'All'; Tier = 'HighVolume'; Categories = @('Scripting and command line')
+       Purpose = 'Same as above for 32-bit PowerShell 7 (follows ScriptBlock32).' }
+
+    @{ Id = 'PS7ModuleLogging64'
+       Path = 'HKLM:\SOFTWARE\Policies\Microsoft\PowerShellCore\ModuleLogging'; Name = 'UseWindowsPowerShellPolicySetting'; Kind = 'DWord'; Value = 1
+       Scope = 'All'; Tier = 'HighVolume'; Categories = @('Scripting and command line')
+       Purpose = 'Makes PowerShell 7 (pwsh.exe) follow the Windows PowerShell module logging policy, including its ModuleNames list (ModuleLogging64 + ModuleNames64), so pwsh sessions log 4103 too.'
+       Risk = 'The heaviest setting in the kit, now for PowerShell 7 sessions as well. Pair it with the Windows PowerShell module logging items or it has nothing to follow.' }
+
+    @{ Id = 'PS7ModuleLogging32'
+       Path = 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\PowerShellCore\ModuleLogging'; Name = 'UseWindowsPowerShellPolicySetting'; Kind = 'DWord'; Value = 1
+       Scope = 'All'; Tier = 'HighVolume'; Categories = @('Scripting and command line')
+       Purpose = 'Same as above for 32-bit PowerShell 7 (follows ModuleLogging32 + ModuleNames32).' }
 
     # PowerShell transcription is deliberately NOT in the kit (removed in
     # #34): it writes text files outside the event log, so it needs its own

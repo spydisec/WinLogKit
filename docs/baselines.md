@@ -31,7 +31,7 @@ ignored: the file is the decision.
 | Tier | Default | Contents |
 |---|---|---|
 | Core | applied | everything with low or justified volume |
-| HighVolume | ask first | process creation + command line, PowerShell script block + module logging, WFP connections, sensitive privilege use, plus the situational Crypto-DPAPI debug channel and IPsec Driver auditing |
+| HighVolume | ask first | process creation + command line, PowerShell script block + module logging (Windows PowerShell and PowerShell 7), WFP connections, sensitive privilege use, plus the situational Crypto-DPAPI debug channel and IPsec Driver auditing |
 
 PowerShell transcription is deliberately not in the kit. It writes text
 files outside the event log (its own folder, permissions, retention and
@@ -66,7 +66,7 @@ and the Yamato guide):
 | Item | Wks | Member | DC | Why |
 |---|---|---|---|---|
 | Process creation + command line | ✓ | ✓ | ✓ | Highest single detection value; volume scales with process churn - watch RDS/build hosts in the pilot |
-| Script block logging (4104) | ✓ | ✓ | ✓ | Moderate volume, de-obfuscated code, generally safe fleet-wide per its Risk note |
+| Script block logging (4104), Windows PowerShell and PowerShell 7 | ✓ | ✓ | ✓ | Moderate volume, de-obfuscated code, generally safe fleet-wide per its Risk note |
 | WFP connections (5156/5157) | ✓ | - | - | Client connection volume is modest; documented **High** volume on connection-heavy servers and DCs |
 | Module logging (4103) | - | - | - | The heaviest setting in the kit; opt-in after a pilot, everywhere |
 | Sensitive Privilege Use | - | - | - | Known to flood with backup agents; opt-in per server role after a pilot |
@@ -103,7 +103,9 @@ Success/Failure flags and channel sizes, which superset the reference in
 places (one exception: ASD sizes Security at 2 GB versus the kit's 1 GB);
 five ASD subcategories cannot be expressed because Yamato's own baseline
 excludes them (Process Termination, Group Membership, and the
-SACL-dependent File System / Kernel Object / Registry).
+SACL-dependent File System / Kernel Object / Registry). The ASD script only
+sets the Windows PowerShell policies, so `ASD.csv` doesn't cover PowerShell 7;
+flip the four `PS7*` rows to Y in your copy if you need it.
 
 ## Building your own
 

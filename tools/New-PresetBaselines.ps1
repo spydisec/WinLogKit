@@ -16,8 +16,8 @@
     decision):
 
       Workstation.csv        Core + process creation/cmdline + script block
-                             logging + WFP connections; DC-only items
-                             deselected
+                             logging (Windows PowerShell and PowerShell 7)
+                             + WFP connections; DC-only items deselected
       MemberServer.csv       as Workstation but WITHOUT WFP connections
                              (documented High volume on connection-heavy
                              servers)
@@ -89,13 +89,13 @@ function Write-Preset {
 $rolePresets = @(
     @{ Name = 'Workstation';      IncludeDcScope = $false
        ExtraAudit = @('0CCE922B', '0CCE9226')
-       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32') }
+       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32', 'PS7ScriptBlock64', 'PS7ScriptBlock32') }
     @{ Name = 'MemberServer';     IncludeDcScope = $false
        ExtraAudit = @('0CCE922B')
-       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32') }
+       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32', 'PS7ScriptBlock64', 'PS7ScriptBlock32') }
     @{ Name = 'DomainController'; IncludeDcScope = $true
        ExtraAudit = @('0CCE922B')
-       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32') }
+       ExtraReg   = @('CmdLineAudit', 'ScriptBlock64', 'ScriptBlock32', 'PS7ScriptBlock64', 'PS7ScriptBlock32') }
 )
 
 # Guard against silent selector drift: every selector must match at least

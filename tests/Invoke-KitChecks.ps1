@@ -103,7 +103,7 @@ if ($dupes) {
 }
 # The shared helpers must stay in the common file: a copy that migrated back
 # into one script would still be a single definition, so name them.
-$commonExpected = @('Test-IsAdmin', 'Get-DomainRole', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
+$commonExpected = @('Test-IsAdmin', 'Get-DomainRole', 'Test-PowerShell7Installed', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
     'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'Get-BaselineItemKeySet', 'Import-BaselineSelection', 'Test-ReferenceBaselineItem', 'Write-IncludeOptionalWarning', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
 $notInCommon = @($commonExpected | Where-Object { -not $defs.ContainsKey($_) -or (($defs[$_] -join ';') -ne 'WinLogKit.Common.ps1') })
 if ($notInCommon) {
@@ -307,6 +307,52 @@ try {
     $ErrorActionPreference = $prevEap
     if ($wefOldExit -ne 0 -and $wefOld -match 'removed in v2') { Pass 'removed -Filter Baseline stops with a migration message' }
     else { Fail "-Filter Baseline handling wrong (exit $wefOldExit): $($wefOld.Trim())" }
+
+    # 10. The rollback baseline picks up settings a later kit version adds
+    #     (#44). Enable needs admin, so its two state functions are lifted out
+    #     by AST and run against a first-run JSON that lacks the PowerShell 7
+    #     items: they must be added once, with their current state, and not
+    #     again on the next run.
+    try {
+        . (Join-Path $KitRoot 'WinLogKit.Common.ps1')
+        $enableAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $KitRoot 'Enable-LoggingBaseline.ps1'), [ref]$null, [ref]$null)
+        $stateFns = $enableAst.FindAll({ param($a) $a -is [System.Management.Automation.Language.FunctionDefinitionAst] -and @('Get-CurrentKitState', 'Add-NewItemsToFirstRun') -contains $a.Name }, $true)
+        foreach ($fn in $stateFns) { . ([scriptblock]::Create($fn.Extent.Text)) }
+        . ([scriptblock]::Create('function Get-AdcsRegPath { $null }'))
+        $allState = Get-CurrentKitState
+        $firstJson = Join-Path $tmp 'first-run.json'
+        @{ CapturedUtc = '2026-01-01T00:00:00'; Host = 'check'; Channels = $allState.Channels
+           Registry = @($allState.Registry | Where-Object { $_.Name -ne 'UseWindowsPowerShellPolicySetting' }); SmbAudit = $allState.SmbAudit } |
+            ConvertTo-Json -Depth 5 | Set-Content -Path $firstJson -Encoding UTF8
+        $added1 = Add-NewItemsToFirstRun -Path $firstJson
+        $added2 = Add-NewItemsToFirstRun -Path $firstJson
+        $after = Get-Content $firstJson -Raw | ConvertFrom-Json
+        $ps7Rows = @($after.Registry | Where-Object { $_.Name -eq 'UseWindowsPowerShellPolicySetting' -and $_.PSObject.Properties.Name -contains 'Existed' -and $_.AddedUtc })
+        $swapClean = (Test-Path -LiteralPath "$firstJson.bak") -and -not (Test-Path -LiteralPath "$firstJson.tmp")
+        if ($stateFns.Count -eq 2 -and $added1 -eq 4 -and $added2 -eq 0 -and $ps7Rows.Count -eq 4 -and @($after.Registry).Count -eq @($allState.Registry).Count -and $swapClean) {
+            Pass 'rollback baseline adds settings new in this kit version once (4 PowerShell 7 items), swapped in with a .bak kept'
+        } else {
+            Fail "rollback baseline extension wrong (functions $($stateFns.Count), first run added $added1, second $added2, PS7 rows $($ps7Rows.Count), registry rows $(@($after.Registry).Count)/$(@($allState.Registry).Count), .bak kept and no .tmp: $swapClean)"
+        }
+    } catch { Fail "rollback baseline extension check errored: $($_.Exception.Message)" }
+
+    # 11. PowerShell 7 follows the Windows PowerShell policy (#44): each PS7
+    #     item sits on the PowerShellCore twin of its Windows PowerShell key,
+    #     and a role preset that turns on script block or module logging also
+    #     turns on the PowerShell 7 companion.
+    $ps7Pairs = @{ PS7ScriptBlock64 = 'ScriptBlock64'; PS7ScriptBlock32 = 'ScriptBlock32'; PS7ModuleLogging64 = 'ModuleLogging64'; PS7ModuleLogging32 = 'ModuleLogging32' }
+    $ps7Bad = @()
+    foreach ($k in $ps7Pairs.Keys) {
+        $ps7Item = @($BaselineRegistrySettings | Where-Object { $_.Id -eq $k })
+        $winItem = @($BaselineRegistrySettings | Where-Object { $_.Id -eq $ps7Pairs[$k] })
+        if ($ps7Item.Count -ne 1 -or $winItem.Count -ne 1) { $ps7Bad += "$k or $($ps7Pairs[$k]) missing"; continue }
+        if ($ps7Item[0].Path -ne ($winItem[0].Path -replace '\\Windows\\PowerShell\\', '\PowerShellCore\')) { $ps7Bad += "$k is not on the PowerShellCore twin of $($ps7Pairs[$k])" }
+    }
+    foreach ($name in @('Workstation', 'MemberServer', 'DomainController')) {
+        $on = @{}; Import-Csv (Join-Path $KitRoot "presets\$name.csv") | Where-Object { $_.Selected -eq 'Y' } | ForEach-Object { $on[$_.Id] = $true }
+        foreach ($k in $ps7Pairs.Keys) { if ($on.ContainsKey($ps7Pairs[$k]) -and -not $on.ContainsKey($k)) { $ps7Bad += "$name selects $($ps7Pairs[$k]) without $k" } }
+    }
+    if ($ps7Bad) { Fail "PowerShell 7 policy items: $($ps7Bad -join '; ')" } else { Pass 'PowerShell 7 items pair with their Windows PowerShell policies, in the settings and the role presets' }
 }
 finally {
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
