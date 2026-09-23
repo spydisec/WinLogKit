@@ -33,6 +33,9 @@ left alone; log sizes are only ever raised.
 
 - `-WhatIf` - full diff, nothing changes (the transcript is still written:
   the preview is worth keeping).
+- Checks disk space first: whether the selected logs, once full at their
+  new maximum sizes, still leave enough free space on their drive (warns
+  only; see [Disk space](safety.md#disk-space)).
 - First real run captures the rollback baseline; `-Rollback` restores it.
 - Never reboots, never restarts services; the one setting needing a service
   restart (AD CS AuditFilter) is set with a warning and left to your change
@@ -44,7 +47,9 @@ left alone; log sizes are only ever raised.
 Read-only verification: channels (enabled, sized, circular retention),
 audit subcategories (superset-aware - more auditing than required passes),
 registry values, SMB audit settings. Per-behaviour-category PASS/FAIL/NOT
-APPLICABLE, detail + summary CSVs, non-zero exit on any failure.
+APPLICABLE, detail + summary CSVs, non-zero exit on any failure. Ends
+with the same [disk space](safety.md#disk-space) check as Enable, for
+information only.
 
 ```powershell
 .\Test-LoggingBaseline.ps1 [-IncludeHighVolume]

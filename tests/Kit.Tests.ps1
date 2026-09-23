@@ -437,3 +437,40 @@ Describe 'Audit policy reading' {
         Format-AuditSetting $null | Should -Be 'Unknown'
     }
 }
+
+# #51: will the selected logs fit on their drive once full? Sizes only ever
+# go up, a log's own file already counts, and it is per drive.
+Describe 'Log storage check' {
+    BeforeAll {
+        function New-Log([string]$Path, $FileSize, [double]$Current, [double]$Target) {
+            [pscustomobject]@{ LogFilePath = $Path; FileSize = $FileSize; MaximumSizeInBytes = $Current; TargetBytes = $Target }
+        }
+        $Logs = @(
+            (New-Log '%SystemRoot%\System32\Winevt\Logs\Security.evtx' 20MB 20MB 1GB),
+            (New-Log 'C:\Windows\System32\Winevt\Logs\System.evtx' $null 128MB 64MB),
+            (New-Log 'D:\Logs\Sysmon.evtx' 512MB 1GB 1GB)
+        )
+    }
+
+    It 'adds up growth and raised sizes per drive' {
+        $c = @(Get-LogStorageCheck -Logs $Logs -DriveSpace @{ 'C:\' = @{ Free = 100GB; Total = 200GB }; 'D:\' = @{ Free = 100GB; Total = 200GB } })
+        $c.Count | Should -Be 2
+        $cDrive = $c | Where-Object { $_.Drive -eq 'C:\' }
+        $cDrive.Logs | Should -Be 2
+        $cDrive.RaiseGB | Should -Be ([math]::Round((1GB - 20MB) / 1GB, 1))
+        $cDrive.GrowthGB | Should -Be ([math]::Round((1GB - 20MB + 128MB) / 1GB, 1))
+        ($c | Where-Object { $_.Drive -eq 'D:\' }).GrowthGB | Should -Be 0.5
+        @($c | Where-Object { $_.Status -ne 'OK' }) | Should -BeNullOrEmpty
+    }
+
+    It 'flags Low under the free-space threshold and Insufficient when the logs cannot fit' {
+        (Get-LogStorageCheck -Logs $Logs[0] -DriveSpace @{ 'C:\' = @{ Free = 10GB; Total = 200GB } }).Status | Should -Be 'Low'
+        (Get-LogStorageCheck -Logs $Logs[0] -DriveSpace @{ 'C:\' = @{ Free = 500MB; Total = 200GB } }).Status | Should -Be 'Insufficient'
+    }
+
+    It 'is wired into Enable and Test' {
+        foreach ($rel in 'Enable-LoggingBaseline.ps1', 'Test-LoggingBaseline.ps1') {
+            Select-String -Path (Join-Path $KitRoot $rel) -Pattern 'Write-LogStorageCheck' -Quiet | Should -BeTrue -Because $rel
+        }
+    }
+}

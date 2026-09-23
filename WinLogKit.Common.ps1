@@ -278,3 +278,75 @@ function Test-ItemSelected {
     }
     return (Test-TierSelected -Tier $Tier -IncludeHighVolume $Selection.IncludeHighVolume)
 }
+
+# ------------------------------------------------------------ log storage ---
+# Disk the kit's channels need once each has filled to its maximum size, per
+# drive, against the free space there (#51). Event rates vary too much from
+# host to host (and day to day on workstations) to predict, but the maximum
+# sizes the baseline sets are fixed, and they are what fill the disk. A log
+# only takes that space as events arrive, so this warns and never blocks.
+#
+# $Logs: one object per selected, registered channel with LogFilePath,
+# FileSize, MaximumSizeInBytes (current) and TargetBytes (kit). $DriveSpace
+# maps a drive root to @{ Free; Total } in bytes, for the self-checks; when
+# absent the live drive is read.
+function Get-LogStorageCheck {
+    param([object[]]$Logs, [hashtable]$DriveSpace, [int]$LowFreePercent = 10)
+    $byDrive = @{}
+    foreach ($l in $Logs) {
+        $path = [Environment]::ExpandEnvironmentVariables("$($l.LogFilePath)")
+        if ([string]::IsNullOrEmpty($path)) { continue }
+        $root = [IO.Path]::GetPathRoot($path)
+        if ([string]::IsNullOrEmpty($root)) { continue }
+        $root = $root.ToUpper()
+        if (-not $byDrive.ContainsKey($root)) { $byDrive[$root] = @{ Logs = 0; Growth = [double]0; Raise = [double]0 } }
+        $current = [double]$l.MaximumSizeInBytes
+        $final = [math]::Max($current, [double]$l.TargetBytes)   # sizes are only ever raised
+        $used = 0.0; if ($null -ne $l.FileSize) { $used = [double]$l.FileSize }
+        $byDrive[$root].Logs++
+        $byDrive[$root].Growth += [math]::Max(0.0, $final - $used)
+        $byDrive[$root].Raise += ($final - $current)
+    }
+    foreach ($root in ($byDrive.Keys | Sort-Object)) {
+        if ($null -ne $DriveSpace -and $DriveSpace.ContainsKey($root)) {
+            $free = [double]$DriveSpace[$root].Free; $total = [double]$DriveSpace[$root].Total
+        } else {
+            try { $d = New-Object IO.DriveInfo $root; $free = [double]$d.AvailableFreeSpace; $total = [double]$d.TotalSize }
+            catch { continue }
+        }
+        $after = $free - $byDrive[$root].Growth
+        $status = 'OK'
+        if ($after -lt 0) { $status = 'Insufficient' }
+        elseif ($total -gt 0 -and ($after / $total * 100) -lt $LowFreePercent) { $status = 'Low' }
+        [pscustomobject]@{
+            Drive       = $root
+            Logs        = $byDrive[$root].Logs
+            RaiseGB     = [math]::Round($byDrive[$root].Raise / 1GB, 1)
+            GrowthGB    = [math]::Round($byDrive[$root].Growth / 1GB, 1)
+            FreeGB      = [math]::Round($free / 1GB, 1)
+            TotalGB     = [math]::Round($total / 1GB, 1)
+            FreeAfterGB = [math]::Round($after / 1GB, 1)
+            Status      = $status
+        }
+    }
+}
+
+function Write-LogStorageCheck {
+    param([object[]]$Check, [int]$LowFreePercent = 10)
+    foreach ($c in $Check) {
+        $line = "$($c.Drive) $($c.Logs) kit log(s) can still grow by $($c.GrowthGB) GB until full"
+        if ($c.RaiseGB -gt 0) { $line += " ($($c.RaiseGB) GB of it from raised maximum sizes)" }
+        $line += "; $($c.FreeGB) GB of $($c.TotalGB) GB free now, $($c.FreeAfterGB) GB once they are full."
+        switch ($c.Status) {
+            'Insufficient' {
+                Write-Host "[STORAGE LOW] $line" -ForegroundColor Red
+                Write-Host '              Not enough free space for these logs to reach their maximum size. Add disk (or free space), or apply a smaller selection.' -ForegroundColor Red
+            }
+            'Low' {
+                Write-Host "[STORAGE LOW] $line" -ForegroundColor Yellow
+                Write-Host "              Under $LowFreePercent% of the drive would be left free. Plan a disk upgrade or free space before rolling out." -ForegroundColor Yellow
+            }
+            default { Write-Host "[STORAGE OK ] $line" -ForegroundColor DarkGray }
+        }
+    }
+}

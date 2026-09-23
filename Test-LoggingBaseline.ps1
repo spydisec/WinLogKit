@@ -122,6 +122,7 @@ Write-Host ''
 
 # ------------------------------------------------------------ channels ------
 
+$storageLogs = @()
 foreach ($ch in $script:BaselineChannels) {
     $targetMB = [math]::Round($ch.TargetBytes / 1MB)
     $expected = "enabled, >= $targetMB MB, circular retention"
@@ -144,6 +145,7 @@ foreach ($ch in $script:BaselineChannels) {
         continue
     }
 
+    $storageLogs += [pscustomobject]@{ LogFilePath = $log.LogFilePath; FileSize = $log.FileSize; MaximumSizeInBytes = $log.MaximumSizeInBytes; TargetBytes = $ch.TargetBytes }
     $actualMB = [math]::Round($log.MaximumSizeInBytes / 1MB)
     $problems = @()
     if ($ch.MustEnable -and -not $log.IsEnabled)      { $problems += 'disabled' }
@@ -368,6 +370,11 @@ foreach ($s in $summary) {
     if ($s.Result -eq 'NOT APPLICABLE') { $colour = 'DarkGray' }
     Write-Host ('{0,-16} {1,-32} pass={2} fail={3} n/a={4}' -f $s.Result, $s.Category, $s.Pass, $s.Fail, $s.NA) -ForegroundColor $colour
 }
+
+# Informational, never a FAIL: low disk is a capacity decision, not drift.
+Write-Host ''
+Write-Host '=== Log storage (assessed channels at their maximum size) ===' -ForegroundColor White
+Write-LogStorageCheck (@(Get-LogStorageCheck -Logs $storageLogs))
 
 # ---------------------------------------------------------------- output ----
 
