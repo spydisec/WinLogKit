@@ -24,7 +24,7 @@ Signs that the scope has drifted past what a new user can take in:
 - **Transcription (#34).** An Optional item filled a test workstation's Documents folder with 1,587 files in 3 weeks. Making it safe needed about 250 more lines (folder ACL, retention, special cases in four scripts). It was removed instead (#36). The lesson: anything that isn't "a native event log setting" costs far more than it looks.
 - **Three ways to choose settings** (tier switches, presets, builder CSV), and presets that nearly duplicate each other. `role_Workstation` and `spydi_Workstation_Minimal` differ by one audit subcategory.
 - **Things that break the kit's own rules.** The kit is "no agents, no downloads", yet the Autoruns add-on needs Sysinternals and the WELA check downloads WELA.
-- **Unused weight.** `data/ossem/` (917 KB) isn't read by any script.
+- **Legacy weight.** `data/ossem/` (917 KB) is read only by the coverage report's legacy `-UseOssem` cross-check mode; the report's default mapping uses `data/attack/`.
 - **Out-of-scope docs.** The kit "ends at the collector", yet it ships a Sentinel KQL page with 10 unresolved review findings.
 - **Roadmap items never landed.** ADR-001's roadmap list was never turned into issues, so the backlog isn't visible.
 
@@ -61,7 +61,7 @@ Out of scope: anything that writes files outside the event log, installs agents 
 | WEF subscription (`-Filter Channel`) | **Keep** | Question 3. |
 | WEF `-Filter Baseline`, `Test-WefFilter.ps1`, `tools/Update-AuditSubcategoryEvents.ps1`, `data/wef/` | **Remove** | Tuning that is easy to get wrong silently (dropped events), and a maintained data snapshot. Document "filter at your SIEM ingest layer" instead. |
 | ATT&CK coverage report + `data/attack/` | **Move to `tools/`** as a maintainer script that produces the numbers on the Coverage page. | The numbers justify the tiers and are worth publishing, but a user doesn't need to run it to deploy logging. |
-| `data/ossem/` | **Remove** | Not read by any script. |
+| `data/ossem/` and the report's `-UseOssem` mode | **Remove** | A second, legacy mapping kept only as a cross-check; the default native mapping (`data/attack/`) stays. |
 | WELA check (`report/Invoke-WELACheck.ps1`) | **Remove** | Downloads a third-party tool. Test already verifies the live state. Link to WELA from the docs for anyone who wants a second opinion. |
 | AutorunsToWinEventLog add-on | **Move to its own repository**, linked from the docs | Needs Sysinternals and a scheduled task, the one exception to the kit's no-agent rule. |
 | `docs/extras/sentinel-kql.md` | **Remove** | Past the kit's boundary (after the collector), SIEM-specific, and unvalidated (10 open findings). |
@@ -128,7 +128,7 @@ The deciding question is whether a component helps someone **turn on, prove or d
 3. [ ] Tiers: move Crypto-DPAPI debug and IPsec Driver to HighVolume; make `-IncludeOptional` accepted-but-ignored with a warning.
 4. [ ] Presets: generate 4 (`Workstation`, `MemberServer`, `DomainController`, `ASD`); delete the other 6; update docs and field-report template.
 5. [ ] Publish the Autoruns add-on as its own repository (history preserved), then remove `addons/` and `docs/addons.md` and link the new repo from the docs.
-6. [ ] Remove `report/Invoke-WELACheck.ps1`, `docs/extras/sentinel-kql.md`, `data/ossem/`.
+6. [ ] Remove `report/Invoke-WELACheck.ps1`, `docs/extras/sentinel-kql.md`, `data/ossem/` (with the coverage report's `-UseOssem` mode).
 7. [ ] WEF: remove `-Filter Baseline`, `Test-WefFilter.ps1`, `tools/Update-AuditSubcategoryEvents.ps1`, `data/wef/`; add a short "filter at the SIEM ingest layer" note to Collect.
 8. [ ] Move `report/Export-AttackCoverage.ps1` to `tools/`; drop the empty `report/` folder.
 9. [ ] README: new one-sentence goal, the "pick a role preset" quick start, and a "not in scope" list.
