@@ -13,6 +13,21 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
   selections are unchanged. `-IncludeOptional` is still accepted by every
   script for one release, but it only prints a deprecation warning and
   selects nothing.
+- **Four presets instead of ten** (ADR-002). One per host role plus ASD:
+
+  | Old preset | Use instead |
+  |---|---|
+  | `role_Workstation.csv` | `Workstation.csv` (same selection) |
+  | `role_MemberServer.csv` | `MemberServer.csv` (same selection) |
+  | `role_DomainController.csv` | `DomainController.csv` (same selection) |
+  | `ASD.csv` | `ASD.csv` (unchanged) |
+  | `spydi_Workstation_Minimal.csv` | `Workstation.csv` (differs by one item: WFP connections instead of IPsec Driver) |
+  | `spydi_Server_Minimal.csv` | `MemberServer.csv` or `DomainController.csv` |
+  | `spydi_*_Heavy.csv` | the role preset, then flip the HighVolume rows you want to Y in your copy |
+  | `Microsoft_Client.csv`, `Microsoft_Server.csv` | `ASD.csv` or a role preset. Both are narrower than the kit's Core tier; they remain as reference data for the Reference page's Refs column (`tools\reference-baselines.psd1`) |
+
+  The Reference page's Minimal/Heavy columns become Wks / Mbr / DC
+  (membership in the three role presets); the Refs column is unchanged.
 
 ### Removed
 - **PowerShell transcription** (`Transcription64`, `TranscriptionHeader64`,

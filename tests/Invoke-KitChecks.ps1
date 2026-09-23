@@ -104,7 +104,7 @@ if ($dupes) {
 # The shared helpers must stay in the common file: a copy that migrated back
 # into one script would still be a single definition, so name them.
 $commonExpected = @('Test-IsAdmin', 'Get-DomainRole', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
-    'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'Get-BaselineItemKeySet', 'Import-BaselineSelection', 'Write-IncludeOptionalWarning', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
+    'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'Get-BaselineItemKeySet', 'Import-BaselineSelection', 'Test-ReferenceBaselineItem', 'Write-IncludeOptionalWarning', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
 $notInCommon = @($commonExpected | Where-Object { -not $defs.ContainsKey($_) -or (($defs[$_] -join ';') -ne 'WinLogKit.Common.ps1') })
 if ($notInCommon) {
     Fail "shared helper not defined in WinLogKit.Common.ps1 (only): $($notInCommon -join ', ')"
@@ -220,7 +220,12 @@ try {
     # 6. Presets: committed CSVs must match what the generator produces
     $presetTmp = Join-Path $tmp 'presets'
     & (Join-Path $KitRoot 'tools\New-PresetBaselines.ps1') -OutDir $presetTmp | Out-Null
-    foreach ($name in @('ASD', 'Microsoft_Client', 'Microsoft_Server', 'role_Workstation', 'role_MemberServer', 'role_DomainController', 'spydi_Workstation_Minimal', 'spydi_Workstation_Heavy', 'spydi_Server_Minimal', 'spydi_Server_Heavy')) {
+    # ADR-002: exactly these four ship; a stray CSV in presets\ would be an
+    # unmaintained baseline users might pick.
+    $presetNames = @('Workstation', 'MemberServer', 'DomainController', 'ASD')
+    $stray = @(Get-ChildItem (Join-Path $KitRoot 'presets') -Filter *.csv | Where-Object { $presetNames -notcontains $_.BaseName } | ForEach-Object { $_.Name })
+    if ($stray) { Fail "presets\ has files the generator does not produce: $($stray -join ', ')" } else { Pass 'presets\ holds exactly the four generated presets' }
+    foreach ($name in $presetNames) {
         $committed = Join-Path $KitRoot "presets\$name.csv"
         if (-not (Test-Path $committed)) { Fail "presets\$name.csv is missing - run tools\New-PresetBaselines.ps1"; continue }
         # Compare ALL columns, so descriptive fields (Purpose, Risk, Tier...)
@@ -327,7 +332,7 @@ try {
     }
 
     $wefB = Join-Path $tmp 'wefB'
-    $wefOut = & (Join-Path $KitRoot 'fleet\New-WefSubscription.ps1') -OutDir $wefB -BaselineFile (Join-Path $KitRoot 'presets\spydi_Server_Heavy.csv') -Filter Baseline -Validate -SubscriptionId 'CheckB' 2>&1 | Out-String
+    $wefOut = & (Join-Path $KitRoot 'fleet\New-WefSubscription.ps1') -OutDir $wefB -BaselineFile (Join-Path $KitRoot 'presets\DomainController.csv') -Filter Baseline -Validate -SubscriptionId 'CheckB' 2>&1 | Out-String
     if ($wefOut -match 'INVALID') { Fail "WEF Baseline filter: a generated query failed local validation: $wefOut" }
     try {
         [xml]$wb = Get-Content (Join-Path $wefB 'CheckB.xml') -Raw

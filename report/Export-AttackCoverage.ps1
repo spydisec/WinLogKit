@@ -46,7 +46,7 @@
     .\report\Export-AttackCoverage.ps1 -IncludeHighVolume
 
 .EXAMPLE
-    .\report\Export-AttackCoverage.ps1 -BaselineFile .\presets\role_Workstation.csv
+    .\report\Export-AttackCoverage.ps1 -BaselineFile .\presets\Workstation.csv
 #>
 [CmdletBinding()]
 param(

@@ -2,8 +2,8 @@
 .SYNOPSIS
     Regenerates docs\reference.md - the one-table reference of every kit
     item: key events, size, volume weight, which reference baselines ask for
-    it, and its spydi Minimal/Heavy membership. Run after changing the
-    settings table or presets; CI fails if the committed page drifts.
+    it, and which role presets include it. Run after changing the settings
+    table or presets; CI fails if the committed page drifts.
 
 .DESCRIPTION
     Everything is derived, never hand-written:
@@ -11,10 +11,10 @@
       - key events: the curated ATT&CK event map (authoritative for audit
         subcategories) plus event IDs mentioned in each item's Purpose text
       - reference membership: the ASD / Microsoft_Client / Microsoft_Server
-        preset CSVs; Y = in Yamato's set (the kit's Core and HighVolume
-        tiers, per the documented deviations)
-      - Minimal / Heavy: the spydi_Server_* preset CSVs (the superset role;
-        DC-only rows are marked and deselected in the Workstation variants)
+        definitions in tools\reference-baselines.psd1; Y = in Yamato's set
+        (the kit's Core and HighVolume tiers, per the documented deviations)
+      - Wks / Mbr / DC: the Workstation / MemberServer / DomainController
+        preset CSVs
       - volume weight: High = HighVolume tier, Watch = Core with a Risk
         note, Low = everything else
 
@@ -33,6 +33,8 @@ $kitRoot = Split-Path $PSScriptRoot -Parent
 if ([string]::IsNullOrEmpty($OutFile)) { $OutFile = Join-Path (Join-Path $kitRoot 'docs') 'reference.md' }
 
 . (Join-Path $kitRoot 'WinLogKit.Settings.ps1')
+. (Join-Path $kitRoot 'WinLogKit.Common.ps1')
+$references = Import-PowerShellDataFile (Join-Path $PSScriptRoot 'reference-baselines.psd1')
 
 # ---- preset membership lookups ----------------------------------------------
 
@@ -44,11 +46,9 @@ function Import-SelectedSet {
     }
     return $set
 }
-$selAsd    = Import-SelectedSet 'ASD'
-$selClient = Import-SelectedSet 'Microsoft_Client'
-$selServer = Import-SelectedSet 'Microsoft_Server'
-$selMin    = Import-SelectedSet 'spydi_Server_Minimal'
-$selHeavy  = Import-SelectedSet 'spydi_Server_Heavy'
+$selWks = Import-SelectedSet 'Workstation'
+$selMbr = Import-SelectedSet 'MemberServer'
+$selDc  = Import-SelectedSet 'DomainController'
 
 # Audit-subcategory event IDs from the curated event map (authoritative).
 $eventsByGuid = @{}
@@ -78,11 +78,10 @@ $yExcludedIds = @('NtlmOutboundAudit', 'NtlmInboundAudit', 'NtlmDomainAudit')
 $yExcludedChannels = @('Microsoft-Windows-SMBServer/Audit', 'Microsoft-Windows-SmbClient/Audit')
 function Format-RefText {
     param([string]$ItemType, [string]$Id, [string]$Tier)
-    $key = ("$ItemType|$Id").ToUpper()
     $refs = @()
-    if ($selAsd.ContainsKey($key))    { $refs += 'A' }
-    if ($selClient.ContainsKey($key)) { $refs += 'C' }
-    if ($selServer.ContainsKey($key)) { $refs += 'S' }
+    if (Test-ReferenceBaselineItem $references.ASD $ItemType $Id)              { $refs += 'A' }
+    if (Test-ReferenceBaselineItem $references.Microsoft_Client $ItemType $Id) { $refs += 'C' }
+    if (Test-ReferenceBaselineItem $references.Microsoft_Server $ItemType $Id) { $refs += 'S' }
     $isYamato = ($Tier -eq 'Core' -or $Tier -eq 'HighVolume') -and
         $ItemType -ne 'SmbAudit' -and
         ($yExcludedIds -notcontains $Id) -and
@@ -96,6 +95,12 @@ function Format-Tick {
     param([hashtable]$Set, [string]$ItemType, [string]$Id)
     if ($Set.ContainsKey(("$ItemType|$Id").ToUpper())) { return ':material-check:' }
     return '-'
+}
+
+# The three role columns for one item.
+function Format-RoleColumn {
+    param([string]$ItemType, [string]$Id)
+    return ('{0} | {1} | {2}' -f (Format-Tick $selWks $ItemType $Id), (Format-Tick $selMbr $ItemType $Id), (Format-Tick $selDc $ItemType $Id))
 }
 
 function Format-Volume {
@@ -118,7 +123,7 @@ $rows = New-Object System.Collections.Generic.List[string]
 foreach ($ch in $script:BaselineChannels) {
     $ev = (Get-PurposeEventText $ch.Purpose) -join ', '
     if ($ev -eq '') { $ev = '-' }
-    $rows.Add("| $($ch.Name) | Channel | $ev | $($ch.DefaultSize) -> $(Format-Size $ch.TargetBytes) | $(Format-Volume $ch) | $(Format-RefText 'Channel' $ch.Name $ch.Tier) | $(Format-Tick $selMin 'Channel' $ch.Name) | $(Format-Tick $selHeavy 'Channel' $ch.Name) |")
+    $rows.Add("| $($ch.Name) | Channel | $ev | $($ch.DefaultSize) -> $(Format-Size $ch.TargetBytes) | $(Format-Volume $ch) | $(Format-RefText 'Channel' $ch.Name $ch.Tier) | $(Format-RoleColumn 'Channel' $ch.Name) |")
 }
 foreach ($sub in $script:BaselineAuditSubcategories) {
     $g = $sub.Guid.ToUpper()
@@ -135,19 +140,19 @@ foreach ($sub in $script:BaselineAuditSubcategories) {
     if ($ev -eq '') { $ev = '-' }
     $name = $sub.Name
     if ($sub.Scope -eq 'DomainController') { $name += ' (DC)' }
-    $rows.Add("| $name | Audit subcategory | $ev | - | $(Format-Volume $sub) | $(Format-RefText 'AuditPolicy' $sub.Guid $sub.Tier) | $(Format-Tick $selMin 'AuditPolicy' $sub.Guid) | $(Format-Tick $selHeavy 'AuditPolicy' $sub.Guid) |")
+    $rows.Add("| $name | Audit subcategory | $ev | - | $(Format-Volume $sub) | $(Format-RefText 'AuditPolicy' $sub.Guid $sub.Tier) | $(Format-RoleColumn 'AuditPolicy' $sub.Guid) |")
 }
 foreach ($rs in $script:BaselineRegistrySettings) {
     $ev = (Get-PurposeEventText $rs.Purpose) -join ', '
     if ($ev -eq '') { $ev = '-' }
     $name = "$($rs.Path -replace '^HKLM:\\SOFTWARE\\', '' -replace '^HKLM:\\SYSTEM\\', '')\$($rs.Name)"
     if ($rs.Scope -eq 'DomainController') { $name += ' (DC)' }
-    $rows.Add("| ``$name`` | Registry | $ev | - | $(Format-Volume $rs) | $(Format-RefText 'Registry' $rs.Id $rs.Tier) | $(Format-Tick $selMin 'Registry' $rs.Id) | $(Format-Tick $selHeavy 'Registry' $rs.Id) |")
+    $rows.Add("| ``$name`` | Registry | $ev | - | $(Format-Volume $rs) | $(Format-RefText 'Registry' $rs.Id $rs.Tier) | $(Format-RoleColumn 'Registry' $rs.Id) |")
 }
 $af = $script:BaselineAdcsAuditFilter
-$rows.Add("| AD CS AuditFilter (needs CertSvc restart) | Registry | $((Get-PurposeEventText $af.Purpose) -join ', ') | - | $(Format-Volume $af) | $(Format-RefText 'Registry' $af.Id $af.Tier) | $(Format-Tick $selMin 'Registry' $af.Id) | $(Format-Tick $selHeavy 'Registry' $af.Id) |")
+$rows.Add("| AD CS AuditFilter (needs CertSvc restart) | Registry | $((Get-PurposeEventText $af.Purpose) -join ', ') | - | $(Format-Volume $af) | $(Format-RefText 'Registry' $af.Id $af.Tier) | $(Format-RoleColumn 'Registry' $af.Id) |")
 foreach ($sa in $script:BaselineSmbAuditSettings) {
-    $rows.Add("| $($sa.Side): $($sa.Id) | SMB audit (2025+) | $((Get-PurposeEventText $sa.Purpose) -join ', ') | - | Low | $(Format-RefText 'SmbAudit' $sa.Id $sa.Tier) | $(Format-Tick $selMin 'SmbAudit' $sa.Id) | $(Format-Tick $selHeavy 'SmbAudit' $sa.Id) |")
+    $rows.Add("| $($sa.Side): $($sa.Id) | SMB audit (2025+) | $((Get-PurposeEventText $sa.Purpose) -join ', ') | - | Low | $(Format-RefText 'SmbAudit' $sa.Id $sa.Tier) | $(Format-RoleColumn 'SmbAudit' $sa.Id) |")
 }
 
 # ---- write the page ---------------------------------------------------------
@@ -159,9 +164,8 @@ $header = @'
      CI fails if this page drifts from the settings table and presets. -->
 
 Every setting in the kit, one row each: the events it produces, the log
-size the kit applies, how heavy it is, who recommends it, and whether the
-[spydi baselines](baselines.md#spydi-baselines-the-blended-recommendation)
-include it.
+size the kit applies, how heavy it is, who recommends it, and which
+[role presets](baselines.md#role-presets) include it.
 
 Reading the columns:
 
@@ -173,16 +177,17 @@ Reading the columns:
   (the HighVolume tier), **Watch** = normal volume with a documented
   pilot-week caution, **Low** = quiet.
 - **Refs** - who asks for it: **A** = ASD, **C** = Microsoft Client,
-  **S** = Microsoft Server, **Y** = Yamato (per the shipped reference
-  presets; kit-added extras such as the Server 2025 SMB auditing and the
-  NTLM audit values show no reference letter and are sourced in the
+  **S** = Microsoft Server, **Y** = Yamato (per the reference definitions in
+  `tools\reference-baselines.psd1`; kit-added extras such as the Server 2025
+  SMB auditing and the NTLM audit values show no reference letter and are
+  sourced in the
   [settings table](https://github.com/spydisec/WinLogKit/blob/main/WinLogKit.Settings.ps1)).
-- **Minimal / Heavy** - membership in `spydi_Server_Minimal` /
-  `spydi_Server_Heavy` (the superset role presets; rows marked **(DC)** are
-  deselected in the Workstation variants and inert off domain controllers).
+- **Wks / Mbr / DC** - membership in the `Workstation`, `MemberServer` and
+  `DomainController` presets (rows marked **(DC)** only apply on domain
+  controllers).
 
-| Setting | Type | Key events | Size | Volume | Refs | Minimal | Heavy |
-|---|---|---|---|---|---|---|---|
+| Setting | Type | Key events | Size | Volume | Refs | Wks | Mbr | DC |
+|---|---|---|---|---|---|---|---|---|
 '@
 
 # Here-strings drop their final newline: add it, or the first row would

@@ -53,9 +53,8 @@ before rolling out: logging volume is real disk and real money.
 
 Want your own selection? `.\New-LoggingBaseline.ps1` walks every setting
 and writes a CSV that Enable, Test, the coverage report and every fleet
-generator accept through `-BaselineFile`; `presets\` ships ready-made
-ones (ASD, Microsoft, and the kit's own `spydi_*` Minimal / Heavy pairs
-per role).
+generator accept through `-BaselineFile`; `presets\` ships one per host
+role (`Workstation`, `MemberServer`, `DomainController`) plus `ASD`.
 
 The three host scripts are at the kit root; fleet generators (Intune, GPO,
 WEF) are in `fleet\` and the coverage report and WELA check in `report\`.

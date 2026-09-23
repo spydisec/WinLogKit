@@ -14,7 +14,7 @@ Eight terms cover the whole kit - each defined once, in plain English:
 | Audit subcategory | A Windows switch deciding which security events get recorded |
 | Tier | How much logging: **Core** (safe default), **HighVolume** (more events, more disk, or only useful in some environments) |
 | Baseline / selection CSV | A spreadsheet listing which settings are on (Y) or off (N) - the kit's unit of decision |
-| Preset | A ready-made baseline we ship (ASD, Microsoft, the `spydi_*` pairs) |
+| Preset | A ready-made baseline we ship: one per host role (`Workstation`, `MemberServer`, `DomainController`) plus `ASD` |
 | WEF / collector | Windows' built-in way to push events to one central server, agent-free |
 | SIEM | The security platform that ultimately analyses the logs (outside this kit) |
 | ATT&CK technique | A catalogued attacker behaviour - the kit counts how many your logs could see |
