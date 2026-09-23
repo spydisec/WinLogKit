@@ -63,7 +63,7 @@ Out of scope: anything that writes files outside the event log, installs agents 
 | ATT&CK coverage report + `data/attack/` | **Move to `tools/`** as a maintainer script that produces the numbers on the Coverage page. | The numbers justify the tiers and are worth publishing, but a user doesn't need to run it to deploy logging. |
 | `data/ossem/` and the report's `-UseOssem` mode | **Remove** | A second, legacy mapping kept only as a cross-check; the default native mapping (`data/attack/`) stays. |
 | WELA check (`report/Invoke-WELACheck.ps1`) | **Remove** | Downloads a third-party tool. Test already verifies the live state. Link to WELA from the docs for anyone who wants a second opinion. |
-| AutorunsToWinEventLog add-on | **Move to its own repository**, linked from the docs | Needs Sysinternals and a scheduled task, the one exception to the kit's no-agent rule. |
+| AutorunsToWinEventLog add-on | **Delete** (first decided as "move to its own repository"; the maintainer changed this to delete on 2026-09-23) | Needs Sysinternals and a scheduled task, the one exception to the kit's no-agent rule. |
 | `docs/extras/sentinel-kql.md` | **Remove** | Past the kit's boundary (after the collector), SIEM-specific, and unvalidated (10 open findings). |
 | PowerShell transcription | **Removed** (#36) | Writes files outside the event log. Script block logging (4104) covers it. |
 
@@ -124,10 +124,10 @@ The deciding question is whether a component helps someone **turn on, prove or d
 ## Action items
 
 1. [ ] Merge #36 (transcription removal).
-2. [x] Accept this ADR (Option B; WEF whole channels only, 3 role presets + ASD, ATT&CK report as a maintainer tool, Autoruns to its own repository).
+2. [x] Accept this ADR (Option B; WEF whole channels only, 3 role presets + ASD, ATT&CK report as a maintainer tool, Autoruns add-on deleted).
 3. [ ] #38 Tiers: move Crypto-DPAPI debug and IPsec Driver to HighVolume; make `-IncludeOptional` accepted-but-ignored with a warning.
 4. [ ] #39 Presets: generate 4 (`Workstation`, `MemberServer`, `DomainController`, `ASD`); delete the other 6; update docs and field-report template.
-5. [ ] (needs a new repository) Publish the Autoruns add-on as its own repository (history preserved), then remove `addons/` and `docs/addons.md` and link the new repo from the docs.
+5. [ ] #53 Delete the Autoruns add-on: `addons/`, `docs/addons.md`, its self-check and fixture (history stays in git).
 6. [ ] #40 Remove `report/Invoke-WELACheck.ps1`, `docs/extras/sentinel-kql.md`, `data/ossem/` (with the coverage report's `-UseOssem` mode).
 7. [ ] #41 WEF: remove `-Filter Baseline`, `Test-WefFilter.ps1`, `tools/Update-AuditSubcategoryEvents.ps1`, `data/wef/` and `$BaselineWefSuppress` (added at the maintainer's request); add a short "filter at the SIEM ingest layer" note to Collect.
 8. [ ] #42 Move `report/Export-AttackCoverage.ps1` to `tools/`; drop the empty `report/` folder.
