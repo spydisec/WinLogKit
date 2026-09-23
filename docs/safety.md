@@ -29,6 +29,25 @@ kit never touches them, in any mode:
 | File Share / SAM / Removable Storage / RPC Events | Steady streams on file servers, DCs, USB-heavy or RPC-heavy hosts respectively - watch during the pilot week. |
 | 1 GB Security + 1 GB PowerShell logs | Up to ~3 GB extra disk per host. |
 
+## Disk space
+
+Raising a log's maximum size takes no disk straight away: the log grows
+into it as events arrive, and then wraps. Event rates differ too much
+between hosts (and from day to day on workstations) to forecast, but the
+maximum sizes are fixed, so the kit checks against those. Enable (also
+under `-WhatIf`) and Test add up, per drive, how much more the selected
+logs can grow before they're full, and compare that with the free space:
+
+```text
+[STORAGE OK ] C:\ 23 kit log(s) can still grow by 2.4 GB until full (0.1 GB of it from raised maximum sizes); 424.2 GB of 930.4 GB free now, 421.8 GB once they are full.
+```
+
+`STORAGE LOW` in yellow means under 10% of the drive would be left free
+once the logs are full; in red it means they wouldn't fit at all. Either
+way, plan a disk upgrade (or free space, or apply a smaller selection)
+before rolling out. The check only warns: nothing is blocked, and a low
+disk never fails Test.
+
 Pilot guidance (from the Yamato README): run the full set on a test box
 mirroring production for at least a week, then use event ID metrics (e.g.
 Hayabusa's `eid-metrics`) to decide what to keep.

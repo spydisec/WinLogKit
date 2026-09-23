@@ -398,6 +398,20 @@ try {
         Write-Host ''
     }
 
+    # ------------------------------------------------------------- storage ---
+    # Before any size is raised (and under -WhatIf): will the selected logs
+    # fit on their drive once full? Warns only.
+    $storageLogs = @()
+    foreach ($ch in $script:BaselineChannels) {
+        if ((Get-ItemDecision $ch.Tier 'Channel' $ch.Name) -ne 'Apply') { continue }
+        $log = Get-WinEvent -ListLog $ch.Name -ErrorAction SilentlyContinue
+        if ($null -eq $log) { continue }
+        $storageLogs += [pscustomobject]@{ LogFilePath = $log.LogFilePath; FileSize = $log.FileSize; MaximumSizeInBytes = $log.MaximumSizeInBytes; TargetBytes = $ch.TargetBytes }
+    }
+    Write-Host '=== Log storage (selected channels at their maximum size) ===' -ForegroundColor White
+    Write-LogStorageCheck (@(Get-LogStorageCheck -Logs $storageLogs))
+    Write-Host ''
+
     # ------------------------------------------------------------ channels ---
     Write-Host '=== Event log channels (size and enablement) ===' -ForegroundColor White
     foreach ($ch in $script:BaselineChannels) {

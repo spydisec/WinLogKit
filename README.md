@@ -41,7 +41,8 @@ From an elevated PowerShell prompt in the kit folder, pick the preset for
 the host's role: `Workstation` (Windows 10/11), `MemberServer` or
 `DomainController`. Test on a non-production machine that mirrors your
 environment for at least a week before rolling out: logging volume is real
-disk and real money.
+disk and real money. `-WhatIf` also tells you whether the logs will fit on
+the disk once full.
 
 ```powershell
 $preset = '.\presets\Workstation.csv'

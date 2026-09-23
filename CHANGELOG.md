@@ -11,6 +11,7 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 ### Added
 
 - 🐚 **PowerShell 7 is logged too.** Four new HighVolume settings make PowerShell 7 (`pwsh.exe`) follow the Windows PowerShell script block and module logging policies through its `UseWindowsPowerShellPolicySetting` option, so running `pwsh` instead of `powershell.exe` no longer escapes script block logging. The role presets turn on the two script block ones alongside the settings they follow; `ASD.csv` stays faithful to the ASD script, which predates PowerShell 7. [#44](https://github.com/spydisec/WinLogKit/issues/44)
+- 💾 **Disk space check.** Enable (including `-WhatIf`) and Test now work out, per drive, how much more the selected logs can grow before they reach their maximum sizes, and warn when that would leave under 10% of the drive free or not fit at all, so a host that needs more disk is known before rollout rather than after. Warns only, never blocks or fails. [#51](https://github.com/spydisec/WinLogKit/issues/51)
 - 🚨 **Unregistered PowerShell 7 event log caught.** `Test-LoggingBaseline.ps1` now fails `PowerShellCore/Operational` when PowerShell 7 is installed but its event log isn't registered (Store and zip installs), where it used to report it as not applicable, and says how to register it. [#44](https://github.com/spydisec/WinLogKit/issues/44)
 
 ### Changed
