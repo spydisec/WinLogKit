@@ -1,5 +1,5 @@
 # Per-host runtime output - never commit. Anchored to the repo root: an
-# unanchored WEF/ would also swallow data/wef/ (Windows matches case-insensitively).
+# unanchored WEF/ would also swallow any folder of that name deeper in the tree.
 /Logs/
 /Results/
 /Evidence/

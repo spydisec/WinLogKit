@@ -30,6 +30,18 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
   (membership in the three role presets); the Refs column is unchanged.
 
 ### Removed
+- **WEF source-side filtering** (ADR-002). `New-WefSubscription.ps1` now
+  forwards each selected channel whole. Removed: `-Filter Baseline` (the
+  Security event-ID filter), the `<name>.expected-eventids.csv` sidecar,
+  `fleet\Test-WefFilter.ps1`, `tools\Update-AuditSubcategoryEvents.ps1`,
+  `data\wef\`, and `$BaselineWefSuppress` Suppress rules. A filter
+  evaluated on the source drops events silently when it is wrong; filter
+  at your SIEM ingest layer instead. `-Filter Channel` is still accepted;
+  `-Filter Baseline` stops with this pointer. Verify collection with
+  `Test-LoggingBaseline.ps1 -WefRole Collector` / `-WefRole Source`.
+  **Already deployed a Baseline-filtered subscription?** Regenerate it and
+  re-import with `wecutil ss <name> /c:<file>` (or `wecutil ds` then
+  `wecutil cs`).
 - **`report\Invoke-WELACheck.ps1`** (ADR-002). It downloaded a third-party
   tool, and `Test-LoggingBaseline.ps1` already verifies the live state. To
   cross-check by hand, run Yamato's WELA yourself; the Commands page keeps

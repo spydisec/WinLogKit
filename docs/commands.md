@@ -1,8 +1,7 @@
 # Commands
 
 Every script, what it does, and the flags you'll actually use. All of them
-except `Test-WefFilter.ps1` (which needs only its sidecar CSV) read the
-same settings table (`WinLogKit.Settings.ps1`) and share one helper file
+read the same settings table (`WinLogKit.Settings.ps1`) and share one helper file
 (`WinLogKit.Common.ps1`), so - given
 the same selection, and regenerating artefacts after any settings change -
 what you apply, what you verify and what you deploy can't disagree.
@@ -14,15 +13,14 @@ PowerShell 5.1 - use whichever your host has.
 | Folder | Scripts | Run from |
 |---|---|---|
 | kit root | `New-`, `Enable-`, `Test-LoggingBaseline.ps1`, the settings table `WinLogKit.Settings.ps1`, the shared helpers `WinLogKit.Common.ps1` | the host you are configuring |
-| `fleet\` | `New-IntuneRemediationPack.ps1`, `New-GpoPack.ps1`, `New-WefSubscription.ps1`, `Test-WefFilter.ps1` | an admin workstation (generators); the collector (`Test-WefFilter`) |
+| `fleet\` | `New-IntuneRemediationPack.ps1`, `New-GpoPack.ps1`, `New-WefSubscription.ps1` | an admin workstation |
 | `report\` | `Export-AttackCoverage.ps1` | anywhere |
-| `tools\` | regenerators for presets, the Reference page and the WEF event map | maintainers |
+| `tools\` | regenerators for presets and the Reference page | maintainers |
 
 The root, `fleet\` and `report\` scripts read the settings table and
 helpers from the kit root and write their output (`Intune\`, `GPO\`, `WEF\`,
-`Results\`) there too, wherever they live. Two things stand
-alone by design: `Test-WefFilter.ps1` needs only its sidecar CSV, and the
-generated Intune pack carries everything it needs to the endpoint.
+`Results\`) there too, wherever they live. The generated Intune pack
+stands alone by design: it carries everything it needs to the endpoint.
 
 ## Enable-LoggingBaseline.ps1
 
@@ -114,30 +112,12 @@ script pair. See [Deploy](deployment.md).
 ## New-WefSubscription.ps1
 
 Generates a source-initiated WEF subscription XML from a selection, plus
-the collector and source setup steps, and a sidecar
-`<SubscriptionId>.expected-eventids.csv` saying what it should deliver.
-Two filter modes: `Channel` (default) forwards each selected channel whole;
-`Baseline` narrows Security to the event IDs the enabled audit
-subcategories can produce (vendored Microsoft lists in `data\wef\`) plus
-the always-on log-tamper events. `-Validate` parses every query in the
-local event engine first. See
-[Collect - filtering with XPath](wec.md#filtering-with-xpath-matching-the-subscription-to-the-baseline).
+the collector and source setup steps. Each selected channel is forwarded
+whole. `-Validate` parses every query in the local event engine first.
+See [Collect](wec.md).
 
 ```powershell
-.\fleet\New-WefSubscription.ps1 [-BaselineFile <csv>] [-Filter Channel|Baseline] [-Validate] [-SubscriptionId <name>] [-OutDir <dir>]
-```
-
-## Test-WefFilter.ps1
-
-Run on the collector: proves a subscription's filter is in effect from
-evidence. Compares the event IDs that arrived in ForwardedEvents against
-the generator's sidecar (UNEXPECTED = filter not applied), optionally
-checks the deployed subscription's query matches the generated XML
-(`-SubscriptionId`), and prints the equivalent Sentinel KQL. Non-zero exit
-on any unexpected ID or mismatch.
-
-```powershell
-.\fleet\Test-WefFilter.ps1 -ExpectedFile .\WEF\<name>.expected-eventids.csv [-SubscriptionId <name>] [-Hours 24]
+.\fleet\New-WefSubscription.ps1 [-BaselineFile <csv>] [-Validate] [-SubscriptionId <name>] [-OutDir <dir>]
 ```
 
 ## New-GpoPack.ps1
