@@ -271,21 +271,14 @@ try {
     }
 
     # ---------------------------------------------------- state snapshots ---
-    # Captures the complete pre-change state (full audit policy backup,
-    # channel sizes/enablement, registry values including absence, SMB audit
-    # settings) into a directory. Used for the protected first-run rollback
-    # baseline AND for a timestamped snapshot before every later apply.
-    function Save-StateSnapshot {
-        param([string]$Dir, [string]$JsonName)
-        New-Item -ItemType Directory -Path $Dir -Force | Out-Null
-        $backupFile = Join-Path $Dir 'auditpol-backup.csv'
-        auditpol /backup /file:"$backupFile" | Out-Null
-        # A snapshot without a working audit backup is worse than no snapshot:
-        # the JSON marker would make later runs (and -Rollback) trust it.
-        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $backupFile)) {
-            throw "auditpol /backup failed (exit $LASTEXITCODE) - snapshot aborted, nothing was changed."
-        }
-
+    # Save-StateSnapshot captures the complete pre-change state (full audit
+    # policy backup, channel sizes/enablement, registry values including
+    # absence, SMB audit settings) into a directory: the protected first-run
+    # rollback baseline, and a timestamped snapshot before every later apply.
+    # Get-CurrentKitState is its read-only core: channel, registry and SMB
+    # audit state for every settings-table item (auditpol /backup covers
+    # every audit subcategory on its own).
+    function Get-CurrentKitState {
         $chState = @()
         foreach ($ch in $script:BaselineChannels) {
             $log = Get-WinEvent -ListLog $ch.Name -ErrorAction SilentlyContinue
@@ -316,13 +309,59 @@ try {
             }
         }
 
+        return @{ Channels = $chState; Registry = $regState; SmbAudit = $smbState }
+    }
+
+    function Save-StateSnapshot {
+        param([string]$Dir, [string]$JsonName)
+        New-Item -ItemType Directory -Path $Dir -Force | Out-Null
+        $backupFile = Join-Path $Dir 'auditpol-backup.csv'
+        auditpol /backup /file:"$backupFile" | Out-Null
+        # A snapshot without a working audit backup is worse than no snapshot:
+        # the JSON marker would make later runs (and -Rollback) trust it.
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $backupFile)) {
+            throw "auditpol /backup failed (exit $LASTEXITCODE) - snapshot aborted, nothing was changed."
+        }
+        $state = Get-CurrentKitState
         @{
             CapturedUtc = (Get-Date).ToUniversalTime().ToString('s')
             Host        = $env:COMPUTERNAME
-            Channels    = $chState
-            Registry    = $regState
-            SmbAudit    = $smbState
+            Channels    = $state.Channels
+            Registry    = $state.Registry
+            SmbAudit    = $state.SmbAudit
         } | ConvertTo-Json -Depth 5 | Set-Content -Path (Join-Path $Dir $JsonName) -Encoding UTF8
+    }
+
+    # The first-run baseline is captured once, so settings added by a later
+    # kit version (the PowerShell 7 items, #44) were missing from it and
+    # -Rollback left them behind. Before changing anything, record any item
+    # the baseline doesn't know yet, in its current state: the kit has never
+    # touched it, so its current state IS its pre-kit state. Returns how many
+    # items were added.
+    function Add-NewItemsToFirstRun {
+        param([string]$Path)
+        $first = Get-Content $Path -Raw | ConvertFrom-Json
+        $now = Get-CurrentKitState
+        $known = @{}
+        foreach ($r in @($first.Registry)) { if ($null -ne $r) { $known[("R|$($r.Path)|$($r.Name)").ToUpper()] = $true } }
+        if ($first.PSObject.Properties.Name -contains 'Channels') { foreach ($c in @($first.Channels)) { if ($null -ne $c) { $known[("C|$($c.Name)").ToUpper()] = $true } } }
+        if ($first.PSObject.Properties.Name -contains 'SmbAudit') { foreach ($s in @($first.SmbAudit)) { if ($null -ne $s) { $known[("S|$($s.Id)").ToUpper()] = $true } } }
+        $addedUtc = (Get-Date).ToUniversalTime().ToString('s')
+        $newReg = @($now.Registry | Where-Object { -not $known.ContainsKey(("R|$($_.Path)|$($_.Name)").ToUpper()) } | ForEach-Object { $_.AddedUtc = $addedUtc; $_ })
+        $newCh  = @($now.Channels | Where-Object { -not $known.ContainsKey(("C|$($_.Name)").ToUpper()) } | ForEach-Object { $_.AddedUtc = $addedUtc; $_ })
+        $newSmb = @($now.SmbAudit | Where-Object { -not $known.ContainsKey(("S|$($_.Id)").ToUpper()) } | ForEach-Object { $_.AddedUtc = $addedUtc; $_ })
+        $count = $newReg.Count + $newCh.Count + $newSmb.Count
+        if ($count -eq 0) { return 0 }
+        $smbOld = @(); if ($first.PSObject.Properties.Name -contains 'SmbAudit') { $smbOld = @($first.SmbAudit | Where-Object { $null -ne $_ }) }
+        $chOld  = @(); if ($first.PSObject.Properties.Name -contains 'Channels') { $chOld = @($first.Channels | Where-Object { $null -ne $_ }) }
+        @{
+            CapturedUtc = $first.CapturedUtc
+            Host        = $first.Host
+            Channels    = @($chOld + $newCh)
+            Registry    = @(@($first.Registry | Where-Object { $null -ne $_ }) + $newReg)
+            SmbAudit    = @($smbOld + $newSmb)
+        } | ConvertTo-Json -Depth 5 | Set-Content -Path $Path -Encoding UTF8
+        return $count
     }
 
     if (-not (Test-Path $baselineJson)) {
@@ -347,6 +386,8 @@ try {
             $snapDir = Join-Path (Join-Path $BaselineDir 'snapshots') $stamp
             Save-StateSnapshot -Dir $snapDir -JsonName 'State.json'
             Write-Host "Existing first-run baseline kept for -Rollback. Pre-change snapshot of the current state saved to $snapDir." -ForegroundColor DarkGray
+            $added = Add-NewItemsToFirstRun -Path $baselineJson
+            if ($added -gt 0) { Write-Host "Added $added setting(s) new in this kit version to the rollback baseline, in their current (pre-kit) state." -ForegroundColor DarkGray }
         }
         Write-Host ''
     }

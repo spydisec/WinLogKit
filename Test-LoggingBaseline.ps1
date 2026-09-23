@@ -132,6 +132,13 @@ foreach ($ch in $script:BaselineChannels) {
     }
     $log = Get-WinEvent -ListLog $ch.Name -ErrorAction SilentlyContinue
     if ($null -eq $log) {
+        # PowerShell 7 installed without its event log registered (Store and
+        # zip installs) logs nothing, whatever the policy says (#44): that is
+        # a gap, not a missing feature.
+        if ($ch.Name -eq 'PowerShellCore/Operational' -and (Test-PowerShell7Installed)) {
+            Add-Row $ch.Categories 'Channel' $ch.Name $expected 'not registered' 'FAIL' 'PowerShell 7 is installed but its event log is not registered, so pwsh sessions are not logged. Register it once, as admin, in PowerShell 7: & "$PSHOME\RegisterManifest.ps1"'
+            continue
+        }
         $note = 'Channel not registered on this host - confirm the owning feature is expected to be absent'
         Add-Row $ch.Categories 'Channel' $ch.Name $expected 'not present' 'NOT APPLICABLE' $note
         continue

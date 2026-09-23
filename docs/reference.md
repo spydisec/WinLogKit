@@ -33,7 +33,7 @@ Reading the columns:
 | Security | Channel | - | 20 MB -> 1 GB | Low | A Y | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-PowerShell/Operational | Channel | 4103, 4104 | 15 MB -> 1 GB | Low | Y | :material-check: | :material-check: | :material-check: |
 | Windows PowerShell | Channel | 400, 403, 600 | 15 MB -> 1 GB | Low | Y | :material-check: | :material-check: | :material-check: |
-| PowerShellCore/Operational | Channel | - | 15 MB -> 1 GB | Low | Y | :material-check: | :material-check: | :material-check: |
+| PowerShellCore/Operational | Channel | 4103, 4104 | 15 MB -> 1 GB | Low | Y | :material-check: | :material-check: | :material-check: |
 | System | Channel | 7045, 7036, 104 | 20 MB -> 128 MB | Low | A Y | :material-check: | :material-check: | :material-check: |
 | Application | Channel | 1040, 1034 | 20 MB -> 128 MB | Low | A Y | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-Windows Defender/Operational | Channel | - | 1 MB -> 128 MB | Low | Y | :material-check: | :material-check: | :material-check: |
@@ -98,6 +98,10 @@ Reading the columns:
 | `Wow6432Node\Policies\Microsoft\Windows\PowerShell\ModuleLogging\EnableModuleLogging` | Registry | - | - | High | A Y | - | - | - |
 | `Policies\Microsoft\Windows\PowerShell\ModuleLogging\ModuleNames\*` | Registry | - | - | High | A Y | - | - | - |
 | `Wow6432Node\Policies\Microsoft\Windows\PowerShell\ModuleLogging\ModuleNames\*` | Registry | - | - | High | A Y | - | - | - |
+| `Policies\Microsoft\PowerShellCore\ScriptBlockLogging\UseWindowsPowerShellPolicySetting` | Registry | 4104 | - | High | - | :material-check: | :material-check: | :material-check: |
+| `Wow6432Node\Policies\Microsoft\PowerShellCore\ScriptBlockLogging\UseWindowsPowerShellPolicySetting` | Registry | - | - | High | - | :material-check: | :material-check: | :material-check: |
+| `Policies\Microsoft\PowerShellCore\ModuleLogging\UseWindowsPowerShellPolicySetting` | Registry | 4103 | - | High | - | - | - | - |
+| `Wow6432Node\Policies\Microsoft\PowerShellCore\ModuleLogging\UseWindowsPowerShellPolicySetting` | Registry | - | - | High | - | - | - | - |
 | `CurrentControlSet\Control\Lsa\MSV1_0\RestrictSendingNTLMTraffic` | Registry | - | - | Low | - | :material-check: | :material-check: | :material-check: |
 | `CurrentControlSet\Control\Lsa\MSV1_0\AuditReceivingNTLMTraffic` | Registry | - | - | Low | - | :material-check: | :material-check: | :material-check: |
 | `CurrentControlSet\Services\Netlogon\Parameters\AuditNTLMInDomain (DC)` | Registry | - | - | Low | - | - | - | :material-check: |
