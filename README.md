@@ -11,10 +11,12 @@ monitoring needs, proves it is recording, and can undo it, on Windows
 servers and endpoints, from one sourced settings table. Plain PowerShell (7
 or the built-in 5.1), no modules, no agents, no downloads.
 
-The baselines are built from the [Yamato Security](https://github.com/Yamato-Security)
-logging guides, the Australian Signals Directorate and Microsoft's own
-recommendations, with every setting's purpose, volume risk and source
-recorded in one table. Targets Windows Server 2019 / 2022 / 2025 and
+The settings come from the [Yamato Security](https://github.com/Yamato-Security)
+logging guides and Microsoft's documentation, with every setting's purpose,
+volume risk and source recorded in one table. The ASD reference preset is
+taken from Yamato's
+[EventLog-Baseline-Guide](https://github.com/Yamato-Security/EventLog-Baseline-Guide)
+scripts. Targets Windows Server 2019 / 2022 / 2025 and
 Windows 10 / 11, standalone or domain-joined; version- and role-specific
 items are detected at runtime and reported NOT APPLICABLE where they do not
 apply.

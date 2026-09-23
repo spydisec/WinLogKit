@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Verifies the Windows Server logging baseline. Changes NOTHING.
+    Verifies the Windows logging baseline on a server or endpoint. Changes NOTHING.
 
 .DESCRIPTION
     Read-only. Checks, against the shared settings table:
