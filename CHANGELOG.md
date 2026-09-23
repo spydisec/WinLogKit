@@ -1,427 +1,193 @@
 # Changelog
 
-All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
-releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
+All notable changes to this project will be documented in this file.
 
-## v2.0.0 - Unreleased
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
-The scope reset from [ADR-002](docs/adr/0002-scope-and-simplification.md):
-WinLogKit turns on the native Windows event logging that security
-monitoring needs, proves it is recording, and can undo it. Anything outside
-that (files outside the event log, downloads, source-side filtering, SIEM
-content) is gone. Version 2.0.0 because presets are renamed and scripts,
-switches and a data folder are removed.
+## [2.0.0] - 2026-09-23
 
-**Upgrading from v1:**
+A scope reset ([ADR-002](docs/adr/0002-scope-and-simplification.md)): WinLogKit turns on the native Windows event logging that security monitoring needs, proves it is recording, and can undo it. Anything outside that (files outside the event log, downloads, source-side filtering, SIEM content) is gone. This is a major version because presets are renamed and scripts, switches and data folders are removed.
+
+**Upgrading from 1.x**
 
 | If you used | Now |
 |---|---|
-| `role_*.csv` / `spydi_*.csv` / `Microsoft_*.csv` presets | `Workstation.csv`, `MemberServer.csv`, `DomainController.csv` or `ASD.csv` (table below) |
-| `-IncludeOptional` | `-IncludeHighVolume` (the old switch still parses, warns, and does nothing) |
-| `New-WefSubscription.ps1 -Filter Baseline` or `Test-WefFilter.ps1` | whole-channel subscription; filter at SIEM ingest |
-| `report\Invoke-WELACheck.ps1` | run WELA yourself if you want a second opinion |
+| `role_*.csv`, `spydi_*.csv` or `Microsoft_*.csv` presets | `Workstation.csv`, `MemberServer.csv`, `DomainController.csv` or `ASD.csv` (details under Changed) |
+| `-IncludeOptional` | `-IncludeHighVolume` (the old switch still parses, warns and does nothing) |
+| `New-WefSubscription.ps1 -Filter Baseline` or `Test-WefFilter.ps1` | The whole-channel subscription; filter at your SIEM's ingest layer |
+| `report\Invoke-WELACheck.ps1` | Run WELA yourself if you want a second opinion |
 | `report\Export-AttackCoverage.ps1` | `tools\Export-AttackCoverage.ps1` |
-| the Autoruns add-on (`addons\`) | removed; uninstall it with `-Uninstall` from a v1 copy first |
+| The Autoruns add-on (`addons\`) | Removed; run `Install-AutorunsToWinEventLog.ps1 -Uninstall` from a 1.x copy first |
+| PowerShell transcription settings | Removed; `-Rollback` or deleting the `Transcription` policy keys clears them |
 
-Transcription settings, if you applied them, are removed by `-Rollback` or
-by hand (see Removed).
+### Added
+
+- 🙏 **Credits page.** The docs site now lists every source WinLogKit is built from, what it takes from each and under which licence, the tools it points to without including, and the tooling used to build it. [#55](https://github.com/spydisec/WinLogKit/pull/55)
+- 🧭 **Decision records in the repository.** Architecture decisions now live in `docs/adr/`: ADR-001 recorded after the fact for the 1.0 layout, and ADR-002 for this release. They stay on GitHub and are left off the docs site. [#37](https://github.com/spydisec/WinLogKit/pull/37), [#43](https://github.com/spydisec/WinLogKit/pull/43), [#55](https://github.com/spydisec/WinLogKit/pull/55)
+- 🏷️ **Situational settings flag.** IPsec Driver auditing and the Crypto-DPAPI debug channel carry a `Situational` flag in the settings table, marking them opt-in because they only matter in some environments rather than because they are loud, so the Reference page labels them by their real volume. [#54](https://github.com/spydisec/WinLogKit/pull/54)
 
 ### Changed
-- **README and Getting Started lead with the role presets**: pick
-  `Workstation`, `MemberServer` or `DomainController`, preview, apply,
-  verify. The README states the goal in one sentence and lists what is out
-  of scope.
-- **ADRs live in the repo** under `docs/adr/` (ADR-001 recorded after the
-  fact; ADR-002 is this release).
-- **Self-checks run from the release zip.** The zip ships `tests\` but
-  not `docs\`; the Reference page drift check now skips there instead of
-  failing.
-- **Two tiers: Core and HighVolume** ([ADR-002](docs/adr/0002-scope-and-simplification.md)).
-  The Optional tier is gone. Its two remaining items, the
-  Crypto-DPAPI debug channel and IPsec Driver auditing, are now
-  HighVolume, so **`-IncludeHighVolume` now also turns them on**. Preset
-  selections are unchanged. `-IncludeOptional` is still accepted by every
-  script for one release, but it only prints a deprecation warning and
-  selects nothing.
-- **Four presets instead of ten** (ADR-002). One per host role plus ASD:
 
-  | Old preset | Use instead |
-  |---|---|
-  | `role_Workstation.csv` | `Workstation.csv` (same selection) |
-  | `role_MemberServer.csv` | `MemberServer.csv` (same selection) |
-  | `role_DomainController.csv` | `DomainController.csv` (same selection) |
-  | `ASD.csv` | `ASD.csv` (unchanged) |
-  | `spydi_Workstation_Minimal.csv` | `Workstation.csv` (differs by one item: WFP connections instead of IPsec Driver) |
-  | `spydi_Server_Minimal.csv` | `MemberServer.csv` or `DomainController.csv` |
-  | `spydi_*_Heavy.csv` | the role preset, then flip the HighVolume rows you want to Y in your copy |
-  | `Microsoft_Client.csv`, `Microsoft_Server.csv` | `ASD.csv` or a role preset. Both are narrower than the kit's Core tier; they remain as reference data for the Reference page's Refs column (`tools\reference-baselines.psd1`) |
+- 🎯 **One clear goal.** The README opens with the kit's purpose in one sentence, leads the quick start with a role preset, and lists what is deliberately out of scope. Get started follows the same preset flow: preview, apply, verify. [#43](https://github.com/spydisec/WinLogKit/pull/43)
+- 🧩 **Two tiers instead of three.** The Optional tier is gone and its two remaining items, the Crypto-DPAPI debug channel and IPsec Driver auditing, are now HighVolume, so `-IncludeHighVolume` also turns them on. Preset selections are unchanged. [#38](https://github.com/spydisec/WinLogKit/pull/38)
+- 🗂️ **Four presets instead of ten.** One per host role plus ASD, so there is one answer to "which preset?". The role presets are renamed with identical selections, and the Microsoft client and server baselines remain only as reference data for the Reference page. [#39](https://github.com/spydisec/WinLogKit/pull/39)
+    - `role_Workstation.csv`, `role_MemberServer.csv`, `role_DomainController.csv` become `Workstation.csv`, `MemberServer.csv`, `DomainController.csv` (same selections).
+    - `spydi_Workstation_Minimal.csv` maps to `Workstation.csv`, which differs by one item: WFP connections instead of IPsec Driver.
+    - `spydi_Server_Minimal.csv` maps to `MemberServer.csv` or `DomainController.csv`.
+    - `spydi_*_Heavy.csv` maps to the role preset with the HighVolume rows you want flipped to Y in your copy.
+    - `Microsoft_Client.csv` and `Microsoft_Server.csv` are narrower than the kit's Core tier; use `ASD.csv` or a role preset.
+- 📋 **Reference page shows role presets.** The Minimal and Heavy columns become Wks, Mbr and DC, one for each role preset. The Refs and Volume columns match 1.0.0 for every setting. [#39](https://github.com/spydisec/WinLogKit/pull/39), [#54](https://github.com/spydisec/WinLogKit/pull/54)
+- 📡 **Collection forwards whole channels.** `New-WefSubscription.ps1` now forwards every event of each selected channel. A filter inside the subscription runs on each source and drops events silently when it is wrong, so filtering belongs at your SIEM's ingest layer. `-Filter Channel` is still accepted; `-Filter Baseline` stops with a pointer to these notes. A deployed Baseline-filtered subscription should be regenerated and re-imported with `wecutil ss <name> /c:<file>`. [#41](https://github.com/spydisec/WinLogKit/pull/41)
+- 🛠️ **Coverage report is a maintainer tool.** `Export-AttackCoverage.ps1` moves to `tools\`. It produces the numbers on the Coverage page and still works on any selection CSV, but deploying the kit doesn't need it, so the `report\` folder is gone. [#42](https://github.com/spydisec/WinLogKit/pull/42)
+- 📚 **Simpler docs site.** Navigation follows a user's path (Get started, Baselines, Deploy, Collect) with Commands, Settings and Coverage grouped under Reference. Get started is one straight path with the execution-policy detail folded away, and Collect leads with setup and condenses the existing-collector checks. [#55](https://github.com/spydisec/WinLogKit/pull/55)
+- ⚖️ **Licences stated accurately.** The README said all the Yamato sources were MIT. Yamato's EnableWindowsLogSettings is GPL-3.0; WELA and EventLog-Baseline-Guide are MIT. The README and the Credits page now say so. [#55](https://github.com/spydisec/WinLogKit/pull/55)
+- 🔖 **DeepWiki badge.** The README carries a link to the project's DeepWiki page. [#33](https://github.com/spydisec/WinLogKit/pull/33)
 
-  The Reference page's Minimal/Heavy columns become Wks / Mbr / DC
-  (membership in the three role presets); the Refs and Volume columns are
-  unchanged (IPsec Driver and the DPAPI debug channel carry a new
-  `Situational` flag so moving them to HighVolume doesn't relabel them).
-- **`Export-AttackCoverage.ps1` moves to `tools\`** (ADR-002). It produces
-  the numbers on the Coverage page and still accepts any selection CSV, but
-  deploying the kit doesn't need it. The now-empty `report\` folder is gone.
-  Run it as `.\tools\Export-AttackCoverage.ps1`.
+### Deprecated
+
+- ⏳ **`-IncludeOptional`.** Every script still accepts it, so existing command lines keep working, but it only prints a deprecation warning and selects nothing. It will be removed in a later release. [#38](https://github.com/spydisec/WinLogKit/pull/38)
+
+### Fixed
+
+- 🏷️ **Reference labels for the former Optional items.** Moving IPsec Driver and the DPAPI debug channel to HighVolume had relabelled them as high volume and as part of Yamato's set; they are back to their 1.0.0 labels. [#54](https://github.com/spydisec/WinLogKit/pull/54)
+- 🧪 **Self-checks run from the release zip.** The zip ships `tests\` but not `docs\`, so the Reference page drift check failed there; it now skips with a message when `docs\` is absent. [#54](https://github.com/spydisec/WinLogKit/pull/54)
+- 🔐 **Security policy scope.** SECURITY.md no longer lists a download path that doesn't exist, and says plainly that the scripts make no outbound requests while the WEF subscription you deploy forwards events by design. [#54](https://github.com/spydisec/WinLogKit/pull/54)
+- 📖 **Docs match what the kit does.** Known limits now name the PowerShell 7 logging gap ([#44](https://github.com/spydisec/WinLogKit/issues/44)) and link the open work, the Coverage page no longer claims full PowerShell coverage, and Deploy notes the Intune pack hasn't been field-tested yet ([#46](https://github.com/spydisec/WinLogKit/issues/46)). [#55](https://github.com/spydisec/WinLogKit/pull/55)
 
 ### Removed
-- **AutorunsToWinEventLog add-on** (`addons\`, the Add-ons page, its
-  self-check and fixture; ADR-002). It downloaded Sysinternals `autorunsc`
-  and installed a scheduled task, the one part of the kit that broke its
-  no-download, no-agent rule. **Installed it on a host?** Run
-  `Install-AutorunsToWinEventLog.ps1 -Uninstall` from a v1 copy of the kit
-  before upgrading; it removes the task (the `Autoruns` log is kept unless
-  `-RemoveLog`). The registry-autorun gap is back to documented-only on
-  the Safety page. The kit now has no network action at all.
-- **WEF source-side filtering** (ADR-002). `New-WefSubscription.ps1` now
-  forwards each selected channel whole. Removed: `-Filter Baseline` (the
-  Security event-ID filter), the `<name>.expected-eventids.csv` sidecar,
-  `fleet\Test-WefFilter.ps1`, `tools\Update-AuditSubcategoryEvents.ps1`,
-  `data\wef\`, and `$BaselineWefSuppress` Suppress rules. A filter
-  evaluated on the source drops events silently when it is wrong; filter
-  at your SIEM ingest layer instead. `-Filter Channel` is still accepted;
-  `-Filter Baseline` stops with this pointer. Verify collection with
-  `Test-LoggingBaseline.ps1 -WefRole Collector` / `-WefRole Source`.
-  **Already deployed a Baseline-filtered subscription?** Regenerate it and
-  re-import with `wecutil ss <name> /c:<file>` (or `wecutil ds` then
-  `wecutil cs`).
-- **`report\Invoke-WELACheck.ps1`** (ADR-002). It downloaded a third-party
-  tool, and `Test-LoggingBaseline.ps1` already verifies the live state. To
-  cross-check by hand, run Yamato's WELA yourself; the Commands page keeps
-  the notes on where WELA and the kit legitimately differ. The kit
-  baseline now has no network action at all.
-- **Sentinel KQL extra** (`docs/extras/sentinel-kql.md`, ADR-002). It sat
-  past the kit's boundary (after the collector) and its queries were never
-  validated against a workspace.
-- **OSSEM snapshot and `Export-AttackCoverage.ps1 -UseOssem`** (ADR-002).
-  A legacy second mapping kept only as a cross-check (917 KB); the native
-  ATT&CK mapping in `data/attack/` is unchanged. No OSSEM data or
-  references remain in the kit.
-- **PowerShell transcription** (`Transcription64`, `TranscriptionHeader64`,
-  `Transcription32`, `TranscriptionHeader32`;
-  [#34](https://github.com/spydisec/WinLogKit/issues/34)). It set no
-  `OutputDirectory`, so every PowerShell session wrote a transcript into
-  the user's Documents folder (and to OneDrive under Known Folder Move).
-  Doing it safely needs a hardened folder, retention and a separate
-  collection path, which is outside an event-log kit. Script block logging
-  (4104) already records the code that ran. **Hosts where it was applied:**
-  `-Rollback` still removes the values (the first-run capture recorded
-  them as absent), or delete the `Transcription` policy keys by hand.
-  Selection CSVs that list the old rows are warned about and the rows
-  ignored.
 
-## v1.0.0 - 2026-09-04
+- 📝 **PowerShell transcription.** With no output folder set, every PowerShell session wrote a transcript into the user's Documents folder, which OneDrive then synced; doing it safely needs a folder, permissions, retention and a collection path of its own. Script block logging (4104) already records the code that ran. Old selection CSVs that list the rows are warned about and the rows ignored. [#36](https://github.com/spydisec/WinLogKit/pull/36), [#34](https://github.com/spydisec/WinLogKit/issues/34)
+- 🧹 **AutorunsToWinEventLog add-on.** It downloaded Sysinternals `autorunsc` and installed a scheduled task, the one part of the kit that broke its no-download, no-agent rule. The Safety page points to Sysinternals Autoruns and Palantir's AutorunsToWinEventLog for anyone who needs that coverage. [#53](https://github.com/spydisec/WinLogKit/pull/53)
+- 🎛️ **Source-side WEF filtering.** `-Filter Baseline`, the expected-event-ID sidecar, `fleet\Test-WefFilter.ps1`, `tools\Update-AuditSubcategoryEvents.ps1`, `data\wef\` and the `$BaselineWefSuppress` Suppress rules. Verify collection with `Test-LoggingBaseline.ps1 -WefRole Collector` or `-WefRole Source`. [#41](https://github.com/spydisec/WinLogKit/pull/41)
+- 🔍 **WELA check.** `report\Invoke-WELACheck.ps1` downloaded a third-party tool, and `Test-LoggingBaseline.ps1` already verifies the live state. The Commands page keeps the notes on where WELA and the kit legitimately differ, and the kit now has no network action at all. [#40](https://github.com/spydisec/WinLogKit/pull/40)
+- 📊 **Sentinel KQL page.** It sat past the kit's boundary, after the collector, and its queries were never validated against a workspace. [#40](https://github.com/spydisec/WinLogKit/pull/40)
+- 🗄️ **Legacy coverage snapshot.** The second technique mapping kept only as a cross-check (`data\ossem\`, 917 KB) and the report's `-UseOssem` mode. The native ATT&CK mapping in `data\attack\` is unchanged. [#40](https://github.com/spydisec/WinLogKit/pull/40)
 
-The v1.0 restructure ([ADR-001](https://github.com/spydisec/WinLogKit/pull/30)):
-docs cut, one copy of the shared helpers, and a layout that shows a new
-reader the three scripts they need. Version 1.0.0 because paths move; no
-setting changed.
+## [1.0.0] - 2026-09-04
+
+The 1.0 restructure ([ADR-001](docs/adr/0001-v1-layout.md)): a docs cut, one copy of the shared helpers, and a layout that shows a new reader the three scripts they need. It is a major version because paths moved; no setting changed.
 
 ### Changed
-- **Layout (breaking: paths).** The fleet generators
-  (`New-IntuneRemediationPack.ps1`, `New-GpoPack.ps1`,
-  `New-WefSubscription.ps1`, `Test-WefFilter.ps1`) now live in `fleet\`,
-  and the coverage report and WELA check (`Export-AttackCoverage.ps1`,
-  `Invoke-WELACheck.ps1`) in `report\`. The three host scripts stay at the
-  root with the settings table and the shared helpers. Output folders
-  (`Intune\`, `GPO\`, `WEF\`, `Results\`, `Evidence\`) stay at the kit
-  root wherever the script runs from.
-- **`LoggingBaseline.Settings.ps1` is now `WinLogKit.Settings.ps1`.** Same
-  contents. If you carry a modified copy, rename it.
-- **`WinLogKit.Common.ps1`.** The helpers that Enable, Test, the WELA
-  check, the coverage report and the fleet generators each carried their
-  own copy of (admin check, host role and OS type, registry reads, the
-  auditpol and SMB audit-state readers, selection-CSV loading and the tier
-  logic) now live in
-  one dot-sourced file next to the settings table. Behaviour is unchanged
-  except that every generated artefact now describes its source the same
-  way (`Core tier [+ HighVolume] [+ Optional]` or `baseline file X.csv`).
-  The self-checks fail if a function is defined in more than one file.
-- **Selection CSVs are checked before use.** A `-BaselineFile` that is not a
-  selection CSV (missing `ItemType`, `Id` or `Selected` columns), has an
-  empty ItemType or Id, or lists the same item twice now stops the run with
-  a message naming the problem, instead of an obscure error or a silent
-  select-nothing. So does a CSV whose rows match nothing in the settings
-  table (Test would otherwise report everything NOT APPLICABLE and exit 0);
-  rows for items this kit version does not know are warned about and
-  ignored, so an older CSV still works.
-- **Docs cut.** README reduced to one screen and reused as the site home
-  page (MkDocs snippet include, one copy of the text). The site goes from
-  13 pages to 10: the WEC Collector page absorbs the WEF section of
-  Deployment and becomes **Collect**, Architecture merges into
-  **Coverage**, FAQ merges into **Safety & FAQ**, and the Sentinel KQL
-  page moves to `docs/extras/` outside the navigation (the kit is
-  SIEM-agnostic; that page is one worked example of the last hop).
-  Landing-page hero and card styling removed.
-- `ROADMAP.md` removed; planned work is tracked in GitHub issues. The
-  release zip no longer ships it.
-- FAQ: the Sysmon answer now covers built-in Sysmon on Windows 11 and
-  Windows Server 2025 (an optional Windows feature since February 2026,
-  per [Microsoft's Sysmon overview](https://learn.microsoft.com/windows/security/operating-system-security/sysmon/overview)).
 
-## v0.11.0 - 2026-09-04
+- 📁 **New layout.** The fleet generators (`New-IntuneRemediationPack.ps1`, `New-GpoPack.ps1`, `New-WefSubscription.ps1`, `Test-WefFilter.ps1`) now live in `fleet\`, and the coverage report and WELA check in `report\`. The three host scripts stay at the root with the settings table and shared helpers, and output folders stay at the kit root wherever a script runs from. [#32](https://github.com/spydisec/WinLogKit/pull/32)
+- ✏️ **Settings table renamed.** `LoggingBaseline.Settings.ps1` is now `WinLogKit.Settings.ps1` with the same contents; rename any modified copy you carry. [#32](https://github.com/spydisec/WinLogKit/pull/32)
+- 🧰 **One copy of the shared helpers.** The admin check, host role and OS type probes, registry reads, the audit policy and SMB readers, selection-CSV loading and the tier logic now live in `WinLogKit.Common.ps1` instead of a copy in every script, and the self-checks fail if a function is defined twice. Every generated file now describes its source the same way. [#31](https://github.com/spydisec/WinLogKit/pull/31)
+- ✅ **Selection CSVs checked before use.** A file that isn't a selection CSV, has an empty ItemType or Id, lists an item twice, or matches nothing in the settings table now stops the run with a message naming the problem, instead of an obscure error or a silent select-nothing. Rows for items the kit doesn't know are warned about and ignored, so older CSVs still work. [#31](https://github.com/spydisec/WinLogKit/pull/31)
+- ✂️ **Docs cut.** The README fits on one screen and doubles as the site home page, and the site goes from 13 pages to 10: Collect absorbs the WEF parts of Deployment, Architecture merges into Coverage, the FAQ merges into Safety, and the Sentinel KQL page moves outside the navigation. [#30](https://github.com/spydisec/WinLogKit/pull/30)
+- 🗺️ **Roadmap moves to issues.** `ROADMAP.md` is removed and planned work is tracked as GitHub issues; the release zip no longer ships it. [#30](https://github.com/spydisec/WinLogKit/pull/30)
+- 🦅 **Built-in Sysmon noted.** The FAQ's Sysmon answer covers Sysmon as a built-in optional feature of Windows 11 and Windows Server 2025, per [Microsoft's Sysmon overview](https://learn.microsoft.com/windows/security/operating-system-security/sysmon/overview). [#30](https://github.com/spydisec/WinLogKit/pull/30)
+
+## [0.11.0] - 2026-09-04
 
 ### Added
-- **WEF XPath filtering matched to the baseline.**
-  `New-WefSubscription.ps1 -Filter Baseline` narrows the Security channel
-  to exactly the event IDs the baseline's enabled audit subcategories can
-  produce - Microsoft's documented per-subcategory event lists, vendored
-  with per-row source URLs in `data\wef\audit_subcategory_events.csv`
-  (regenerated by `tools\Update-AuditSubcategoryEvents.ps1`) - plus the
-  always-on Eventlog-service events (1100, 1102, 1104, 1105, 1108). IDs are collapsed into
-  ranges and packed under the 32-expression-per-Select cap; other channels
-  stay whole; the generator refuses to build a filter for a subcategory it
-  has no documented IDs for rather than silently drop them. `-Validate`
-  parses every query in the local event engine before writing. A sidecar
-  `<name>.expected-eventids.csv` records what the subscription should
-  deliver. `$BaselineWefSuppress` in the settings table carries optional
-  Suppress rules (empty by default: suppression is policy, not tuning).
-- **`Test-WefFilter.ps1`**: on the collector, proves the filter is in
-  effect from evidence - unexpected event IDs in ForwardedEvents, deployed
-  query vs generated file via `wecutil`, and the equivalent Sentinel KQL.
-- Docs: WEC Collector page gains "Filtering with XPath: matching the
-  subscription to the baseline" (how the XPath subset works, the two-gate
-  contract, the four confirmation checks); CI check 9 covers snapshot
-  completeness and the generated query.
 
-## v0.10.1 - 2026-09-03
+- 🎯 **WEF filtering matched to the baseline.** `New-WefSubscription.ps1 -Filter Baseline` narrows the Security channel to the event IDs the baseline's audit subcategories can produce, from Microsoft's documented lists, plus the always-on log-tamper events, packed under the 32-expression cap per query. It refuses to build a filter for a subcategory it has no documented IDs for, `-Validate` parses every query locally, and a sidecar CSV records what the subscription should deliver. Suppress rules can be set in the settings table and ship empty. [#28](https://github.com/spydisec/WinLogKit/pull/28), [#29](https://github.com/spydisec/WinLogKit/pull/29)
+- 🔬 **Filter proof on the collector.** `Test-WefFilter.ps1` shows whether the filter is in effect from evidence: unexpected event IDs in ForwardedEvents, the deployed query against the generated file, and the equivalent Sentinel KQL. [#28](https://github.com/spydisec/WinLogKit/pull/28)
+- 📖 **Filtering guide.** The WEC Collector page explains how the XPath subset works, the two-gate contract and the four confirmation checks, and CI checks the snapshot and the generated query. [#28](https://github.com/spydisec/WinLogKit/pull/28)
+
+## [0.10.1] - 2026-09-03
 
 ### Changed
-- Autoruns add-on documentation and script headers reframed: the add-on
-  is WinLogKit's own implementation of the idea, with Palantir's
-  AutorunsToWinEventLog credited and its MIT notice kept. Design choices
-  are presented on their own merits; the upstream comparison table and
-  issue/PR references are gone. No functional change.
 
-## v0.10.0 - 2026-09-03
+- 🤝 **Add-on credited properly.** The Autoruns add-on's docs and script headers present it as WinLogKit's own implementation of the idea, with Palantir's AutorunsToWinEventLog credited and its MIT notice kept. No functional change. [#27](https://github.com/spydisec/WinLogKit/pull/27)
+
+## [0.10.0] - 2026-09-03
 
 ### Added
-- **AutorunsToWinEventLog add-on** (`addons/AutorunsToWinEventLog/`), an
-  optional, clearly separated extra that puts a daily inventory over the
-  kit's documented Persistence gap (partial mitigation, not SACL-grade
-  change auditing): a daily SYSTEM scheduled task runs Sysinternals
-  `autorunsc` and writes every autostart entry to a dedicated `Autoruns`
-  event log (ID 1 per entry, 100 run summary, 101 failure) for WEF/AMA
-  collection. Inspired by Palantir's MIT-licensed tool (credited, log
-  name and message layout kept compatible). Design: hashes and signature
-  verification with no VirusTotal, Microsoft-signed entries kept, UTF-8
-  CSV handling, dynamic columns, run-health events, Authenticode
-  verification of the binary before it runs as SYSTEM, admin-only
-  install folder, log sized at install, `-WhatIf` / `-Status` /
-  `-Uninstall` / `-RunNow`, PowerShell 7 clean. Self-checked in CI
-  against a UTF-8 fixture; the binary itself is never vendored. Docs:
-  new **Add-ons** page.
 
-## v0.9.0 - 2026-09-02
+- 🧷 **AutorunsToWinEventLog add-on.** An optional, separate extra for the Persistence gap: a daily SYSTEM scheduled task runs Sysinternals `autorunsc` and writes every autostart entry to an `Autoruns` event log for collection. It verifies the binary's signature before running it as SYSTEM, keeps hashes and signatures, handles UTF-8, and supports `-WhatIf`, `-Status`, `-Uninstall` and `-RunNow`. Inspired by Palantir's MIT-licensed tool. [#26](https://github.com/spydisec/WinLogKit/pull/26)
+
+## [0.9.0] - 2026-09-02
 
 ### Added
-- Two docs pages for the collection and SIEM end of the chain: **WEC
-  Collector** (reading an existing collector: subscription anatomy,
-  wide-open queries, delivery modes, runtime-status reconciliation,
-  ForwardedEvents health, the classic silent failures) and **Sentinel
-  KQL** (which table forwarded events land in, the four-layer check that
-  AMA collects ForwardedEvents, and a query pack: fleet inventory, a
-  field-tested collection-method map (Direct AMA vs WEF-via-collector
-  per source, joined on _ResourceId), a silent-collector triage for
-  collectors attached to a DCR but shipping nothing, a domain-controller
-  section covering the three DC paths (WEF -> WindowsEvent, direct
-  Security connector -> SecurityEvent, ASIM DNS -> ASimDnsActivityLogs),
-  silent/never-seen sources, latency, volume attribution,
-  collection-policy fingerprinting).
+
+- 📥 **WEC Collector page.** How to read an existing collector: subscription anatomy, wide-open queries, delivery modes, reconciling registered sources, ForwardedEvents health and the classic silent failures. [#24](https://github.com/spydisec/WinLogKit/pull/24)
+- 📊 **Sentinel KQL page.** Which table forwarded events land in, a four-layer check that the agent collects ForwardedEvents, and a query pack covering fleet inventory, collection method per source, silent collectors, domain controller paths, latency and volume. [#24](https://github.com/spydisec/WinLogKit/pull/24), [#25](https://github.com/spydisec/WinLogKit/pull/25)
 
 ### Changed
-- Docs and CONTRIBUTING reworded so PowerShell 7 is explicitly
-  first-class: both engines are supported and CI-tested, Windows
-  PowerShell 5.1 is the compatibility floor (ships with Windows, and
-  [Intune remediations execute under Windows PowerShell](https://learn.microsoft.com/intune/intune-service/fundamentals/remediations)),
-  not the recommended shell.
 
-## v0.8.0 - 2026-08-31
+- 🐚 **PowerShell 7 is first-class.** The docs and CONTRIBUTING say plainly that both engines are supported and tested in CI, with Windows PowerShell 5.1 as the compatibility floor because it ships with Windows and [Intune remediations run under it](https://learn.microsoft.com/intune/intune-service/fundamentals/remediations). [#23](https://github.com/spydisec/WinLogKit/pull/23)
+
+## [0.8.0] - 2026-08-31
 
 ### Added
-- **Reference docs page**: one generated table of all 80 kit settings -
-  key event IDs (curated ATT&CK event map merged with each setting's
-  documented IDs), channel size default -> target, volume weight
-  (High / Watch / Low), reference-baseline membership (ASD / Microsoft
-  Client / Microsoft Server / Yamato, with kit-added extras honestly
-  unlettered) and real spydi Minimal/Heavy membership ticks read from the
-  preset CSVs. Generated by `tools\Export-ReferenceTable.ps1` and
-  drift-checked in CI, so it cannot silently go stale.
-- Community files: `CONTRIBUTING.md` (ground rules, how changes land),
-  `SECURITY.md` (private vulnerability reporting, what's in scope), issue
-  templates (bug report, **field report** for real volume data, feature
-  request) and a PR checklist template.
+
+- 📋 **Reference page.** One generated table of every setting: key event IDs, log size default and target, volume weight, which reference baselines ask for it, and preset membership. It is drift-checked in CI, so it can't go stale. [#21](https://github.com/spydisec/WinLogKit/pull/21)
+- 🤝 **Community files.** CONTRIBUTING, SECURITY (private vulnerability reporting), issue templates including a field report for real volume data, and a PR checklist. [#22](https://github.com/spydisec/WinLogKit/pull/22)
 
 ### Changed
-- Docs UI reworked: spydi theme (WELA-informed stylesheet, credited),
-  hero landing page with icon cards, jargon-reduction pass, and
-  hand-authored SVG diagrams replacing mermaid (which rendered as
-  unreadable strips).
-- README trimmed to a front door: quick start, files, tiers, safety
-  summary and a where-everything-lives table pointing at the docs site.
-  The encyclopedic content moved into the docs (behaviour category
-  mapping -> Architecture; Yamato deviations table -> Baselines; WELA
-  quick reference and expected deviations -> Commands; Server 2025 /
-  Win11 24H2 notes -> FAQ) instead of being deleted.
-- IPsec Driver purpose text corrected per Microsoft's
-  [advanced audit policy reference](https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration)
-  (5478-5480 and 5483-5485 are IPsec service start/stop and
-  filter-processing events, not driver integrity failures); presets
-  regenerated.
+
+- 🎨 **Docs look and readability.** A new site theme with a credited stylesheet, a readability pass, and hand-drawn SVG diagrams replacing Mermaid, which rendered as unreadable strips. [#17](https://github.com/spydisec/WinLogKit/pull/17), [#18](https://github.com/spydisec/WinLogKit/pull/18), [#20](https://github.com/spydisec/WinLogKit/pull/20)
+- 🚪 **README as a front door.** The README is trimmed to a quick start and pointers, with the detailed content moved into the docs rather than deleted. [#22](https://github.com/spydisec/WinLogKit/pull/22)
+- 🛰️ **IPsec Driver description corrected.** Events 5478-5480 and 5483-5485 are IPsec service start/stop and filter-processing events, per Microsoft's [advanced audit policy reference](https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/advanced-audit-policy-configuration), not driver integrity failures.
 
 ### Fixed
-- WELA download hardened for forward compatibility and the registry-write
-  tripwire added after reviewing upstream WELA's recent bug fixes
-  (`New-Item -Force` wiping existing registry values, WELA #243): kit
-  registry writes go through `Registry::SetValue` and CI's AST check keeps
-  it that way.
 
-## v0.7.0 - 2026-08-31
+- 🛡️ **Registry writes can't wipe sibling values.** After reviewing an upstream WELA bug where `New-Item -Force` wiped existing registry values, every kit registry write goes through `Registry::SetValue`, and a CI check keeps it that way. The WELA download was also made forward-compatible. [#19](https://github.com/spydisec/WinLogKit/pull/19)
+
+## [0.7.0] - 2026-08-31
 
 ### Added
-- Automatic pre-change snapshots: every real apply after the first now
-  saves a timestamped snapshot of the current state
-  (`Baseline\snapshots\<timestamp>\`: full auditpol backup + channel /
-  registry / SMB state JSON) before changing anything, so moving between
-  baselines leaves a point-in-time record. The protected first-run capture
-  and `-Rollback` semantics are unchanged (rollback = undo the kit
-  entirely; snapshot restore is documented as a manual step).
-- Docs landing page rewritten per a UX copy review (hero with the stake
-  above the fold, verb-first CTAs, outcome-led "Why" cards); enabling
-  `attr_list` also fixed the landing buttons, which previously rendered as
-  literal markup.
-- spydi blended baselines (`presets/spydi_*`): ASD + Microsoft Client +
-  Microsoft Server + Yamato blended on two axes - role (Server covering
-  servers/DCs/WEF collectors with runtime DC-gating; Workstation for
-  Windows 10/11) and volume (Minimal = the unanimous high-signal set +
-  4688/cmdline + 4104 + IPsec Driver; Heavy = Minimal + WFP connections +
-  Sensitive Privilege Use + ASD's module logging). Coverage: Workstation
-  263/269, Server 273/279 of 472 (284 native ceiling; Server Heavy reaches
-  the full native reach). Per-group source-and-events table and a
-  Minimal-vs-Heavy decision diagram in the docs; drift-checked in CI.
 
-## v0.6.0 - 2026-08-31
+- 📸 **Snapshots before every apply.** Every real apply after the first saves a timestamped copy of the current state (audit policy backup plus channel, registry and SMB state) before changing anything, so moving between baselines leaves a record. The first-run capture and `-Rollback` are unchanged. [#15](https://github.com/spydisec/WinLogKit/pull/15)
+- ⚖️ **Blended Minimal and Heavy baselines.** Presets combining ASD, Microsoft and Yamato on two axes, role (Server or Workstation) and volume (Minimal or Heavy), with a per-group source table and a decision diagram in the docs. [#14](https://github.com/spydisec/WinLogKit/pull/14)
+- 🏠 **Landing page rewrite.** The docs landing page was rewritten after a UX copy review, which also fixed buttons that rendered as literal markup.
+
+## [0.6.0] - 2026-08-31
 
 ### Added
-- Native ATT&CK mapping: `Export-AttackCoverage.ps1` now joins a snapshot
-  derived from **current MITRE ATT&CK Enterprise v19.2** (detection
-  strategies -> Windows analytics -> literal log sources and event codes)
-  through a kit-curated event map (`data/attack/`, every row sourced).
-  New statuses NotNative and Unmapped keep the limits and the curation
-  worklist visible. MITRE attribution and OSSEM approach-credit in
-  `data/attack/README.md`; `-UseOssem` retains the OSSEM-DM snapshot join
-  as a cross-check. Reference numbers: 472 Windows techniques mapped,
-  native-logging ceiling 284 (MITRE's analytics are Sysmon-first),
-  Core 162, Core+HighVolume 279 of the 284 ceiling.
-- Architecture page on the docs site with a mermaid diagram of the kit's
-  one mechanism (snapshots in -> settings table -> host + fleet artefacts
-  -> events out to collector/SIEM); mermaid rendering enabled site-wide.
+
+- 🗺️ **Native ATT&CK mapping.** The coverage report joins a snapshot of MITRE ATT&CK Enterprise v19.2 (detection strategies to Windows analytics to log sources and event codes) through a kit-curated event map, with NotNative and Unmapped statuses so limits and curation gaps stay visible. With 472 Windows techniques mapped and a native-logging ceiling of 284, Core reaches 162 and Core plus HighVolume 279. [#12](https://github.com/spydisec/WinLogKit/pull/12)
+- 🧱 **Architecture page.** A diagram of the kit's one mechanism: snapshots in, the settings table, host and fleet artefacts, events out to a collector. [#12](https://github.com/spydisec/WinLogKit/pull/12)
 
 ### Fixed
-- Release zip packaging omitted `data/`, `presets/`, `tools/` and `tests/`,
-  so data-dependent scripts (coverage, presets) failed from a zip install
-  (field-reported). The zip now carries them.
 
-## v0.5.0 - 2026-08-31
+- 📦 **Release zip contents.** The zip left out `data\`, `presets\`, `tools\` and `tests\`, so coverage and presets failed from a zip install; it now carries them. [#12](https://github.com/spydisec/WinLogKit/pull/12)
 
-### Added
-- Per-role presets: `presets/role_Workstation.csv`, `role_MemberServer.csv`
-  and `role_DomainController.csv` - the kit's recommended starting point per
-  host role (Core plus the high-value items each role can afford), with every
-  hold-back justified by the settings table's Risk metadata and the rationale
-  documented per decision. ATT&CK coverage: Workstation 317/362, MemberServer
-  299/362, DomainController 302/362. Starting points pending pilot volume
-  data. Drift-checked in CI like the reference presets.
-- Getting Started documents the PowerShell execution policy blocker with
-  least-invasive-first fixes (field-reported; per
-  [about_Execution_Policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies)).
-
-## v0.4.0 - 2026-08-31
+## [0.5.0] - 2026-08-31
 
 ### Added
-- GPO delivery: `New-GpoPack.ps1` generates the advanced audit policy
-  `audit.csv` (GUID-driven) and an LGPO-format `registry.txt` from any
-  selection, with explicit reminders for what GPO packs deliberately
-  exclude (channel sizing, NTLM security options, SMB auditing, AD CS).
-- WEF plumbing verification: `Test-LoggingBaseline.ps1 -WefRole
-  Source|Collector` checks the SubscriptionManager policy and WinRM on
-  sources, and Wecsvc / ForwardedEvents sizing / loaded subscriptions on
-  collectors.
-- ATT&CK coverage reporting: `Export-AttackCoverage.ps1` joins a vendored,
-  provenance-recorded [OSSEM-DM](https://github.com/OTRF/OSSEM-DM)
-  snapshot (`data/ossem/`, MIT) against any selection and reports
-  observable techniques with reasons for the gaps (NotSelected / NotInKit /
-  RequiresSysmon). Reference numbers: Core 152/362, Core+HighVolume
-  320/362 mapped Windows techniques.
-- Documentation site (MkDocs Material, deployed to GitHub Pages by the
-  Docs workflow): getting started, commands, baselines and presets, fleet
-  deployment, coverage mapping, safety, FAQ.
-- WEF/WEC central collection: `New-WefSubscription.ps1` generates a
-  source-initiated Windows Event Forwarding subscription XML from the
-  settings table or any baseline selection CSV (one query per selected
-  channel), with collector (`winrm qc`, `wecutil`) and source (GPO
-  SubscriptionManager) setup guidance printed, following
-  [Microsoft's WEF intrusion-detection guidance](https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection).
-  The kit's pipeline boundary is documented: generate (kit) -> transport
-  (WEF/WEC) -> ingest (SIEM, out of scope). Transport defaults live in the
-  settings table (`$BaselineWefDefaults`).
-- Reference baseline presets in `presets/`: ASD, Microsoft_Client and
-  Microsoft_Server as selection CSVs usable with every `-BaselineFile`
-  parameter, faithful to the `bat/` scripts in Yamato's
-  [EventLog-Baseline-Guide](https://github.com/Yamato-Security/EventLog-Baseline-Guide),
-  with documented faithfulness limits (see README "Reference baseline
-  presets"). Regenerated by `tools/New-PresetBaselines.ps1` and
-  drift-checked in CI.
-- README updated for the v0.3.0 feature set (release/CHANGELOG pointers,
-  files table, WEF and presets sections).
 
-## v0.3.0 - 2026-08-31
+- 👥 **Per-role presets.** Workstation, member server and domain controller presets: Core plus the high-value items each role can afford, with every hold-back justified by the settings table's risk notes and documented. [#10](https://github.com/spydisec/WinLogKit/pull/10)
+- 🔓 **Execution policy help.** Getting Started explains the "running scripts is disabled" blocker with the least invasive fixes first, per [about_Execution_Policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies). [#9](https://github.com/spydisec/WinLogKit/pull/9)
+
+## [0.4.0] - 2026-08-31
 
 ### Added
-- Windows 10 / 11 workstation support: host profile detection (workstation /
-  server / domain controller) shown by Enable/Test, runtime NOT APPLICABLE
-  gating for role- and version-specific items, README guidance (including
-  Home edition notes).
-- Intune delivery: `New-IntuneRemediationPack.ps1` compiles the settings
-  table, or a New-LoggingBaseline.ps1 selection CSV, into a self-contained
-  detection + remediation script pair (SYSTEM, 64-bit, Intune exit-code
-  contract). AD CS AuditFilter excluded from packs by design (CertSvc
-  restart).
-- IPsec Driver audit subcategory (Optional tier) - present in
-  [Microsoft's baseline recommendation](https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations)
-  but not the Yamato set; surfaced by reviewing Yamato's
-  [EventLog-Baseline-Guide](https://github.com/Yamato-Security/EventLog-Baseline-Guide)
-  comparison app, now credited in the README.
-- Kit self-checks extended to generate and validate the Intune pack.
 
-## v0.2.0 - 2026-08-31
+- 🏢 **GPO delivery.** `New-GpoPack.ps1` generates an advanced audit policy `audit.csv` and an LGPO `registry.txt` from any selection, with reminders for what GPO packs can't carry. [#7](https://github.com/spydisec/WinLogKit/pull/7)
+- 📡 **Central collection.** `New-WefSubscription.ps1` generates a source-initiated Windows Event Forwarding subscription from any selection, with collector and source setup printed, following [Microsoft's WEF guidance](https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection). [#6](https://github.com/spydisec/WinLogKit/pull/6)
+- 🔌 **WEF checks.** `Test-LoggingBaseline.ps1 -WefRole Source` or `-WefRole Collector` verifies the forwarding policy and WinRM on sources, and the collector service, ForwardedEvents size and loaded subscriptions on collectors. [#7](https://github.com/spydisec/WinLogKit/pull/7)
+- 📈 **ATT&CK coverage report.** `Export-AttackCoverage.ps1` reports which techniques a selection makes observable, with a reason for each gap. [#7](https://github.com/spydisec/WinLogKit/pull/7)
+- 📚 **Documentation site.** Getting started, commands, baselines, deployment, coverage and safety, published to GitHub Pages. [#7](https://github.com/spydisec/WinLogKit/pull/7)
+- 📑 **Reference presets.** ASD, Microsoft client and Microsoft server baselines as selection CSVs, faithful to Yamato's [EventLog-Baseline-Guide](https://github.com/Yamato-Security/EventLog-Baseline-Guide) scripts and drift-checked in CI. [#6](https://github.com/spydisec/WinLogKit/pull/6)
+
+## [0.3.0] - 2026-08-31
 
 ### Added
-- Windows Server 2025 support: new SMB signing/encryption capability auditing
-  (`AuditClientDoesNotSupport*` / `AuditServerDoesNotSupport*` via the SMB
-  configuration cmdlets, events 3021/3022 and 31998/31999) plus sizing for the
-  `SMBServer/Audit` and `SmbClient/Audit` channels. OS-gated: reported
-  NOT APPLICABLE on 2019/2022.
-- `New-LoggingBaseline.ps1`: interactive baseline builder with the kit
-  recommendation and per-item volume/stability risk notes; writes an
-  Excel-editable selection CSV.
-- `-BaselineFile` on Enable/Test: apply and verify exactly the selected set.
-- Stability safety documentation (never-do list: CrashOnAuditFail,
-  do-not-overwrite retention, global object access auditing, blanket SACLs),
-  grounded in Microsoft documentation, with `Risk` metadata on heavy settings.
-- SDLC: CI (PSScriptAnalyzer lint, kit self-checks on Windows PowerShell 5.1
-  and PowerShell 7, DevSkim security scan), release workflow (zip + SHA256 on
-  version tags), Dependabot for GitHub Actions, self-check harness in `tests/`.
 
-### Notes
-- On Windows Server 2025, NTLMv1 is removed by the OS and the SMB client
-  supports NTLM blocking. The kit's NTLM settings remain audit-only and safe.
+- 💻 **Windows 10 and 11 support.** Enable and Test detect workstation, server or domain controller and report role- or version-specific items as NOT APPLICABLE where they don't apply. [#3](https://github.com/spydisec/WinLogKit/pull/3)
+- 📲 **Intune delivery.** `New-IntuneRemediationPack.ps1` compiles any selection into a self-contained detection and remediation pair for Intune. AD CS auditing is left out by design, because it needs a service restart. [#3](https://github.com/spydisec/WinLogKit/pull/3)
+- 🛰️ **IPsec Driver auditing.** In [Microsoft's baseline recommendation](https://learn.microsoft.com/windows-server/identity/ad-ds/plan/security-best-practices/audit-policy-recommendations) but not Yamato's set, found by reviewing Yamato's EventLog-Baseline-Guide comparison. [#3](https://github.com/spydisec/WinLogKit/pull/3)
 
-## v0.1.0 - 2026-08-31
+### Fixed
 
-- Initial release: Yamato Security logging baselines as an enable/test/verify
-  kit for Windows Server 2019/2022. Tiered enablement (Core / HighVolume /
-  Optional), idempotent with `-WhatIf` and `-Rollback`, read-only verification
-  with per-category PASS/FAIL/NA and CSV output, WELA-based independent
-  checking with archived evidence.
+- 🔧 **Field-test fixes.** WELA staging, DevSkim TLS alerts, and a baseline tree view in the builder. [#4](https://github.com/spydisec/WinLogKit/pull/4)
+
+## [0.2.0] - 2026-08-31
+
+### Added
+
+- 🪟 **Windows Server 2025 support.** Auditing of SMB peers that can't sign or encrypt (events 3021/3022 and 31998/31999), with the two SMB audit channels sized; reported NOT APPLICABLE on 2019 and 2022. [#1](https://github.com/spydisec/WinLogKit/pull/1)
+- 🧱 **Baseline builder.** `New-LoggingBaseline.ps1` walks every setting with the kit's recommendation and a risk note, and writes a selection CSV you can edit in Excel. [#1](https://github.com/spydisec/WinLogKit/pull/1)
+- 🎚️ **Apply exactly what you chose.** `-BaselineFile` on Enable and Test applies and verifies only the selected settings. [#1](https://github.com/spydisec/WinLogKit/pull/1)
+- ⛔ **Never-do list.** Documentation of the settings the kit never touches (CrashOnAuditFail, do-not-overwrite retention, global object auditing, blanket SACLs), with risk notes on heavy settings. [#1](https://github.com/spydisec/WinLogKit/pull/1)
+- ⚙️ **CI and releases.** Lint, self-checks on Windows PowerShell 5.1 and PowerShell 7, a security scan, zip releases with checksums on version tags, and Dependabot. [#1](https://github.com/spydisec/WinLogKit/pull/1), [#2](https://github.com/spydisec/WinLogKit/pull/2)
+
+## [0.1.0] - 2026-08-31
+
+### Added
+
+- 🚀 **Initial release.** Yamato Security's logging baselines as an enable, test and roll back kit for Windows Server 2019 and 2022: tiered enablement, idempotent with `-WhatIf` and `-Rollback`, and read-only verification with PASS/FAIL per behaviour category and CSV output.

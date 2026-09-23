@@ -2,9 +2,9 @@
 
 Two questions, answered from data shipped in the kit: **how do the pieces
 fit together**, and **if I turn these settings on, which attack techniques
-could my logs actually see, and for the rest, why not?**
-`Export-AttackCoverage.ps1` computes the second one locally for any
-baseline, offline.
+could my logs actually see, and for the rest, why not?** The numbers come
+from the maintainer tool `tools\Export-AttackCoverage.ps1`, which also
+works offline on your own baseline CSV.
 
 ## How the pieces fit
 
@@ -125,7 +125,7 @@ are in the settings table and on the [Reference page](reference.md).
 | Software and service install | Security System Extension (4697) | System (7045); Application (MsiInstaller); CodeIntegrity/Operational; PrintService Admin + Operational | - | Full |
 | Remote access | Logon (types 3/10); Other Logon/Logoff (4778/4779); RPC Events | TerminalServices-LocalSessionManager/Operational; SmbClient/Security | - | Full |
 | Scheduled and automated tasks | Other Object Access (4698-4702) | TaskScheduler/Operational; WMI-Activity/Operational | - | Full |
-| Scripting and command line | Process Creation (HV) | PowerShell/Operational (4103/4104); Windows PowerShell; PowerShellCore/Operational; Diagnosis-Scripted | Script block + module logging (HV); cmdline (HV) | Full for PowerShell; other interpreters visible only via 4688 command lines |
+| Scripting and command line | Process Creation (HV) | PowerShell/Operational (4103/4104); Windows PowerShell; PowerShellCore/Operational; Diagnosis-Scripted | Script block + module logging (HV); cmdline (HV) | Full for Windows PowerShell 5.1; PowerShell 7 not yet ([#44](https://github.com/spydisec/WinLogKit/issues/44)); other interpreters visible only via 4688 command lines |
 | Persistence | Security System Extension; Other Object Access; Directory Service Changes (DC) | System (7045); TaskScheduler/Operational; WMI-Activity/Operational; Bits-Client/Operational | - | **Partial**: registry autoruns (Run keys, IFEO) need the Registry subcategory + per-key SACLs, not in this baseline |
 | Removable and external devices | Plug and Play (6416); Removable Storage (4663) | Security; DriverFrameworks-UserMode/Operational | - | Full |
 | Blocked and denied activity | Account Lockout; Filtering Platform Connection blocks (HV) | Security; Defender/Operational; AppLocker x4; CodeIntegrity; Security-Mitigations x2; Firewall | - | Full (AppLocker channels populate only if AppLocker policy deployed) |
