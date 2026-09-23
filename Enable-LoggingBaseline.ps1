@@ -122,14 +122,6 @@ function Remove-RegValue {
     }
 }
 
-function Get-DesiredInclusion {
-    param([bool]$Success, [bool]$Failure)
-    if ($Success -and $Failure) { return 'Success and Failure' }
-    if ($Success) { return 'Success' }
-    if ($Failure) { return 'Failure' }
-    return 'No Auditing'
-}
-
 function Set-SmbAuditSetting {
     param([hashtable]$Item)
     $setParams = @{ $Item.Id = $Item.Value; Force = $true }
@@ -465,12 +457,15 @@ try {
         if ($decision -eq 'Excluded')  { Add-Result 'AuditPol' $sub.Name 'Excluded' 'Selected = N in baseline file'; continue }
         if ($decision -eq 'NotListed') { Add-Result 'AuditPol' $sub.Name 'Excluded' 'Not listed in baseline file'; continue }
 
-        $desired = Get-DesiredInclusion -Success $sub.Success -Failure $sub.Failure
-        $guid    = $sub.Guid.ToUpper()
-        $current = 'Unknown'
-        if ($currentAudit.ContainsKey($guid)) { $current = $currentAudit[$guid] }
+        # Compared as setting values (0..3), not localised text (#45).
+        $desiredValue = Get-AuditSettingValue -Success $sub.Success -Failure $sub.Failure
+        $desired      = Format-AuditSetting $desiredValue
+        $guid         = $sub.Guid.ToUpper()
+        $currentValue = $null
+        if ($currentAudit.ContainsKey($guid)) { $currentValue = $currentAudit[$guid] }
+        $current = Format-AuditSetting $currentValue
 
-        if ($current -eq $desired) {
+        if ($currentValue -eq $desiredValue) {
             Add-Result 'AuditPol' $sub.Name 'AlreadyCorrect' $desired
             continue
         }

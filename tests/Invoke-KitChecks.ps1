@@ -104,7 +104,7 @@ if ($dupes) {
 # The shared helpers must stay in the common file: a copy that migrated back
 # into one script would still be a single definition, so name them.
 $commonExpected = @('Test-IsAdmin', 'Get-DomainRole', 'Test-PowerShell7Installed', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
-    'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'Get-BaselineItemKeySet', 'Import-BaselineSelection', 'Test-ReferenceBaselineItem', 'Write-IncludeOptionalWarning', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
+    'ConvertFrom-AuditPolicyBackup', 'Get-AuditPolicyByGuid', 'Get-AuditSettingValue', 'Format-AuditSetting', 'Get-SmbAuditState', 'Get-BaselineItemKeySet', 'Import-BaselineSelection', 'Test-ReferenceBaselineItem', 'Write-IncludeOptionalWarning', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
 $notInCommon = @($commonExpected | Where-Object { -not $defs.ContainsKey($_) -or (($defs[$_] -join ';') -ne 'WinLogKit.Common.ps1') })
 if ($notInCommon) {
     Fail "shared helper not defined in WinLogKit.Common.ps1 (only): $($notInCommon -join ', ')"
@@ -353,6 +353,28 @@ try {
         foreach ($k in $ps7Pairs.Keys) { if ($on.ContainsKey($ps7Pairs[$k]) -and -not $on.ContainsKey($k)) { $ps7Bad += "$name selects $($ps7Pairs[$k]) without $k" } }
     }
     if ($ps7Bad) { Fail "PowerShell 7 policy items: $($ps7Bad -join '; ')" } else { Pass 'PowerShell 7 items pair with their Windows PowerShell policies, in the settings and the role presets' }
+
+    # 12. Audit policy is read as numbers, not words (#45). The same policy
+    #     exported on English and on German Windows (header row and setting
+    #     text translated, values identical) must parse to the same
+    #     GUID -> value map covering every kit subcategory, with the Option:
+    #     rows skipped; and no script may still match on the translated text.
+    try {
+        . (Join-Path $KitRoot 'WinLogKit.Common.ps1')
+        $fx = Join-Path (Join-Path $KitRoot 'tests') 'fixtures'
+        $mapEn = ConvertFrom-AuditPolicyBackup -Lines (Get-Content (Join-Path $fx 'auditpol-backup-en.csv') -Encoding UTF8)
+        $mapDe = ConvertFrom-AuditPolicyBackup -Lines (Get-Content (Join-Path $fx 'auditpol-backup-de.csv') -Encoding UTF8)
+        $diff = @($mapEn.Keys | Where-Object { -not $mapDe.ContainsKey($_) -or $mapDe[$_] -ne $mapEn[$_] })
+        $missingSub = @($BaselineAuditSubcategories | Where-Object { -not $mapEn.ContainsKey($_.Guid.ToUpper()) } | ForEach-Object { $_.Name })
+        $textReaders = @(foreach ($rel in @('WinLogKit.Common.ps1', 'Enable-LoggingBaseline.ps1', 'Test-LoggingBaseline.ps1', 'fleet\New-IntuneRemediationPack.ps1')) {
+            if (Select-String -Path (Join-Path $KitRoot $rel) -Pattern "'Inclusion Setting'|match 'Success'|match 'Failure'|auditpol /get /category" -Quiet) { $rel }
+        })
+        if ($mapEn.Count -ge 50 -and $mapEn.Count -eq $mapDe.Count -and $diff.Count -eq 0 -and $missingSub.Count -eq 0 -and $textReaders.Count -eq 0 -and (Format-AuditSetting 3) -eq 'Success and Failure' -and (Get-AuditSettingValue $true $false) -eq 1) {
+            Pass "audit policy parses the same from English and German exports ($($mapEn.Count) subcategories, values not text)"
+        } else {
+            Fail "locale-neutral audit reading wrong: en $($mapEn.Count) / de $($mapDe.Count) rows, $($diff.Count) differ, kit subcategories missing [$($missingSub -join ', ')], text-matching readers [$($textReaders -join ', ')]"
+        }
+    } catch { Fail "locale-neutral audit check errored: $($_.Exception.Message)" }
 }
 finally {
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue

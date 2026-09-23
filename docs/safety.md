@@ -37,9 +37,6 @@ decision.
 
 ## Known limits, stated plainly
 
-- **English-language OS assumed for verification**: `auditpol` output text
-  is localised; setting uses GUIDs and is locale-safe. Locale-neutral
-  verification is tracked in [#45](https://github.com/spydisec/WinLogKit/issues/45).
 - **PowerShell 7 needs its event log registered**: PowerShell 7 (`pwsh.exe`)
   has its own Group Policy settings (per
   [about_Group_Policy_Settings](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_group_policy_settings)).
