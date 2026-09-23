@@ -55,12 +55,12 @@ decision.
 No. The kit is a static snapshot: the Yamato baselines and the MITRE
 ATT&CK mapping data are vendored with recorded provenance (source, commit,
 date). Nothing is fetched at runtime, and nothing about your hosts,
-results or baselines leaves them. The baseline has one optional network
-action, `Invoke-WELACheck.ps1 -Download`, which fetches WELA from GitHub
-when you explicitly ask; the optional [Autoruns add-on](addons.md) adds a
-second, `Install-AutorunsToWinEventLog.ps1 -Download`, which fetches
-`autorunsc` from live.sysinternals.com. Both have an offline alternative
-(bring the files yourself), so air-gapped estates need no network at all.
+results or baselines leaves them. The baseline itself has no network
+action at all. The optional [Autoruns add-on](addons.md) has one,
+`Install-AutorunsToWinEventLog.ps1 -Download`, which fetches `autorunsc`
+from live.sysinternals.com when you explicitly ask; it has an offline
+alternative (bring the file yourself), so air-gapped estates need no
+network at all.
 
 ### How is this different from just running Yamato's batch script?
 
@@ -161,8 +161,8 @@ host, while the 1 GB Security log matters more on small SSDs.
 ### Does a "PASS" mean I'm detecting attacks?
 
 No - it means the configured events are being generated and retained.
-Detection needs rules on top (Sigma, SIEM analytics). WELA's rule counts
-and the [coverage mapping](mapping.md) tell you what your events *support*.
+Detection needs rules on top (Sigma, SIEM analytics). The
+[coverage mapping](mapping.md) tells you what your events *support*.
 
 ### How do I update the kit without losing my baselines?
 

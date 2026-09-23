@@ -7,8 +7,7 @@ same settings table (`WinLogKit.Settings.ps1`) and share one helper file
 the same selection, and regenerating artefacts after any settings change -
 what you apply, what you verify and what you deploy can't disagree.
 All of the kit's scripts run on PowerShell 7 and on stock Windows
-PowerShell 5.1 - use whichever your host has. (WELA is Yamato's tool
-with its own requirements; `Invoke-WELACheck.ps1` drives it either way.)
+PowerShell 5.1 - use whichever your host has.
 
 ## Where the scripts live
 
@@ -16,12 +15,12 @@ with its own requirements; `Invoke-WELACheck.ps1` drives it either way.)
 |---|---|---|
 | kit root | `New-`, `Enable-`, `Test-LoggingBaseline.ps1`, the settings table `WinLogKit.Settings.ps1`, the shared helpers `WinLogKit.Common.ps1` | the host you are configuring |
 | `fleet\` | `New-IntuneRemediationPack.ps1`, `New-GpoPack.ps1`, `New-WefSubscription.ps1`, `Test-WefFilter.ps1` | an admin workstation (generators); the collector (`Test-WefFilter`) |
-| `report\` | `Export-AttackCoverage.ps1`, `Invoke-WELACheck.ps1` | anywhere (coverage); the host (WELA) |
+| `report\` | `Export-AttackCoverage.ps1` | anywhere |
 | `tools\` | regenerators for presets, the Reference page and the WEF event map | maintainers |
 
 The root, `fleet\` and `report\` scripts read the settings table and
 helpers from the kit root and write their output (`Intune\`, `GPO\`, `WEF\`,
-`Results\`, `Evidence\`) there too, wherever they live. Two things stand
+`Results\`) there too, wherever they live. Two things stand
 alone by design: `Test-WefFilter.ps1` needs only its sidecar CSV, and the
 generated Intune pack carries everything it needs to the endpoint.
 
@@ -84,29 +83,16 @@ which techniques it makes observable - and why the rest are not
 .\report\Export-AttackCoverage.ps1 [-IncludeHighVolume] [-BaselineFile <csv>]
 ```
 
-## Invoke-WELACheck.ps1
+## Cross-checking with WELA (optional)
 
-Runs Yamato's WELA (`audit-settings`, `audit-filesize`) as an independent
-second opinion, parses deviations superset-aware, archives raw output as
-timestamped evidence. Locates WELA in `.\WELA\` or an unzipped
-`WELA-<version>\` folder; `-Download` fetches it from GitHub on request.
+The kit doesn't bundle or download a second-opinion tool: Test is the
+verifier. If you want an independent view, run Yamato's
+[WELA](https://github.com/Yamato-Security/WELA) yourself
+(`.\WELA.ps1 audit-settings -Baseline YamatoSecurity`). Never use its
+`configure` command alongside the kit (see
+[Deviations](baselines.md#deviations-from-the-yamato-sources)).
 
-```powershell
-.\report\Invoke-WELACheck.ps1 [-Download] [-WelaPath <path>] [-Baseline YamatoSecurity|ASD|Microsoft_Client|Microsoft_Server]
-```
-
-WELA's own commands, for reference (v2.1.0, verified against source; all
-output is CSV, archived per run under `.\Evidence\`):
-
-```text
-.\WELA.ps1 audit-settings -Baseline <YamatoSecurity|ASD|Microsoft_Client|Microsoft_Server> [-OutType std|gui|table]
-.\WELA.ps1 audit-filesize -Baseline YamatoSecurity
-.\WELA.ps1 configure      -Baseline YamatoSecurity [-Auto]     # not used by this kit
-.\WELA.ps1 update-rules
-```
-
-**Expected deviations in WELA output** (WELA disagreeing with the kit is not
-always kit drift):
+Where WELA disagrees with the kit, it isn't always drift:
 
 - *Process Termination, Group Membership, Kernel Object, Registry*: WELA's
   recommendation table asks for these, but Yamato's own
@@ -117,9 +103,8 @@ always kit drift):
   those events only generate on domain controllers, where the kit applies
   them.
 - Rows where WELA recommends less than the kit (e.g. Account Lockout
-  `Failure`, Process Creation `Success`): the kit's Success and Failure
-  supersets them, and `Invoke-WELACheck.ps1` compares superset-aware, so
-  these rows are not reported as deviations once the kit is applied.
+  `Failure`, Process Creation `Success`): the kit applies Success and
+  Failure, a superset.
 
 ## New-IntuneRemediationPack.ps1
 

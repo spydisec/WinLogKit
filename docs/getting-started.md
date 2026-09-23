@@ -116,9 +116,6 @@ From an **elevated** Windows PowerShell prompt in the kit folder:
 .\Enable-LoggingBaseline.ps1 -IncludeHighVolume
 .\Test-LoggingBaseline.ps1   -IncludeHighVolume
 
-# 4. Independent second opinion (fetches WELA once, on request).
-.\report\Invoke-WELACheck.ps1 -Download
-
 # Escape hatch: restore everything captured at first run.
 .\Enable-LoggingBaseline.ps1 -Rollback
 ```
@@ -146,7 +143,7 @@ Or start from a published reference: see
 ## Where the scripts live
 
 The three host scripts sit at the kit root. Fleet generators are in
-`fleet\`, the coverage report and WELA check in `report\`; see
+`fleet\` and the coverage report in `report\`; see
 [Commands](commands.md#where-the-scripts-live). Wherever a script lives, it
 reads the settings table from the root and writes its output there; the
 one that needs neither is `Test-WefFilter.ps1`, which runs on the collector
@@ -159,7 +156,6 @@ from its sidecar CSV alone.
 | `Baseline\` | First-run rollback capture (auditpol backup + JSON); `snapshots\<timestamp>\` holds an automatic pre-change snapshot from every later apply |
 | `Results\` | Test and coverage CSVs, timestamped |
 | `Logs\` | Enable transcripts (every run, including `-WhatIf`) |
-| `Evidence\` | Raw WELA output per run, timestamped |
 | `Intune\`, `WEF\`, `GPO\` | Generated deployment artefacts |
 
 All of these are per-host output and gitignored - only the kit itself and

@@ -33,8 +33,8 @@ Examples of reports that are in scope:
   shrinking, `CrashOnAuditFail`, retention changes, SACLs)
 - Injection into generated artefacts (Intune packs, WEF subscription XML,
   GPO files) via crafted baseline CSV content
-- The `-Download` path fetching or executing something other than the
-  intended, verifiable WELA release
+- A `-Download` path fetching or executing something other than the
+  intended, verifiable release
 - Anything that makes verification report PASS when the host does not
   actually match the baseline
 

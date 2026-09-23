@@ -12,9 +12,9 @@ How the kit works under the hood, in one picture. The claim it makes:
 **all configuration derives from a single settings table (coverage
 additionally reads the shipped ATT&CK snapshot), snapshots come in once
 with their dates recorded, and events flow out to your collector - the kit
-never talks to the internet at runtime.** The two opt-in exceptions fetch
-a tool only when you ask: `Invoke-WELACheck.ps1 -Download` and the
-[Autoruns add-on](addons.md) installer's `-Download`.
+never talks to the internet at runtime.** The one opt-in exception fetches
+a tool only when you ask: the [Autoruns add-on](addons.md) installer's
+`-Download`.
 
 <figure markdown>
 <svg viewBox="0 0 660 620" role="img" aria-label="Vendored snapshots feed two destinations: Yamato baselines into the settings table, and the ATT&amp;CK snapshot into the coverage report. Enable applies and Test verifies the settings table on the Windows host, generators compile fleet artefacts from it, host events flow to the Windows Event Log, over WEF to a collector, and hand off to the SIEM." style="max-width: 660px; width: 100%; height: auto; font-family: inherit;">
@@ -105,8 +105,7 @@ Which application each piece touches: Enable/Test drive `auditpol.exe`,
 `wevtutil.exe`, the registry and the SMB configuration cmdlets; the Intune
 pack is consumed by **Microsoft Intune** (Scripts and remediations); the
 subscription XML by the **Windows Event Collector** (`wecutil`); the GPO
-pack by **GPMC / LGPO.exe**; and WELA runs as an independent checker
-alongside Test.
+pack by **GPMC / LGPO.exe**.
 
 ## Behaviour category mapping
 
@@ -203,15 +202,6 @@ tier's volume cost; the per-setting breakdown is in the detail CSV's
   status and which kit item provides it
 - `Results\AttackCoverage_Gaps_*.csv` - techniques not observable, with the
   dominant reason
-
-## OSSEM cross-check
-
-The approach of joining logging configuration to ATT&CK through event
-metadata was proven by OTRF's [OSSEM-DM](https://github.com/OTRF/OSSEM-DM)
-(MIT) - full credit in `data/attack/README.md`. The kit retains its OSSEM
-snapshot and `-UseOssem` runs the legacy join as an independent cross-check
-(note it maps an older ATT&CK vintage with a different technique set, so
-its numbers are not directly comparable to the native mapping's).
 
 ## Caveats
 

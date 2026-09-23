@@ -30,6 +30,18 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
   (membership in the three role presets); the Refs column is unchanged.
 
 ### Removed
+- **`report\Invoke-WELACheck.ps1`** (ADR-002). It downloaded a third-party
+  tool, and `Test-LoggingBaseline.ps1` already verifies the live state. To
+  cross-check by hand, run Yamato's WELA yourself; the Commands page keeps
+  the notes on where WELA and the kit legitimately differ. The kit
+  baseline now has no network action at all.
+- **Sentinel KQL extra** (`docs/extras/sentinel-kql.md`, ADR-002). It sat
+  past the kit's boundary (after the collector) and its queries were never
+  validated against a workspace.
+- **OSSEM snapshot and `Export-AttackCoverage.ps1 -UseOssem`** (ADR-002).
+  A legacy second mapping kept only as a cross-check (917 KB); the native
+  ATT&CK mapping in `data/attack/` is unchanged. No OSSEM data or
+  references remain in the kit.
 - **PowerShell transcription** (`Transcription64`, `TranscriptionHeader64`,
   `Transcription32`, `TranscriptionHeader32`;
   [#34](https://github.com/spydisec/WinLogKit/issues/34)). It set no
