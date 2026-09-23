@@ -44,7 +44,9 @@ $result = Invoke-Pester -Configuration $config
 
 Write-Host ''
 if ($result.Result -ne 'Passed' -or $result.FailedCount -gt 0) {
-    Write-Host "$($result.FailedCount) check(s) failed." -ForegroundColor Red
+    # Setup (BeforeAll) and discovery failures fail blocks or containers, not
+    # tests, so count them too rather than reporting "0 failed".
+    Write-Host "$($result.FailedCount) check(s) failed, $($result.FailedBlocksCount) setup block(s) failed, $($result.FailedContainersCount) test file(s) failed to load." -ForegroundColor Red
     exit 1
 }
 Write-Host "All kit checks passed ($($result.PassedCount) passed, $($result.SkippedCount) skipped, Pester $($pester.Version))." -ForegroundColor Green

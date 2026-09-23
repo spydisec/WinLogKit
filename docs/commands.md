@@ -145,5 +145,5 @@ The kit's self-checks, a Pester 5 suite in `tests\Kit.Tests.ps1` (parse on
 both engines, settings consistency, builder round-trip, generated artefact
 validation, preset drift, rollback and audit-reading checks). Safe anywhere,
 no admin - run it before a PR; CI runs it on every push. It needs Pester 5
-(`Install-Module Pester -RequiredVersion 5.9.1 -Scope CurrentUser`); the kit
+(`Install-Module Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -SkipPublisherCheck`); the kit
 itself needs no modules.
