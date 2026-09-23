@@ -15,12 +15,14 @@ Reading the columns:
 - **Size** - default -> kit target, for event log channels.
 - **Volume** - how heavy the logs get: **High** = a high-volume generator
   (the HighVolume tier), **Watch** = normal volume with a documented
-  pilot-week caution, **Low** = quiet.
+  pilot-week caution, **Low** = quiet. Two HighVolume items are opt-in only
+  because they matter in some environments, not because they are loud (IPsec
+  Driver, the DPAPI debug channel); they show Watch or Low.
 - **Refs** - who asks for it: **A** = ASD, **C** = Microsoft Client,
   **S** = Microsoft Server, **Y** = Yamato (per the reference definitions in
   `tools\reference-baselines.psd1`; kit-added extras such as the Server 2025
-  SMB auditing and the NTLM audit values show no reference letter and are
-  sourced in the
+  SMB auditing and the NTLM audit values, and those two opt-in items, show
+  no Y and are sourced in the
   [settings table](https://github.com/spydisec/WinLogKit/blob/main/WinLogKit.Settings.ps1)).
 - **Wks / Mbr / DC** - membership in the `Workstation`, `MemberServer` and
   `DomainController` presets (rows marked **(DC)** only apply on domain
