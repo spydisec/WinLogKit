@@ -8,6 +8,18 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-09-24
+
+Simpler fleet delivery, documented setting by setting: Intune through the Settings catalog, a Group Policy path for every setting, and SMB auditing in the GPO pack. Plus PowerShell 7 logging, a disk-space check before you apply, verification that works in any Windows language, and an ATT&CK mapping with no gaps left unexplained.
+
+**Upgrading from 2.0.x**
+
+| If you used | Now |
+|---|---|
+| `fleet\New-IntuneRemediationPack.ps1`, or its remediations in Intune | Build a Settings catalog profile from the [Settings catalog](https://spydisec.github.io/WinLogKit/intune-csp/) page, then remove the old remediation from Intune. It keeps running until you do, but is no longer maintained. |
+| A role preset (`Workstation`, `MemberServer`, `DomainController`) | Rerun Enable with it: the presets now also turn on PowerShell 7 script block logging. |
+| Anything else | Unchanged: scripts, switches, presets and selection CSVs work as before. |
+
 ### Added
 
 - 🐚 **PowerShell 7 is logged too.** Four new HighVolume settings make PowerShell 7 (`pwsh.exe`) follow the Windows PowerShell script block and module logging policies through its `UseWindowsPowerShellPolicySetting` option, so running `pwsh` instead of `powershell.exe` no longer escapes script block logging. The role presets turn on the two script block ones alongside the settings they follow; `ASD.csv` stays faithful to the ASD script, which predates PowerShell 7. [#44](https://github.com/spydisec/WinLogKit/issues/44)
