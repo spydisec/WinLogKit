@@ -33,6 +33,9 @@ by hand (see Removed).
   of scope.
 - **ADRs live in the repo** under `docs/adr/` (ADR-001 recorded after the
   fact; ADR-002 is this release).
+- **Self-checks run from the release zip.** The zip ships `tests\` but
+  not `docs\`; the Reference page drift check now skips there instead of
+  failing.
 - **Two tiers: Core and HighVolume** ([ADR-002](docs/adr/0002-scope-and-simplification.md)).
   The Optional tier is gone. Its two remaining items, the
   Crypto-DPAPI debug channel and IPsec Driver auditing, are now
@@ -54,7 +57,9 @@ by hand (see Removed).
   | `Microsoft_Client.csv`, `Microsoft_Server.csv` | `ASD.csv` or a role preset. Both are narrower than the kit's Core tier; they remain as reference data for the Reference page's Refs column (`tools\reference-baselines.psd1`) |
 
   The Reference page's Minimal/Heavy columns become Wks / Mbr / DC
-  (membership in the three role presets); the Refs column is unchanged.
+  (membership in the three role presets); the Refs and Volume columns are
+  unchanged (IPsec Driver and the DPAPI debug channel carry a new
+  `Situational` flag so moving them to HighVolume doesn't relabel them).
 - **`Export-AttackCoverage.ps1` moves to `tools\`** (ADR-002). It produces
   the numbers on the Coverage page and still accepts any selection CSV, but
   deploying the kit doesn't need it. The now-empty `report\` folder is gone.

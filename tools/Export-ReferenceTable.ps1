@@ -73,16 +73,23 @@ function Get-PurposeEventText {
 
 # Kit-added items that Yamato's own scripts do not contain: the Server 2025
 # SMB auditing (all SmbAudit rows plus its two channels) and the NTLM audit
-# registry values. They must not carry the Y letter.
+# registry values. They must not carry the Y letter. Situational items (the
+# old Optional tier: IPsec Driver, the DPAPI debug channel) are opt-in
+# extras outside Yamato's set too, whatever their tier.
 $yExcludedIds = @('NtlmOutboundAudit', 'NtlmInboundAudit', 'NtlmDomainAudit')
 $yExcludedChannels = @('Microsoft-Windows-SMBServer/Audit', 'Microsoft-Windows-SmbClient/Audit')
+function Test-Situational {
+    param([hashtable]$Item)
+    return ($Item.ContainsKey('Situational') -and $Item.Situational)
+}
+
 function Format-RefText {
-    param([string]$ItemType, [string]$Id, [string]$Tier)
+    param([string]$ItemType, [string]$Id, [string]$Tier, [bool]$Situational = $false)
     $refs = @()
     if (Test-ReferenceBaselineItem $references.ASD $ItemType $Id)              { $refs += 'A' }
     if (Test-ReferenceBaselineItem $references.Microsoft_Client $ItemType $Id) { $refs += 'C' }
     if (Test-ReferenceBaselineItem $references.Microsoft_Server $ItemType $Id) { $refs += 'S' }
-    $isYamato = ($Tier -eq 'Core' -or $Tier -eq 'HighVolume') -and
+    $isYamato = ($Tier -eq 'Core' -or $Tier -eq 'HighVolume') -and -not $Situational -and
         $ItemType -ne 'SmbAudit' -and
         ($yExcludedIds -notcontains $Id) -and
         -not ($ItemType -eq 'Channel' -and $yExcludedChannels -contains $Id)
@@ -105,7 +112,9 @@ function Format-RoleColumn {
 
 function Format-Volume {
     param([hashtable]$Item)
-    if ($Item.Tier -eq 'HighVolume') { return 'High' }
+    # Situational items are opt-in for relevance, not volume: label them from
+    # their Risk note like any Core item.
+    if ($Item.Tier -eq 'HighVolume' -and -not (Test-Situational $Item)) { return 'High' }
     if ($Item.ContainsKey('Risk') -and "$($Item.Risk)" -ne '') { return 'Watch' }
     return 'Low'
 }
@@ -123,7 +132,7 @@ $rows = New-Object System.Collections.Generic.List[string]
 foreach ($ch in $script:BaselineChannels) {
     $ev = (Get-PurposeEventText $ch.Purpose) -join ', '
     if ($ev -eq '') { $ev = '-' }
-    $rows.Add("| $($ch.Name) | Channel | $ev | $($ch.DefaultSize) -> $(Format-Size $ch.TargetBytes) | $(Format-Volume $ch) | $(Format-RefText 'Channel' $ch.Name $ch.Tier) | $(Format-RoleColumn 'Channel' $ch.Name) |")
+    $rows.Add("| $($ch.Name) | Channel | $ev | $($ch.DefaultSize) -> $(Format-Size $ch.TargetBytes) | $(Format-Volume $ch) | $(Format-RefText 'Channel' $ch.Name $ch.Tier (Test-Situational $ch)) | $(Format-RoleColumn 'Channel' $ch.Name) |")
 }
 foreach ($sub in $script:BaselineAuditSubcategories) {
     $g = $sub.Guid.ToUpper()
@@ -140,7 +149,7 @@ foreach ($sub in $script:BaselineAuditSubcategories) {
     if ($ev -eq '') { $ev = '-' }
     $name = $sub.Name
     if ($sub.Scope -eq 'DomainController') { $name += ' (DC)' }
-    $rows.Add("| $name | Audit subcategory | $ev | - | $(Format-Volume $sub) | $(Format-RefText 'AuditPolicy' $sub.Guid $sub.Tier) | $(Format-RoleColumn 'AuditPolicy' $sub.Guid) |")
+    $rows.Add("| $name | Audit subcategory | $ev | - | $(Format-Volume $sub) | $(Format-RefText 'AuditPolicy' $sub.Guid $sub.Tier (Test-Situational $sub)) | $(Format-RoleColumn 'AuditPolicy' $sub.Guid) |")
 }
 foreach ($rs in $script:BaselineRegistrySettings) {
     $ev = (Get-PurposeEventText $rs.Purpose) -join ', '

@@ -30,6 +30,11 @@
 #                Certificate Services role is installed.
 #   Categories - which behaviour categories the item satisfies.
 #                Used for the per-category PASS/FAIL rollup in the test script.
+#   Situational - optional, $true on the HighVolume items that are opt-in
+#                because they only matter in some environments, not because
+#                they are loud (the old Optional tier). The Reference page
+#                labels their volume from the Risk note and does not count
+#                them as part of Yamato's set.
 #
 # PowerShell 5.1 compatible. No external module dependencies.
 #
@@ -204,7 +209,7 @@ $script:BaselineChannels = @(
        Categories = @('Remote access','Network flow and sessions')
        Purpose = 'SMB client audit events, including Windows Server 2025 signing/encryption capability auditing (31998/31999) and NTLM-blocking diagnostics.' }
 
-    @{ Name = 'Microsoft-Windows-Crypto-DPAPI/Debug';                                   TargetBytes = $mb128; MustEnable = $true;  Tier = 'HighVolume'; DefaultSize = '1 MB'; MayBeAbsent = $true
+    @{ Name = 'Microsoft-Windows-Crypto-DPAPI/Debug';                                   TargetBytes = $mb128; MustEnable = $true;  Tier = 'HighVolume'; DefaultSize = '1 MB'; MayBeAbsent = $true; Situational = $true
        Categories = @('Certificates and keys')
        Purpose = 'DPAPI key operations. Added by WELA v2.1 configure. A debug-class channel, so opt-in: enable only if DPAPI theft (e.g. Mimikatz backup key export) is a monitored scenario.'
        Risk = 'Debug-class channels carry a small constant tracing overhead and are not designed for always-on production use. Enable deliberately, not by default.' }
@@ -350,7 +355,7 @@ $script:BaselineAuditSubcategories = @(
        Risk = 'Known to flood on hosts running backup agents and monitoring software (backup/restore privileges fire constantly). Test on one host per server role before fleet rollout.' }
 
     # --- System ---
-    @{ Name = 'IPsec Driver';                         Guid = '0CCE9213-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'HighVolume'
+    @{ Name = 'IPsec Driver';                         Guid = '0CCE9213-69AE-11D9-BED3-505054503030'; Success = $true; Failure = $true; Scope = 'All';              Tier = 'HighVolume'; Situational = $true
        Categories = @('Network flow and sessions')
        Purpose = 'IPsec driver packet events (4960-4963, 4965) and IPsec service start/stop and filter-processing events (5478-5480, 5483-5485). In Microsoft''s baseline recommendation (and the Microsoft_Client baseline in Yamato''s EventLog-Baseline-Guide) but not in the Yamato set, so opt-in: enable where IPsec is actually used.' }
 

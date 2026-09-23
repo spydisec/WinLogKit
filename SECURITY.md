@@ -33,8 +33,7 @@ Examples of reports that are in scope:
   shrinking, `CrashOnAuditFail`, retention changes, SACLs)
 - Injection into generated artefacts (Intune packs, WEF subscription XML,
   GPO files) via crafted baseline CSV content
-- A `-Download` path fetching or executing something other than the
-  intended, verifiable release
+- Anything that makes the kit reach the network (it has no network action)
 - Anything that makes verification report PASS when the host does not
   actually match the baseline
 
