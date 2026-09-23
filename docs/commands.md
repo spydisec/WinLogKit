@@ -13,13 +13,13 @@ PowerShell 5.1 - use whichever your host has.
 | Folder | Scripts | Run from |
 |---|---|---|
 | kit root | `New-`, `Enable-`, `Test-LoggingBaseline.ps1`, the settings table `WinLogKit.Settings.ps1`, the shared helpers `WinLogKit.Common.ps1` | the host you are configuring |
-| `fleet\` | `New-IntuneRemediationPack.ps1`, `New-GpoPack.ps1`, `New-WefSubscription.ps1` | an admin workstation |
+| `fleet\` | `New-GpoPack.ps1`, `New-WefSubscription.ps1` | an admin workstation |
 | `tools\` | regenerators for presets and the Reference page, and the ATT&CK coverage report | maintainers |
 
 The root, `fleet\` and `tools\` scripts read the settings table and
-helpers from the kit root and write their output (`Intune\`, `GPO\`, `WEF\`,
-`Results\`) there too, wherever they live. The generated Intune pack
-stands alone by design: it carries everything it needs to the endpoint.
+helpers from the kit root and write their output (`GPO\`, `WEF\`,
+`Results\`) there too, wherever they live. Intune is delivered through
+the Settings catalog, with no generator: see [Deploy](deployment.md).
 
 ## Enable-LoggingBaseline.ps1
 
@@ -96,15 +96,6 @@ Where WELA disagrees with the kit, it isn't always drift:
 - Rows where WELA recommends less than the kit (e.g. Account Lockout
   `Failure`, Process Creation `Success`): the kit applies Success and
   Failure, a superset.
-
-## New-IntuneRemediationPack.ps1
-
-Compiles the selection into a self-contained Intune detection + remediation
-script pair. See [Deploy](deployment.md).
-
-```powershell
-.\fleet\New-IntuneRemediationPack.ps1 [-BaselineFile <csv>] [-IncludeHighVolume] [-OutDir <dir>]
-```
 
 ## New-WefSubscription.ps1
 

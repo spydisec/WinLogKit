@@ -28,7 +28,7 @@
     NOT included, by design (printed as reminders):
       - Channel sizes/enablement: only the classic Application, Security
         and System logs have a Group Policy template (see gpo-paths.md);
-        size the rest with a startup script or the Intune pack.
+        size the rest with a startup script or Enable-LoggingBaseline.ps1.
       - NTLM audit values (MSV1_0 / Netlogon): these are GPO *Security
         Options* ("Network security: Restrict NTLM: ..."), set them in GPMC.
       - AD CS AuditFilter: CertSvc restart territory, keep it manual.
@@ -144,7 +144,7 @@ if ($skipped.Count -gt 0) {
     Write-Host 'Selected but NOT in this pack (different GPO mechanisms):' -ForegroundColor Yellow
     $skipped | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
 }
-Write-Host 'Also not in GPO packs by design: channel sizes/enablement (Event Log Service templates for Application/Security/System, a startup script or the Intune pack for the rest), AD CS AuditFilter.' -ForegroundColor Yellow
+Write-Host 'Also not in GPO packs by design: channel sizes/enablement (Event Log Service templates for Application/Security/System, a startup script or Enable-LoggingBaseline.ps1 for the rest), AD CS AuditFilter.' -ForegroundColor Yellow
 $totalAudit = @($script:BaselineAuditSubcategories).Count
 if ($auditCount -lt $totalAudit) {
     Write-Host ''

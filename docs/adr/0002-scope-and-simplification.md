@@ -1,6 +1,6 @@
 # ADR-002: Project scope and simplification for v2
 
-**Status:** Accepted (Option B, 2026-09-23); implemented in v2.0.0
+**Status:** Accepted (Option B, 2026-09-23); implemented in v2.0.0. Amended by [ADR-003](0003-intune-settings-catalog-only.md): Intune through the Settings catalog only.
 **Date:** 2026-09-23
 **Deciders:** Maintainer (@spydisec)
 **Supersedes:** nothing. Follows [ADR-001](https://github.com/spydisec/WinLogKit/pull/30) (v1.0 layout and docs cut).

@@ -7,9 +7,6 @@
 # generators all use. Registry writers stay in Enable-LoggingBaseline.ps1,
 # the only script that writes.
 #
-# The Intune pack generator embeds its own copies of what the generated
-# scripts need: those must stay self-contained.
-#
 # PowerShell 5.1 compatible. No external module dependencies.
 # =============================================================================
 
