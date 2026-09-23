@@ -44,6 +44,12 @@ decision.
   auditing, which the kit doesn't set; no file hashes or DLL loads without
   agents; no flow statistics. These are the recognised limits
   of agentless native logging - the docs say so instead of pretending.
+  For registry autostart entries specifically, Microsoft's Sysinternals
+  [Autoruns](https://learn.microsoft.com/sysinternals/downloads/autoruns)
+  inventories them, and Palantir's
+  [AutorunsToWinEventLog](https://github.com/palantir/windows-event-forwarding/tree/master/AutorunsToWinEventLog)
+  shows one way to write that inventory to an event log for collection.
+  Both sit outside the kit.
 - **Domain-joined hosts**: GPO reapplies audit policy at refresh; deliver
   fleet-wide via the [deployment artefacts](deployment.md).
 
