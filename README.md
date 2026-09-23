@@ -24,8 +24,7 @@ apply.
   registry settings from one settings table. Idempotent, `-WhatIf` diff,
   `-Rollback` to first-run state.
 - **Verify** the live state per behaviour category (PASS / FAIL / NOT
-  APPLICABLE) with evidence CSVs, plus Yamato's WELA as an independent
-  second opinion.
+  APPLICABLE) with evidence CSVs.
 - **Collect** centrally: a Windows Event Forwarding subscription generated
   from the same selection. It forwards the selected channels whole by
   default, or narrows Security to the event IDs the baseline actually
@@ -57,7 +56,7 @@ generator accept through `-BaselineFile`; `presets\` ships one per host
 role (`Workstation`, `MemberServer`, `DomainController`) plus `ASD`.
 
 The three host scripts are at the kit root; fleet generators (Intune, GPO,
-WEF) are in `fleet\` and the coverage report and WELA check in `report\`.
+WEF) are in `fleet\` and the coverage report in `report\`.
 
 If scripts are blocked, `Set-ExecutionPolicy -Scope Process RemoteSigned`
 unblocks the current window without persisting anything; downloaded zips

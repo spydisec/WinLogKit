@@ -11,7 +11,8 @@
 # MkDocs build output (deployed by CI, never committed)
 site/
 
-# Downloaded copy of WELA (fetched by Invoke-WELACheck.ps1 -Download)
+# A WELA copy unzipped next to the kit for a by-hand cross-check (v1's
+# Invoke-WELACheck.ps1 also put it, and its Evidence\ output, here)
 WELA*/
 
 # WELA output files if WELA is ever run from the repo root by hand

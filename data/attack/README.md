@@ -32,6 +32,5 @@ worklist).
   This kit is not affiliated with or endorsed by MITRE.
 - The idea of joining host logging configuration to ATT&CK through event
   metadata follows OTRF's [OSSEM-DM](https://github.com/OTRF/OSSEM-DM)
-  (MIT), whose snapshot the kit retains in `data/ossem/` for cross-checking
-  (`Export-AttackCoverage.ps1 -UseOssem`). Credit where due: OSSEM proved
-  the approach; this native mapping updates it against current ATT&CK.
+  (MIT). Credit where due: OSSEM proved the approach; this native mapping
+  updates it against current ATT&CK.

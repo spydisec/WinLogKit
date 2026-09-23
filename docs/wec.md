@@ -23,9 +23,7 @@ channel the subscription does not name. Keeping both generated from the
 same baseline selection is why
 [`New-WefSubscription.ps1`](commands.md#new-wefsubscriptionps1) exists.
 Gate 3, the hop from ForwardedEvents into a SIEM, is deliberately outside
-the kit: any agent or connector that reads a Windows event log will do. One
-worked example for Microsoft Sentinel is kept as an
-[extra](extras/sentinel-kql.md).
+the kit: any agent or connector that reads a Windows event log will do.
 
 ## Generate the subscription
 
@@ -322,5 +320,4 @@ Four checks, cheapest first:
    returned is an event the filter should have stopped.
 
 What the filter buys you is measurable before and after: the Security
-channel's share of ingested volume per source is the number to compare
-(the [Sentinel extra](extras/sentinel-kql.md#query-pack) has the queries).
+channel's share of ingested volume per source is the number to compare.
