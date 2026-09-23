@@ -12,7 +12,7 @@ Eight terms cover the whole kit - each defined once, in plain English:
 |---|---|
 | Event channel | A named log Windows writes to (Security, System, ...) |
 | Audit subcategory | A Windows switch deciding which security events get recorded |
-| Tier | How much logging: **Core** (safe default), **HighVolume** (more events, more disk), **Optional** (situational) |
+| Tier | How much logging: **Core** (safe default), **HighVolume** (more events, more disk, or only useful in some environments) |
 | Baseline / selection CSV | A spreadsheet listing which settings are on (Y) or off (N) - the kit's unit of decision |
 | Preset | A ready-made baseline we ship (ASD, Microsoft, the `spydi_*` pairs) |
 | WEF / collector | Windows' built-in way to push events to one central server, agent-free |

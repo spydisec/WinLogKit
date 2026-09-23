@@ -71,7 +71,7 @@
     Optional selection CSV from New-LoggingBaseline.ps1. Selected = Y channel
     rows are forwarded; Selected = Y audit-subcategory rows drive the Security
     filter in Baseline mode. Without it, the kit's Core tier is used (plus
-    HighVolume/Optional items if the matching switch is given).
+    HighVolume items if -IncludeHighVolume is given).
 
 .PARAMETER Filter
     Channel (default): whole-channel forwarding. Baseline: Security events

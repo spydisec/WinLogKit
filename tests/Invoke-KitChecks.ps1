@@ -104,7 +104,7 @@ if ($dupes) {
 # The shared helpers must stay in the common file: a copy that migrated back
 # into one script would still be a single definition, so name them.
 $commonExpected = @('Test-IsAdmin', 'Get-DomainRole', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
-    'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'Get-BaselineItemKeySet', 'Import-BaselineSelection', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
+    'Get-AuditPolicyByGuid', 'Get-SmbAuditState', 'Get-BaselineItemKeySet', 'Import-BaselineSelection', 'Write-IncludeOptionalWarning', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
 $notInCommon = @($commonExpected | Where-Object { -not $defs.ContainsKey($_) -or (($defs[$_] -join ';') -ne 'WinLogKit.Common.ps1') })
 if ($notInCommon) {
     Fail "shared helper not defined in WinLogKit.Common.ps1 (only): $($notInCommon -join ', ')"
@@ -129,6 +129,11 @@ if ($bad) { Fail "unknown category tags: $($bad -join ', ')" } else { Pass 'cate
 $noteMissing = @($BaselineCategories | Where-Object { -not $BaselineCategoryNotes.ContainsKey($_) })
 if ($noteMissing) { Fail "missing coverage notes: $($noteMissing -join ', ')" } else { Pass 'coverage notes complete' }
 
+# v2 has two tiers (ADR-002): anything else would be silently never applied.
+$badTier = @(foreach ($grp in @($BaselineChannels, $BaselineAuditSubcategories, $BaselineRegistrySettings, $BaselineSmbAuditSettings, @($BaselineAdcsAuditFilter))) {
+    foreach ($item in $grp) { if (@('Core', 'HighVolume') -notcontains $item.Tier) { "$($item.Tier)" } }
+})
+if ($badTier) { Fail "items with a tier other than Core/HighVolume: $($badTier -join ', ')" } else { Pass 'every item is Core or HighVolume' }
 $guids = @($BaselineAuditSubcategories | ForEach-Object { $_.Guid.ToUpper() })
 if (@($guids | Sort-Object -Unique).Count -ne $guids.Count) { Fail 'duplicate audit subcategory GUIDs' } else { Pass 'audit GUIDs unique' }
 $badGuid = @($guids | Where-Object { $_ -notmatch '^[0-9A-F]{8}(-[0-9A-F]{4}){3}-[0-9A-F]{12}$' })
@@ -141,7 +146,7 @@ try {
     $csv1 = Join-Path $tmp 'recommended.csv'
     $csv2 = Join-Path $tmp 'all-tiers.csv'
     & (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -AcceptRecommended -OutFile $csv1 -Force | Out-Null
-    & (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -AcceptRecommended -IncludeHighVolume -IncludeOptional -OutFile $csv2 -Force | Out-Null
+    & (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -AcceptRecommended -IncludeHighVolume -OutFile $csv2 -Force | Out-Null
 
     $r1 = Import-Csv $csv1
     $r2 = Import-Csv $csv2
@@ -166,6 +171,13 @@ try {
     if ($selCore -ne $coreCount -or $selOther -ne 0) { Fail "recommended defaults wrong (core=$coreCount selected-core=$selCore selected-noncore=$selOther)" } else { Pass 'recommended defaults select exactly Core' }
     if (@($r2 | Where-Object { $_.Selected -eq 'Y' }).Count -ne $r2.Count) { Fail 'all-tiers run did not select everything' } else { Pass 'all-tiers run selects everything' }
 
+    # 4a. The deprecated v1 -IncludeOptional switch still parses, only warns,
+    #     and selects nothing extra.
+    $csv3 = Join-Path $tmp 'include-optional.csv'
+    & (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -AcceptRecommended -IncludeOptional -OutFile $csv3 -Force -WarningVariable optWarn -WarningAction SilentlyContinue | Out-Null
+    $selCsv3 = @(Import-Csv $csv3 | Where-Object { $_.Selected -eq 'Y' }).Count
+    if (@($optWarn | Where-Object { "$_" -match 'IncludeOptional is deprecated' }).Count -gt 0 -and $selCsv3 -eq $coreCount) { Pass '-IncludeOptional warns and changes nothing' }
+    else { Fail "-IncludeOptional handling wrong (warnings: $(@($optWarn).Count), selected: $selCsv3, core: $coreCount)" }
     # 4b. Selection CSV validation: a file with the right columns but no row
     #     matching this kit must be rejected (otherwise Test would report every
     #     item NOT APPLICABLE and exit 0), while one stale row only warns.

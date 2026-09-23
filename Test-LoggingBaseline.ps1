@@ -15,8 +15,8 @@
     category summary). Exit code is non-zero when anything FAILs, so it can
     gate a pipeline.
 
-    HighVolume and Optional tier items are only assessed when the matching
-    switch is given - mirroring Enable-LoggingBaseline.ps1 - otherwise they
+    HighVolume tier items are only assessed when -IncludeHighVolume is
+    given - mirroring Enable-LoggingBaseline.ps1 - otherwise they
     report NOT APPLICABLE with the reason, so an undeployed tier does not
     show as a failure. With -BaselineFile, the selection CSV decides instead:
     only Selected = Y items are assessed, so verification always matches
@@ -28,7 +28,8 @@
     Assess HighVolume tier items as requirements.
 
 .PARAMETER IncludeOptional
-    Assess Optional tier items as requirements.
+    Deprecated, ignored with a warning. The Optional tier was folded into
+    HighVolume in v2 (ADR-002); use -IncludeHighVolume.
 
 .PARAMETER BaselineFile
     Path to a selection CSV produced by New-LoggingBaseline.ps1. When given,
@@ -115,7 +116,7 @@ Write-Host "Host profile   : $(Get-OsType), $domainRole"
 if ($null -ne $script:Selection.Map) {
     Write-Host "Baseline file  : $BaselineFile (tier switches ignored)"
 } else {
-    Write-Host "Tiers assessed : Core$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
+    Write-Host "Tiers assessed : Core$(if ($IncludeHighVolume) {' + HighVolume'})"
 }
 Write-Host ''
 

@@ -93,8 +93,9 @@ function Get-SmbAuditState {
 # table. It comes from one of two places, and a baseline CSV always wins:
 #   - a selection CSV from New-LoggingBaseline.ps1 (or a preset): listed rows
 #     decide, unlisted items are off
-#   - the tier switches: Core is always on, HighVolume and Optional only when
-#     their switch is given
+#   - the tier switches: Core is always on, HighVolume only with
+#     -IncludeHighVolume. (v2 folded the Optional tier into HighVolume, ADR-002;
+#     -IncludeOptional is still accepted for one release and only warns.)
 
 # Every "ITEMTYPE|ID" key the settings table defines, as a hashtable set.
 function Get-BaselineItemKeySet {
@@ -151,26 +152,36 @@ function Import-BaselineSelection {
     return $map
 }
 
+# The one deprecation message for the v1 -IncludeOptional switch.
+function Write-IncludeOptionalWarning {
+    param([bool]$IncludeOptional)
+    if ($IncludeOptional) {
+        Write-Warning '-IncludeOptional is deprecated and ignored: v2 folded the Optional tier into HighVolume (ADR-002). Use -IncludeHighVolume. The switch will be removed in a later release.'
+    }
+}
+
 function Test-TierSelected {
-    param([string]$Tier, [bool]$IncludeHighVolume, [bool]$IncludeOptional)
+    param([string]$Tier, [bool]$IncludeHighVolume)
     if ($Tier -eq 'Core') { return $true }
     if ($Tier -eq 'HighVolume') { return $IncludeHighVolume }
-    if ($Tier -eq 'Optional') { return $IncludeOptional }
     return $false
 }
 
-# Resolves a script's -BaselineFile / -IncludeHighVolume / -IncludeOptional
-# parameters into one selection object; call it once at setup and pass the
-# result to Test-ItemSelected. Stops the script (exit 1) when the file does
-# not exist, which is what every caller did before this helper existed.
+# Resolves a script's -BaselineFile / -IncludeHighVolume parameters into one
+# selection object; call it once at setup and pass the result to
+# Test-ItemSelected. Stops the script (exit 1) when the file does not exist,
+# which is what every caller did before this helper existed.
+# -IncludeOptional is the deprecated v1 switch: every script still accepts it
+# and passes it here, where it only produces the warning.
 #   Map              hashtable "ITEMTYPE|ID" -> bool, or $null for tier mode
-#   IncludeHighVolume, IncludeOptional   the tier switches (tier mode only)
-#   Description      "baseline file X.csv" or "Core tier [+ HighVolume] [+ Optional]"
+#   IncludeHighVolume  the tier switch (tier mode only)
+#   Description      "baseline file X.csv" or "Core tier [+ HighVolume]"
 #   BaselineFile     the path as given, or ''
 function Resolve-BaselineSelection {
     param([string]$BaselineFile, [bool]$IncludeHighVolume, [bool]$IncludeOptional)
+    Write-IncludeOptionalWarning $IncludeOptional
     $map = $null
-    $description = "Core tier$(if ($IncludeHighVolume) {' + HighVolume'})$(if ($IncludeOptional) {' + Optional'})"
+    $description = "Core tier$(if ($IncludeHighVolume) {' + HighVolume'})"
     if (-not [string]::IsNullOrEmpty($BaselineFile)) {
         if (-not (Test-Path $BaselineFile)) {
             Write-Error "Baseline file not found: $BaselineFile (build one with New-LoggingBaseline.ps1 or use a preset)"
@@ -182,7 +193,6 @@ function Resolve-BaselineSelection {
     return @{
         Map               = $map
         IncludeHighVolume = $IncludeHighVolume
-        IncludeOptional   = $IncludeOptional
         Description       = $description
         BaselineFile      = "$BaselineFile"
     }
@@ -195,5 +205,5 @@ function Test-ItemSelected {
         $key = ("$ItemType|$Id").ToUpper()
         return ($Selection.Map.ContainsKey($key) -and $Selection.Map[$key])
     }
-    return (Test-TierSelected -Tier $Tier -IncludeHighVolume $Selection.IncludeHighVolume -IncludeOptional $Selection.IncludeOptional)
+    return (Test-TierSelected -Tier $Tier -IncludeHighVolume $Selection.IncludeHighVolume)
 }

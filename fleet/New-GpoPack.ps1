@@ -125,7 +125,7 @@ foreach ($rs in $script:BaselineRegistrySettings) {
 
 Write-Host "GPO pack written to $outDirFull (from $sourceDesc):" -ForegroundColor Green
 Write-Host "  audit.csv     $auditCount audit subcategory rows"
-Write-Host "  registry.txt  $regCount policy registry value(s)$(if ($regCount -eq 0) { '  (none selected - PowerShell logging and command line capture are HighVolume/Optional tier)' })"
+Write-Host "  registry.txt  $regCount policy registry value(s)$(if ($regCount -eq 0) { '  (none selected - PowerShell logging and command line capture are HighVolume tier)' })"
 Write-Host ''
 Write-Host 'Apply locally / in image builds (LGPO.exe from the Microsoft Security Compliance Toolkit):' -ForegroundColor White
 Write-Host "  LGPO.exe /ac `"$outDirFull\audit.csv`""
@@ -146,7 +146,6 @@ if ($auditCount -lt $totalAudit) {
     if ($null -ne $sel.Map) { $verifyArgs = " -BaselineFile `"$((Resolve-Path $BaselineFile).Path)`"" }
     else {
         if ($IncludeHighVolume) { $verifyArgs += ' -IncludeHighVolume' }
-        if ($IncludeOptional)   { $verifyArgs += ' -IncludeOptional' }
     }
     Write-Host "the effective result: & `"$(Join-Path $kitRoot 'Test-LoggingBaseline.ps1')`"$verifyArgs (it reads the live audit policy, not the file you applied)." -ForegroundColor Yellow
 }
