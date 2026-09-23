@@ -41,8 +41,8 @@ write-only share.
 
 The split exists so volume decisions are made by a human with the impact in
 front of them - `Export-AttackCoverage.ps1` quantifies what the HighVolume
-tier buys (117 additional ATT&CK techniques over Core: 162 -> 279 of the
-284-technique native ceiling; see [Coverage](mapping.md)).
+tier buys (114 additional ATT&CK techniques over Core: 169 -> 283 of the
+298-technique native ceiling; see [Coverage](mapping.md)).
 
 ## Role presets
 
@@ -54,9 +54,9 @@ adjust your copy.
 
 | Preset | Selection | Observable techniques |
 |---|---|---|
-| `Workstation.csv` | Core + process creation/cmdline + script block logging + WFP connections; DC-only items deselected | **265** of 472 mapped = 93% of the 284 native ceiling |
-| `MemberServer.csv` | as Workstation, **without** WFP connections | **263** of 472 = 93% of ceiling |
-| `DomainController.csv` | as MemberServer, plus the DC-scope subcategories | **273** of 472 = 96% of ceiling |
+| `Workstation.csv` | Core + process creation/cmdline + script block logging + WFP connections; DC-only items deselected | **269** of 472 mapped = 90% of the 298 native ceiling |
+| `MemberServer.csv` | as Workstation, **without** WFP connections | **267** of 472 = 90% of ceiling |
+| `DomainController.csv` | as MemberServer, plus the DC-scope subcategories | **277** of 472 = 93% of ceiling |
 
 The reasoning per decision (volume and behaviour characterisations come from
 the settings table's Risk notes, themselves sourced from

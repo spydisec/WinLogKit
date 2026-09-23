@@ -18,6 +18,8 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 ### Changed
 
+- 🎯 **ATT&CK mapping curated: nothing left Unmapped.** Every log source MITRE's analytics name is now mapped to the kit item that produces it or classified with a reason, and the self-checks fail if a refresh adds one that isn't. Four corrections where ATT&CK names the wrong log (shutdown 1074 is in System, Code Integrity 3033 in its own log) or the kit already collects the events (firewall rule changes in the Firewall log) make four more techniques observable: Core + HighVolume now reaches 283 techniques (was 279). The native ceiling is restated from the report's own classification (298, was quoted as 284), and the Coverage and Baselines numbers are regenerated and dated. `data\attack\README.md` now sets a refresh cadence and the steps. [#49](https://github.com/spydisec/WinLogKit/issues/49)
+
 - 🧪 **Self-checks run on Pester 5.** The checks move to a Pester suite (`tests\Kit.Tests.ps1`, one test per check) so they can be named, filtered and reported one by one. `tests\Invoke-KitChecks.ps1` is still the command to run: it finds Pester 5, runs the suite and tells you how to install Pester if it's missing. Pester is a development and CI dependency only; the kit itself still needs no modules. [#50](https://github.com/spydisec/WinLogKit/issues/50)
 
 ### Fixed

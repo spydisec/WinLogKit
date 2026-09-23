@@ -173,27 +173,28 @@ Every technique verdict carries a reason:
 
 ## Reference numbers (ATT&CK v19.2: 472 Windows techniques with analytics)
 
-An important context number first: MITRE's current analytics catalogue is
-Sysmon-first - **176 of the 472 techniques are Sysmon-only and another 12
-need ETW/EDR/network/cloud telemetry**, so the ceiling for *any* native
-host-logging configuration is **284 techniques**. Against that ceiling:
+Regenerated 2026-09-24 with the curated event map (no Unmapped sources
+left). An important context number first: MITRE's current analytics
+catalogue is Sysmon-first - by the report's own classification **148 of the
+472 techniques are Sysmon-only and another 26 need ETW, EDR, network,
+cloud or application telemetry**, so the ceiling for *any* native
+host-logging configuration is **298 techniques**. Against that ceiling:
 
-| Selection | Observable | Of the native ceiling (284) |
+| Selection | Observable | Of the native ceiling (298) |
 |---|---|---|
-| Core tier | 162 | 57% |
-| **Core + HighVolume** | **279** | **98%** |
-| Workstation preset | 265 | 93% |
-| DomainController preset | 273 | 96% |
-| MemberServer preset | 263 | 93% |
-| Microsoft client recommendation (reference, not shipped) | 166 | 58% |
+| Core tier | 169 | 57% |
+| **Core + HighVolume** | **283** | **95%** |
+| Workstation preset | 269 | 90% |
+| DomainController preset | 277 | 93% |
+| MemberServer preset | 267 | 90% |
+| Microsoft client recommendation (reference, not shipped) | 166 | 56% |
 
 Read that middle row carefully: with the HighVolume tier on, the kit reaches
-**279 of the 284 natively-reachable techniques** - the 5 missed are 1
-excluded-subcategory technique and 4 unmapped-source curation items. The
-Core -> HighVolume jump (117 techniques) is the quantified case for that
-tier's volume cost; the per-setting breakdown is in the detail CSV's
-`ProvidedBy` column.
-
+**283 of the 298 natively-reachable techniques** - the 15 missed need
+subcategories the kit deliberately excludes (SACL-dependent Registry and
+File System auditing, DS Replication, ...). The Core -> HighVolume jump
+(114 techniques) is the quantified case for that tier's volume cost; the
+per-setting breakdown is in the detail CSV's `ProvidedBy` column.
 ## Outputs
 
 - `Results\AttackCoverage_Detail_*.csv` - every analytic mapping row with
