@@ -93,32 +93,35 @@ Notes:
 
 ## First run - see everything before changing anything
 
-From an **elevated** Windows PowerShell prompt in the kit folder:
+From an **elevated** PowerShell prompt in the kit folder, pick the preset
+for the host's role (`Workstation` for Windows 10/11, `MemberServer`,
+`DomainController`; see [Baselines](baselines.md#role-presets)):
 
 ```powershell
+$preset = '.\presets\Workstation.csv'
+
 # Full diff of what would change. Nothing is changed.
-.\Enable-LoggingBaseline.ps1 -WhatIf
+.\Enable-LoggingBaseline.ps1 -BaselineFile $preset -WhatIf
 ```
 
 ## Apply and verify (the 10-minute path)
 
 ```powershell
-# 1. Apply the Core tier. The first real run captures a rollback baseline
+# 1. Apply. The first real run captures a rollback baseline
 #    (audit policy backup, channel sizes, registry values) to .\Baseline\.
-.\Enable-LoggingBaseline.ps1
+.\Enable-LoggingBaseline.ps1 -BaselineFile $preset
 
 # 2. Verify: per-category PASS/FAIL to console, evidence CSVs to .\Results\.
-.\Test-LoggingBaseline.ps1
-
-# 3. Decide on the high volume tier (the Coverage page shows what it adds:
-#    162 -> 279 observable ATT&CK techniques), then apply it.
-.\Enable-LoggingBaseline.ps1 -IncludeHighVolume
-.\Test-LoggingBaseline.ps1   -IncludeHighVolume
+.\Test-LoggingBaseline.ps1 -BaselineFile $preset
 
 # Escape hatch: restore everything captured at first run.
 .\Enable-LoggingBaseline.ps1 -Rollback
 ```
 
+After the pilot week, adjust your copy of the preset: the HighVolume rows
+it leaves off (module logging, sensitive privilege use, and so on) are the
+next decisions, and the [Coverage](mapping.md) page shows what they buy
+(162 -> 279 observable ATT&CK techniques from Core to Core + HighVolume).
 `Test-LoggingBaseline.ps1` exits non-zero on any failure, so it can gate a
 pipeline or an Intune/RMM check as-is.
 

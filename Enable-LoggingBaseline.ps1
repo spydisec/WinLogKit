@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Enables the Windows Server logging baseline (event log channels,
+    Enables the Windows logging baseline on a server or endpoint (event log channels,
     advanced audit policy subcategories and registry settings) derived from
     the Yamato Security EnableWindowsLogSettings / WELA baselines.
 

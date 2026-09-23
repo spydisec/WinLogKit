@@ -6,14 +6,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/spydisec/WinLogKit/blob/main/LICENSE)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/spydisec/WinLogKit)
 
-Turn on the Windows event logging that security monitoring needs, prove it
-is being recorded, and roll it back if you change your mind. Plain
-PowerShell (7 or the built-in 5.1), no modules, no agents.
+WinLogKit turns on the native Windows event logging that security
+monitoring needs, proves it is recording, and can undo it, on Windows
+servers and endpoints, from one sourced settings table. Plain PowerShell (7
+or the built-in 5.1), no modules, no agents, no downloads.
 
-The baselines are built from the [Yamato Security](https://github.com/Yamato-Security)
-logging guides, the Australian Signals Directorate and Microsoft's own
-recommendations, with every setting's purpose, volume risk and source
-recorded in one table. Targets Windows Server 2019 / 2022 / 2025 and
+The settings come from the [Yamato Security](https://github.com/Yamato-Security)
+logging guides and Microsoft's documentation, with every setting's purpose,
+volume risk and source recorded in one table. The ASD reference preset is
+taken from Yamato's
+[EventLog-Baseline-Guide](https://github.com/Yamato-Security/EventLog-Baseline-Guide)
+scripts. Targets Windows Server 2019 / 2022 / 2025 and
 Windows 10 / 11, standalone or domain-joined; version- and role-specific
 items are detected at runtime and reported NOT APPLICABLE where they do not
 apply.
@@ -25,37 +28,50 @@ apply.
   `-Rollback` to first-run state.
 - **Verify** the live state per behaviour category (PASS / FAIL / NOT
   APPLICABLE) with evidence CSVs.
-- **Collect** centrally: a Windows Event Forwarding subscription generated
-  from the same selection, forwarding the selected channels whole. The kit
-  ends at the collector's ForwardedEvents log; any SIEM picks up from there.
 - **Deploy** at fleet scale as an Intune remediation pack or GPO artefacts,
   compiled from the same table so deployed config cannot drift from the
   tested baseline.
-- **Measure** which MITRE ATT&CK techniques a selection makes observable,
-  offline, from data shipped in the kit.
+- **Collect** centrally: a Windows Event Forwarding subscription generated
+  from the same selection, forwarding the selected channels whole. The kit
+  ends at the collector's ForwardedEvents log; any SIEM picks up from there.
 
 ## Quick start
 
-From an elevated PowerShell prompt in the kit folder. Test on a
-non-production machine that mirrors your environment for at least a week
-before rolling out: logging volume is real disk and real money.
+From an elevated PowerShell prompt in the kit folder, pick the preset for
+the host's role: `Workstation` (Windows 10/11), `MemberServer` or
+`DomainController`. Test on a non-production machine that mirrors your
+environment for at least a week before rolling out: logging volume is real
+disk and real money.
 
 ```powershell
-.\Enable-LoggingBaseline.ps1 -WhatIf              # 1. full diff, nothing changes
-.\Enable-LoggingBaseline.ps1                      # 2. apply Core (first run captures rollback state)
-.\Test-LoggingBaseline.ps1                        # 3. verify
-.\Enable-LoggingBaseline.ps1 -IncludeHighVolume   # 4. add the high-volume tier after reading its notes
-.\Enable-LoggingBaseline.ps1 -Rollback            # undo everything captured at step 2
+$preset = '.\presets\Workstation.csv'
+.\Enable-LoggingBaseline.ps1 -BaselineFile $preset -WhatIf   # 1. full diff, nothing changes
+.\Enable-LoggingBaseline.ps1 -BaselineFile $preset           # 2. apply (first run captures rollback state)
+.\Test-LoggingBaseline.ps1   -BaselineFile $preset           # 3. verify
+.\Enable-LoggingBaseline.ps1 -Rollback                       # undo everything captured at step 2
 ```
 
-Want your own selection? `.\New-LoggingBaseline.ps1` walks every setting
-and writes a CSV that Enable, Test, the coverage report and every fleet
-generator accept through `-BaselineFile`; `presets\` ships one per host
-role (`Workstation`, `MemberServer`, `DomainController`) plus `ASD`.
+Want your own selection? Copy a preset and flip `Selected` in Excel, or run
+`.\New-LoggingBaseline.ps1`, which walks every setting and writes a CSV that
+Enable, Test and every fleet generator accept through `-BaselineFile`.
 
 The three host scripts are at the kit root; fleet generators (Intune, GPO,
 WEF) are in `fleet\`; `tools\` holds maintainer scripts.
 
+## Not in scope
+
+To keep the kit small and safe to run on any host, it deliberately doesn't:
+
+- write files outside the event log (for example PowerShell transcripts)
+- install agents, services, scheduled tasks or third-party binaries, or
+  download anything (the optional Autoruns add-on is the one exception and
+  is moving to its own repository)
+- filter events at the source, or ship SIEM content (parsers, queries,
+  detections); the kit ends at the collector
+- touch the [never-do list](https://spydisec.github.io/WinLogKit/safety/#what-the-kit-will-never-do)
+
+The reasoning is in
+[ADR-002](https://github.com/spydisec/WinLogKit/blob/main/docs/adr/0002-scope-and-simplification.md).
 If scripts are blocked, `Set-ExecutionPolicy -Scope Process RemoteSigned`
 unblocks the current window without persisting anything; downloaded zips
 also need `Unblock-File`, and a policy enforced by Group Policy cannot be
