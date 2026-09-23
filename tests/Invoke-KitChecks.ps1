@@ -242,7 +242,9 @@ try {
     # Line-ending-neutral compare: git checkout may normalise the committed
     # page to CRLF while the generator writes LF.
     $committedRef = Get-Content (Join-Path $KitRoot 'docs\reference.md') -Raw -ErrorAction SilentlyContinue
-    if ($null -eq $committedRef) { Fail 'docs\reference.md missing - run tools\Export-ReferenceTable.ps1' }
+    # The release zip ships tests\ but not docs\: skip, don't fail, there.
+    if (-not (Test-Path (Join-Path $KitRoot 'docs'))) { Write-Host 'SKIP: docs\ not present (release zip) - reference page drift not checked' -ForegroundColor DarkGray }
+    elseif ($null -eq $committedRef) { Fail 'docs\reference.md missing - run tools\Export-ReferenceTable.ps1' }
     elseif (($committedRef -replace "`r`n", "`n") -ne ((Get-Content $refTmp -Raw) -replace "`r`n", "`n")) { Fail 'docs\reference.md drifted - rerun tools\Export-ReferenceTable.ps1' }
     else { Pass 'reference page matches generator' }
 
