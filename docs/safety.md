@@ -151,7 +151,7 @@ NOT APPLICABLE. Two related notes:
   audits Success and Failure on nearly all subcategories, captures 4688
   command lines, and requires the Security log at 192 MB minimum. The
   kit's 1 GB Security log exceeds that minimum; 4688 with command line is
-  the HighVolume tier (`-IncludeHighVolume`), and every `spydi_*` preset
+  the HighVolume tier (`-IncludeHighVolume`), and every role preset
   includes it.
 
 On workstations generally, volume calibration differs from servers: far

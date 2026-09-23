@@ -152,6 +152,19 @@ function Import-BaselineSelection {
     return $map
 }
 
+# Is this settings item part of a reference baseline definition (one entry
+# of tools\reference-baselines.psd1)? Used by the preset and Reference page
+# generators, so both read membership the same way.
+function Test-ReferenceBaselineItem {
+    param([hashtable]$Definition, [string]$ItemType, [string]$Id)
+    switch ($ItemType) {
+        'AuditPolicy' { foreach ($prefix in $Definition.AuditPrefixes) { if ($Id.ToUpper().StartsWith($prefix)) { return $true } }; return $false }
+        'Registry'    { return ($Definition.RegistryIds -contains $Id) }
+        'Channel'     { return ($Definition.Channels -contains $Id) }
+    }
+    return $false
+}
+
 # The one deprecation message for the v1 -IncludeOptional switch.
 function Write-IncludeOptionalWarning {
     param([bool]$IncludeOptional)

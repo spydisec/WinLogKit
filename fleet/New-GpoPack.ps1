@@ -49,7 +49,7 @@
     Core + HighVolume audit policy and registry artefacts.
 
 .EXAMPLE
-    .\fleet\New-GpoPack.ps1 -BaselineFile .\presets\Microsoft_Server.csv -OutDir .\GPO\MSServer
+    .\fleet\New-GpoPack.ps1 -BaselineFile .\presets\MemberServer.csv -OutDir .\GPO\MemberServer
 #>
 [CmdletBinding()]
 param(

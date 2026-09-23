@@ -160,7 +160,7 @@ Two data files in `data/attack/` (provenance and attribution in its README):
 ```powershell
 .\report\Export-AttackCoverage.ps1                                        # Core tier
 .\report\Export-AttackCoverage.ps1 -IncludeHighVolume
-.\report\Export-AttackCoverage.ps1 -BaselineFile .\presets\role_Workstation.csv
+.\report\Export-AttackCoverage.ps1 -BaselineFile .\presets\Workstation.csv
 ```
 
 Every technique verdict carries a reason:
@@ -185,10 +185,10 @@ host-logging configuration is **284 techniques**. Against that ceiling:
 |---|---|---|
 | Core tier | 162 | 57% |
 | **Core + HighVolume** | **279** | **98%** |
-| role_Workstation preset | 265 | 93% |
-| role_DomainController preset | 273 | 96% |
-| role_MemberServer preset | 263 | 93% |
-| Microsoft_Client preset | 166 | 58% |
+| Workstation preset | 265 | 93% |
+| DomainController preset | 273 | 96% |
+| MemberServer preset | 263 | 93% |
+| Microsoft client recommendation (reference, not shipped) | 166 | 58% |
 
 Read that middle row carefully: with the HighVolume tier on, the kit reaches
 **279 of the 284 natively-reachable techniques** - the 5 missed are 1

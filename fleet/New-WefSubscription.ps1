@@ -109,7 +109,7 @@
     Core-tier channels, whole-channel forwarding, into .\WEF\WinLogKit-Baseline.xml.
 
 .EXAMPLE
-    .\fleet\New-WefSubscription.ps1 -BaselineFile .\presets\spydi_Server_Minimal.csv -Filter Baseline -Validate
+    .\fleet\New-WefSubscription.ps1 -BaselineFile .\presets\MemberServer.csv -Filter Baseline -Validate
     Security filtered to exactly what that preset enables; every query parsed locally.
 
 .EXAMPLE

@@ -11,7 +11,7 @@ body:
     id: baseline
     attributes:
       label: Baseline used
-      placeholder: spydi_Workstation_Minimal / Core + HighVolume / custom CSV
+      placeholder: Workstation preset / Core + HighVolume / custom CSV
     validations:
       required: true
   - type: input
