@@ -82,8 +82,8 @@ by hand (see Removed).
   validated against a workspace.
 - **OSSEM snapshot and `Export-AttackCoverage.ps1 -UseOssem`** (ADR-002).
   A legacy second mapping kept only as a cross-check (917 KB); the native
-  ATT&CK mapping in `data/attack/` is unchanged. OTRF's OSSEM-DM stays
-  credited.
+  ATT&CK mapping in `data/attack/` is unchanged. No OSSEM data or
+  references remain in the kit.
 - **PowerShell transcription** (`Transcription64`, `TranscriptionHeader64`,
   `Transcription32`, `TranscriptionHeader32`;
   [#34](https://github.com/spydisec/WinLogKit/issues/34)). It set no
