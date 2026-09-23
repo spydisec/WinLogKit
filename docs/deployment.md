@@ -27,7 +27,8 @@ Produces a self-contained pair for Intune remediations:
   never shrinks logs, never restarts anything
 
 Prefer the **Settings catalog**? Audit policy, command-line capture,
-Windows PowerShell logging and three log sizes have a Policy CSP; the
+Windows PowerShell logging, SMB auditing and three log sizes have a
+Policy CSP; the
 [Settings catalog](intune-csp.md) page maps each kit setting to its CSP
 and lists what still needs this pack.
 
@@ -53,14 +54,31 @@ Produces:
 - `audit.csv` - the advanced audit policy in Windows' own audit CSV format
   (GUID-driven; the same shape `auditpol /backup` emits)
 - `registry.txt` - LGPO text format for the policy-key registry values
-  (PowerShell logging, command line capture)
+  (PowerShell logging, command line capture, SMB signing and encryption
+  auditing)
 
-Apply locally or in image builds with LGPO.exe from Microsoft's Security
-Compliance Toolkit (`LGPO.exe /ac audit.csv`, `LGPO.exe /t registry.txt`);
-for domain GPOs, mirror `audit.csv` in Advanced Audit Policy Configuration.
-Printed reminders cover what GPO packs deliberately exclude: channel
-sizing (startup script or Intune pack), NTLM audit values (GPO Security
-Options), SMB auditing (`Set-Smb*Configuration`), AD CS AuditFilter.
+**Building a domain GPO by hand?** [Group Policy paths](gpo-paths.md)
+lists where every setting lives in the Group Policy Management Editor and
+what to set it to, generated from the same settings table.
+
+**Local, image builds or air-gapped estates:** apply the files with
+LGPO.exe from Microsoft's
+[Security Compliance Toolkit](https://learn.microsoft.com/windows/security/operating-system-security/device-management/windows-security-configuration-framework/security-compliance-toolkit-10)
+(`LGPO.exe /ac audit.csv`, `LGPO.exe /t registry.txt`). LGPO can also
+export a machine's local policy as a GPO backup, so a reference machine
+configured this way can seed a domain GPO through GPMC's Import Settings
+(see LGPO's documentation in the toolkit).
+
+**What the GPO pack can't deliver** (the generator prints these as
+reminders, and the [Group Policy paths](gpo-paths.md) page lists them):
+
+- Log sizes and enablement, except the Application, Security and System
+  sizes, which have an Event Log Service template. Size the rest with the
+  Intune pack or a computer startup script.
+- NTLM audit values: GPO Security Options, set in the editor (paths on
+  the page).
+- The AD CS AuditFilter: it needs a CertSvc restart, so set it on the CA
+  in a change window.
 
 !!! warning "Partial selections and apply semantics"
     A pack generated from a narrow `-BaselineFile` covers only the selected

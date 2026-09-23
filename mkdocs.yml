@@ -78,6 +78,7 @@ nav:
       - Commands: commands.md
       - Settings: reference.md
       - Settings catalog: intune-csp.md
+      - Group Policy paths: gpo-paths.md
       - Coverage: mapping.md
   - Safety & FAQ: safety.md
   - Credits: credits.md

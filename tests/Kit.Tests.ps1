@@ -269,37 +269,45 @@ Describe 'Reference page' {
     }
 }
 
-# #47: the Settings catalog page. Every kit item is either mapped to a CSP
-# or listed as having none, and the map names nothing the kit doesn't have.
-Describe 'Settings catalog page' {
+# #47 / #48: the Settings catalog and Group Policy pages. Every kit item has
+# a CSP or a reason it has none, and a Group Policy path or a reason; the
+# map names nothing the kit doesn't have.
+Describe 'Policy pages' {
     BeforeAll {
-        $CspMap = Import-PowerShellDataFile (Join-Path $KitRoot 'tools\csp-map.psd1')
+        $PolicyMap = Import-PowerShellDataFile (Join-Path $KitRoot 'tools\policy-map.psd1')
     }
 
-    It 'matches the generator' -Skip:(-not $HasDocs) {
-        $cspTmp = Join-Path $Tmp 'intune-csp.md'
-        & (Join-Path $KitRoot 'tools\Export-CspTable.ps1') -OutFile $cspTmp | Out-Null
-        $committed = Join-Path $KitRoot 'docs\intune-csp.md'
-        $committed | Should -Exist
-        ((Get-Content $committed -Raw) -replace "`r`n", "`n") | Should -BeExactly ((Get-Content $cspTmp -Raw) -replace "`r`n", "`n") -Because 'rerun tools\Export-CspTable.ps1'
+    It 'match the generator' -Skip:(-not $HasDocs) {
+        $polTmp = Join-Path $Tmp 'policy-pages'
+        & (Join-Path $KitRoot 'tools\Export-PolicyTables.ps1') -OutDir $polTmp | Out-Null
+        foreach ($page in 'intune-csp.md', 'gpo-paths.md') {
+            $committed = Join-Path $KitRoot "docs\$page"
+            $committed | Should -Exist
+            # Line-ending neutral: git may check the page out with CRLF.
+            ((Get-Content $committed -Raw) -replace "`r`n", "`n") | Should -BeExactly ((Get-Content (Join-Path $polTmp $page) -Raw) -replace "`r`n", "`n") -Because "rerun tools\Export-PolicyTables.ps1 ($page)"
+        }
     }
 
-    It 'maps every audit subcategory and registry item, once' {
+    It 'cover every audit subcategory, registry item and SMB audit item' {
+        $auditKeys = @($PolicyMap.Audit.Keys | ForEach-Object { $_.ToUpper() })
+        @($BaselineAuditSubcategories | Where-Object { $auditKeys -notcontains $_.Guid.ToUpper() } | ForEach-Object { $_.Name }) | Should -BeNullOrEmpty
+        @($BaselineSmbAuditSettings | Where-Object { -not $PolicyMap.Smb.ContainsKey($_.Id) } | ForEach-Object { $_.Id }) | Should -BeNullOrEmpty
+        # Each registry item: exactly one of Csp / NoCsp, and of Gp / NoGp.
+        @($BaselineRegistrySettings | Where-Object {
+            $m = $PolicyMap.Registry[$_.Id]
+            ($null -eq $m) -or -not ($m.ContainsKey('Csp') -xor $m.ContainsKey('NoCsp')) -or -not ($m.ContainsKey('Gp') -xor $m.ContainsKey('NoGp'))
+        } | ForEach-Object { $_.Id }) | Should -BeNullOrEmpty
+    }
+
+    It 'name only items the kit has, and only known audit categories' {
         $guids = @($BaselineAuditSubcategories | ForEach-Object { $_.Guid.ToUpper() })
-        @($guids | Where-Object { $CspMap.Audit.Keys.ToUpper() -notcontains $_ }) | Should -BeNullOrEmpty
-        @($BaselineRegistrySettings | Where-Object { -not ($CspMap.Registry.ContainsKey($_.Id) -xor $CspMap.NoCsp.ContainsKey($_.Id)) } | ForEach-Object { $_.Id }) | Should -BeNullOrEmpty
-    }
-
-    It 'names only items the kit has' {
-        $ids = @($BaselineRegistrySettings | ForEach-Object { $_.Id })
-        $guids = @($BaselineAuditSubcategories | ForEach-Object { $_.Guid.ToUpper() })
-        $channels = @($BaselineChannels | ForEach-Object { $_.Name })
-        @($CspMap.Audit.Keys | Where-Object { $guids -notcontains $_.ToUpper() }) | Should -BeNullOrEmpty
-        @(@($CspMap.Registry.Keys) + @($CspMap.NoCsp.Keys) | Where-Object { $ids -notcontains $_ }) | Should -BeNullOrEmpty
-        @($CspMap.Channels.Keys | Where-Object { $channels -notcontains $_ }) | Should -BeNullOrEmpty
+        @($PolicyMap.Audit.Keys | Where-Object { $guids -notcontains $_.ToUpper() }) | Should -BeNullOrEmpty
+        @($PolicyMap.Registry.Keys | Where-Object { @($BaselineRegistrySettings | ForEach-Object { $_.Id }) -notcontains $_ }) | Should -BeNullOrEmpty
+        @($PolicyMap.Smb.Keys | Where-Object { @($BaselineSmbAuditSettings | ForEach-Object { $_.Id }) -notcontains $_ }) | Should -BeNullOrEmpty
+        @($PolicyMap.Channels.Keys | Where-Object { @($BaselineChannels | ForEach-Object { $_.Name }) -notcontains $_ }) | Should -BeNullOrEmpty
+        @($PolicyMap.Audit.Values | Where-Object { -not $PolicyMap.AuditCategories.ContainsKey(($_.Csp -split '_')[0]) } | ForEach-Object { $_.Csp }) | Should -BeNullOrEmpty
     }
 }
-
 Describe 'GPO pack' {
     BeforeAll {
         $GpoTmp = Join-Path $Tmp 'gpo'
@@ -312,7 +320,11 @@ Describe 'GPO pack' {
     }
 
     It 'puts the policy registry values in registry.txt' {
-        (Get-Content (Join-Path $GpoTmp 'registry.txt') -Raw) | Should -Match 'EnableScriptBlockLogging'
+        $reg = Get-Content (Join-Path $GpoTmp 'registry.txt') -Raw
+        $reg | Should -Match 'EnableScriptBlockLogging'
+        # SMB auditing goes through its Lanman Server / Workstation policies (#48).
+        $reg | Should -Match 'Microsoft\\Windows\\LanmanServer\r?\nAuditClientDoesNotSupportEncryption\r?\nDWORD:1'
+        $reg | Should -Match 'Microsoft\\Windows\\LanmanWorkstation\r?\nAuditServerDoesNotSupportSigning\r?\nDWORD:1'
     }
 }
 
