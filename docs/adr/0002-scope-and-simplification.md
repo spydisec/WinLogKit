@@ -59,7 +59,7 @@ Out of scope: anything that writes files outside the event log, installs agents 
 | Intune pack | **Keep** | Question 4. |
 | GPO pack | **Keep** | Small (135 lines), and the AD-joined route. |
 | WEF subscription (`-Filter Channel`) | **Keep** | Question 3. |
-| WEF `-Filter Baseline`, `Test-WefFilter.ps1`, `tools/Update-AuditSubcategoryEvents.ps1`, `data/wef/` | **Remove** | Tuning that is easy to get wrong silently (dropped events), and a maintained data snapshot. Document "filter at your SIEM ingest layer" instead. |
+| WEF `-Filter Baseline`, `Test-WefFilter.ps1`, `tools/Update-AuditSubcategoryEvents.ps1`, `data/wef/`, `$BaselineWefSuppress` Suppress rules | **Remove** | Tuning that is easy to get wrong silently (dropped events), and a maintained data snapshot. Document "filter at your SIEM ingest layer" instead. |
 | ATT&CK coverage report + `data/attack/` | **Move to `tools/`** as a maintainer script that produces the numbers on the Coverage page. | The numbers justify the tiers and are worth publishing, but a user doesn't need to run it to deploy logging. |
 | `data/ossem/` and the report's `-UseOssem` mode | **Remove** | A second, legacy mapping kept only as a cross-check; the default native mapping (`data/attack/`) stays. |
 | WELA check (`report/Invoke-WELACheck.ps1`) | **Remove** | Downloads a third-party tool. Test already verifies the live state. Link to WELA from the docs for anyone who wants a second opinion. |
@@ -125,13 +125,13 @@ The deciding question is whether a component helps someone **turn on, prove or d
 
 1. [ ] Merge #36 (transcription removal).
 2. [x] Accept this ADR (Option B; WEF whole channels only, 3 role presets + ASD, ATT&CK report as a maintainer tool, Autoruns to its own repository).
-3. [ ] Tiers: move Crypto-DPAPI debug and IPsec Driver to HighVolume; make `-IncludeOptional` accepted-but-ignored with a warning.
-4. [ ] Presets: generate 4 (`Workstation`, `MemberServer`, `DomainController`, `ASD`); delete the other 6; update docs and field-report template.
-5. [ ] Publish the Autoruns add-on as its own repository (history preserved), then remove `addons/` and `docs/addons.md` and link the new repo from the docs.
-6. [ ] Remove `report/Invoke-WELACheck.ps1`, `docs/extras/sentinel-kql.md`, `data/ossem/` (with the coverage report's `-UseOssem` mode).
-7. [ ] WEF: remove `-Filter Baseline`, `Test-WefFilter.ps1`, `tools/Update-AuditSubcategoryEvents.ps1`, `data/wef/`; add a short "filter at the SIEM ingest layer" note to Collect.
-8. [ ] Move `report/Export-AttackCoverage.ps1` to `tools/`; drop the empty `report/` folder.
-9. [ ] README: new one-sentence goal, the "pick a role preset" quick start, and a "not in scope" list.
-10. [ ] CHANGELOG and tag **v2.0.0** with a migration table (old name, new name or replacement).
+3. [ ] #38 Tiers: move Crypto-DPAPI debug and IPsec Driver to HighVolume; make `-IncludeOptional` accepted-but-ignored with a warning.
+4. [ ] #39 Presets: generate 4 (`Workstation`, `MemberServer`, `DomainController`, `ASD`); delete the other 6; update docs and field-report template.
+5. [ ] (needs a new repository) Publish the Autoruns add-on as its own repository (history preserved), then remove `addons/` and `docs/addons.md` and link the new repo from the docs.
+6. [ ] #40 Remove `report/Invoke-WELACheck.ps1`, `docs/extras/sentinel-kql.md`, `data/ossem/` (with the coverage report's `-UseOssem` mode).
+7. [ ] #41 WEF: remove `-Filter Baseline`, `Test-WefFilter.ps1`, `tools/Update-AuditSubcategoryEvents.ps1`, `data/wef/` and `$BaselineWefSuppress` (added at the maintainer's request); add a short "filter at the SIEM ingest layer" note to Collect.
+8. [ ] #42 Move `report/Export-AttackCoverage.ps1` to `tools/`; drop the empty `report/` folder.
+9. [ ] #43 README: new one-sentence goal, the "pick a role preset" quick start, and a "not in scope" list.
+10. [ ] #43 CHANGELOG (then tag **v2.0.0** after merge) with a migration table (old name, new name or replacement).
 11. [ ] Create GitHub issues for the ADR-001 roadmap items that still apply after this cut.
-12. [ ] Add `docs/adr/0001-v1-layout.md` as a short record pointing at PR #30, so both ADRs live in the repo.
+12. [ ] #43 Add `docs/adr/0001-v1-layout.md` as a short record pointing at PR #30, so both ADRs live in the repo.
