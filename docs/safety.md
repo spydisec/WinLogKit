@@ -42,7 +42,8 @@ decision.
   verification is tracked in [#45](https://github.com/spydisec/WinLogKit/issues/45).
 - **PowerShell 7 isn't logged yet**: the kit turns on script block and
   module logging through the Windows PowerShell policy, which PowerShell 7
-  (`pwsh.exe`) ignores. Sessions in PowerShell 7 produce no 4104/4103
+  (`pwsh.exe`) ignores: it has its own Group Policy settings, per
+  [about_Group_Policy_Settings](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_group_policy_settings). Sessions in PowerShell 7 produce no 4104/4103
   events until [#44](https://github.com/spydisec/WinLogKit/issues/44) is fixed; Windows PowerShell 5.1 is fully
   covered.
 - **Native gaps**: registry autoruns (Run keys, IFEO) need SACLs for change
