@@ -30,7 +30,3 @@ worklist).
   Corporation, used per the
   [ATT&CK Terms of Use](https://attack.mitre.org/resources/legal-and-branding/terms-of-use/).
   This kit is not affiliated with or endorsed by MITRE.
-- The idea of joining host logging configuration to ATT&CK through event
-  metadata follows OTRF's [OSSEM-DM](https://github.com/OTRF/OSSEM-DM)
-  (MIT). Credit where due: OSSEM proved the approach; this native mapping
-  updates it against current ATT&CK.
