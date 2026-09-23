@@ -141,6 +141,9 @@ files, and CI fails if the committed copies drift.
 
 ## tests\Invoke-KitChecks.ps1
 
-The kit's self-checks (parse on both engines, settings consistency, builder
-round-trip, generated artefact validation, preset drift). Safe anywhere, no
-admin - run it before a PR; CI runs it on every push.
+The kit's self-checks, a Pester 5 suite in `tests\Kit.Tests.ps1` (parse on
+both engines, settings consistency, builder round-trip, generated artefact
+validation, preset drift, rollback and audit-reading checks). Safe anywhere,
+no admin - run it before a PR; CI runs it on every push. It needs Pester 5
+(`Install-Module Pester -RequiredVersion 5.9.1 -Scope CurrentUser`); the kit
+itself needs no modules.

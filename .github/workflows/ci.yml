@@ -35,6 +35,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The self-checks are a Pester 5 suite (tests\Kit.Tests.ps1). Pester is
+      # a CI/dev dependency only; the kit itself needs no modules. Each engine
+      # has its own module path, so install it for both.
+      - name: Install Pester 5 (Windows PowerShell 5.1)
+        shell: powershell
+        run: Install-Module Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Install Pester 5 (PowerShell 7)
+        shell: pwsh
+        run: Install-Module Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -SkipPublisherCheck
+
       # The kit must run on stock Windows PowerShell 5.1 - test that engine first.
       - name: Kit checks (Windows PowerShell 5.1)
         shell: powershell
