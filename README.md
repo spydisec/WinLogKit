@@ -54,7 +54,7 @@ generator accept through `-BaselineFile`; `presets\` ships one per host
 role (`Workstation`, `MemberServer`, `DomainController`) plus `ASD`.
 
 The three host scripts are at the kit root; fleet generators (Intune, GPO,
-WEF) are in `fleet\` and the coverage report in `report\`.
+WEF) are in `fleet\`; `tools\` holds maintainer scripts.
 
 If scripts are blocked, `Set-ExecutionPolicy -Scope Process RemoteSigned`
 unblocks the current window without persisting anything; downloaded zips

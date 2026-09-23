@@ -110,9 +110,8 @@ From an **elevated** Windows PowerShell prompt in the kit folder:
 # 2. Verify: per-category PASS/FAIL to console, evidence CSVs to .\Results\.
 .\Test-LoggingBaseline.ps1
 
-# 3. Decide on the high volume tier with evidence, then apply it.
-.\report\Export-AttackCoverage.ps1                    # what Core makes observable
-.\report\Export-AttackCoverage.ps1 -IncludeHighVolume # what HighVolume adds
+# 3. Decide on the high volume tier (the Coverage page shows what it adds:
+#    162 -> 279 observable ATT&CK techniques), then apply it.
 .\Enable-LoggingBaseline.ps1 -IncludeHighVolume
 .\Test-LoggingBaseline.ps1   -IncludeHighVolume
 
@@ -143,7 +142,7 @@ Or start from a published reference: see
 ## Where the scripts live
 
 The three host scripts sit at the kit root. Fleet generators are in
-`fleet\` and the coverage report in `report\`; see
+`fleet\` and maintainer tools in `tools\`; see
 [Commands](commands.md#where-the-scripts-live). Wherever a script lives, it
 reads the settings table from the root and writes its output there.
 

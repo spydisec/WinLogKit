@@ -14,10 +14,9 @@ PowerShell 5.1 - use whichever your host has.
 |---|---|---|
 | kit root | `New-`, `Enable-`, `Test-LoggingBaseline.ps1`, the settings table `WinLogKit.Settings.ps1`, the shared helpers `WinLogKit.Common.ps1` | the host you are configuring |
 | `fleet\` | `New-IntuneRemediationPack.ps1`, `New-GpoPack.ps1`, `New-WefSubscription.ps1` | an admin workstation |
-| `report\` | `Export-AttackCoverage.ps1` | anywhere |
-| `tools\` | regenerators for presets and the Reference page | maintainers |
+| `tools\` | regenerators for presets and the Reference page, and the ATT&CK coverage report | maintainers |
 
-The root, `fleet\` and `report\` scripts read the settings table and
+The root, `fleet\` and `tools\` scripts read the settings table and
 helpers from the kit root and write their output (`Intune\`, `GPO\`, `WEF\`,
 `Results\`) there too, wherever they live. The generated Intune pack
 stands alone by design: it carries everything it needs to the endpoint.
@@ -70,17 +69,6 @@ coverage); writes an Excel-editable selection CSV.
 
 No elevation needed; changes nothing.
 
-## Export-AttackCoverage.ps1
-
-Joins a selection against the vendored MITRE ATT&CK snapshot and reports
-which techniques it makes observable - and why the rest are not
-(NotSelected, NotInKit, RequiresSysmon, NotNative or Unmapped). See
-[Coverage](mapping.md).
-
-```powershell
-.\report\Export-AttackCoverage.ps1 [-IncludeHighVolume] [-BaselineFile <csv>]
-```
-
 ## Cross-checking with WELA (optional)
 
 The kit doesn't bundle or download a second-opinion tool: Test is the
@@ -124,6 +112,24 @@ See [Collect](wec.md).
 
 Generates the advanced audit policy `audit.csv` and an LGPO-format
 `registry.txt` from the selection. See [Deploy](deployment.md).
+
+## Maintainer tools (`tools\`)
+
+You don't need these to deploy logging. They regenerate the kit's derived
+files, and CI fails if the committed copies drift.
+
+- `New-PresetBaselines.ps1` - the four presets (run it under Windows
+  PowerShell 5.1 so the CSVs keep their UTF-8 BOM).
+- `Export-ReferenceTable.ps1` - the [Reference](reference.md) page.
+- `Export-AttackCoverage.ps1` - joins a selection against the vendored
+  MITRE ATT&CK snapshot and reports which techniques it makes observable,
+  and why the rest are not (NotSelected, NotInKit, RequiresSysmon, NotNative
+  or Unmapped). It produces the numbers on the [Coverage](mapping.md) page,
+  and works on your own selection CSV too:
+
+  ```powershell
+  .\tools\Export-AttackCoverage.ps1 [-IncludeHighVolume] [-BaselineFile <csv>]
+  ```
 
 ## tests\Invoke-KitChecks.ps1
 

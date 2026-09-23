@@ -269,7 +269,7 @@ try {
     if ($badMap) { Fail "event_map.csv references unknown settings items: $($badMap -join ', ')" } else { Pass 'event map item ids valid against settings table' }
 
     $covTmp = Join-Path $tmp 'cov'
-    & (Join-Path $KitRoot 'report\Export-AttackCoverage.ps1') -OutDir $covTmp | Out-Null
+    & (Join-Path $KitRoot 'tools\Export-AttackCoverage.ps1') -OutDir $covTmp | Out-Null
     $covDetail = Get-ChildItem $covTmp -Filter 'AttackCoverage_Detail_*.csv' | Select-Object -First 1
     if ($null -eq $covDetail) { Fail 'coverage detail CSV not produced' } else {
         $covRows = Import-Csv $covDetail.FullName

@@ -28,6 +28,10 @@ releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
   The Reference page's Minimal/Heavy columns become Wks / Mbr / DC
   (membership in the three role presets); the Refs column is unchanged.
+- **`Export-AttackCoverage.ps1` moves to `tools\`** (ADR-002). It produces
+  the numbers on the Coverage page and still accepts any selection CSV, but
+  deploying the kit doesn't need it. The now-empty `report\` folder is gone.
+  Run it as `.\tools\Export-AttackCoverage.ps1`.
 
 ### Removed
 - **WEF source-side filtering** (ADR-002). `New-WefSubscription.ps1` now

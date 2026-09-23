@@ -157,9 +157,9 @@ Two data files in `data/attack/` (provenance and attribution in its README):
    logging), one sourced row per claim.
 
 ```powershell
-.\report\Export-AttackCoverage.ps1                                        # Core tier
-.\report\Export-AttackCoverage.ps1 -IncludeHighVolume
-.\report\Export-AttackCoverage.ps1 -BaselineFile .\presets\Workstation.csv
+.\tools\Export-AttackCoverage.ps1                                        # Core tier
+.\tools\Export-AttackCoverage.ps1 -IncludeHighVolume
+.\tools\Export-AttackCoverage.ps1 -BaselineFile .\presets\Workstation.csv
 ```
 
 Every technique verdict carries a reason:
