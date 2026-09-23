@@ -31,8 +31,8 @@ Examples of reports that are in scope:
 - A kit script that can be made to apply a setting outside its documented
   set, or one from the never-do list (reboot, service restart, log
   shrinking, `CrashOnAuditFail`, retention changes, SACLs)
-- Injection into generated artefacts (Intune packs, WEF subscription XML,
-  GPO files) via crafted baseline CSV content
+- Injection into generated artefacts (WEF subscription XML, GPO files) via
+  crafted baseline CSV content
 - Anything that makes a kit script reach the network itself (the scripts
   make no outbound requests; only the WEF subscription you deploy forwards
   events, by design)

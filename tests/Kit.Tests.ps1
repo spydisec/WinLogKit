@@ -21,7 +21,6 @@ BeforeDiscovery {
         Where-Object { $_.FullName.Substring($kitRootFull.Length) -notmatch '\\(WELA[^\\]*|Baseline|Logs|Results|Evidence|Intune)\\' } |
         ForEach-Object { @{ Name = $_.FullName.Substring($kitRootFull.Length).TrimStart('\'); Path = $_.FullName } })
     $PresetNames = @('Workstation', 'MemberServer', 'DomainController', 'ASD') | ForEach-Object { @{ Name = $_ } }
-    $PackFiles = @('Detect-LoggingBaseline.ps1', 'Remediate-LoggingBaseline.ps1') | ForEach-Object { @{ Name = $_ } }
     # The release zip ships tests\ but not docs\: the Reference page check
     # is skipped there rather than failed.
     $HasDocs = Test-Path (Join-Path $kitRoot 'docs')
@@ -96,9 +95,7 @@ Describe 'Scripts' {
 
     Context 'helper functions' {
         BeforeAll {
-            # Function name -> files that define it. The Intune pack generator
-            # embeds its helpers in a here-string, which the AST does not see as
-            # definitions: the generated pack must stay self-contained.
+            # Function name -> files that define it.
             $Defs = @{}
             foreach ($f in $ScriptPaths) {
                 $ast = [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$null)
@@ -207,29 +204,6 @@ Describe 'Baseline builder' {
         $r = Invoke-KitChild 'New-LoggingBaseline.ps1' @('-Show', '-BaselineFile', $stale)
         $r.Exit | Should -Be 0
         $r.Output | Should -Match 'does not know, ignored: CHANNEL\|NO-SUCH-CHANNEL/OPERATIONAL'
-    }
-}
-
-Describe 'Intune pack' {
-    BeforeAll {
-        $PackDir = Join-Path $Tmp 'intune'
-        & (Join-Path $KitRoot 'fleet\New-IntuneRemediationPack.ps1') -OutDir $PackDir | Out-Null
-    }
-
-    It 'generates <Name> that parses with no placeholders left' -ForEach $PackFiles {
-        $p = Join-Path $PackDir $Name
-        $p | Should -Exist
-        $errors = $null
-        [System.Management.Automation.Language.Parser]::ParseFile($p, [ref]$null, [ref]$errors) | Out-Null
-        $errors.Count | Should -Be 0
-        (Get-Content $p -Raw) | Should -Not -Match '__(MODE|ITEMS|COUNT|SOURCE|FILENAME)__'
-    }
-
-    # The recommended CSV selects only Core, so no HighVolume item may be embedded.
-    It 'honours the baseline CSV selection' {
-        $packDir2 = Join-Path $Tmp 'intune-csv'
-        & (Join-Path $KitRoot 'fleet\New-IntuneRemediationPack.ps1') -OutDir $packDir2 -BaselineFile $Csv1 | Out-Null
-        (Get-Content (Join-Path $packDir2 'Detect-LoggingBaseline.ps1') -Raw) | Should -Not -Match 'EnableModuleLogging'
     }
 }
 
@@ -471,7 +445,7 @@ Describe 'Audit policy reading' {
     }
 
     It 'leaves no script matching on the translated text' {
-        @(foreach ($rel in @('WinLogKit.Common.ps1', 'Enable-LoggingBaseline.ps1', 'Test-LoggingBaseline.ps1', 'fleet\New-IntuneRemediationPack.ps1')) {
+        @(foreach ($rel in @('WinLogKit.Common.ps1', 'Enable-LoggingBaseline.ps1', 'Test-LoggingBaseline.ps1')) {
             if (Select-String -Path (Join-Path $KitRoot $rel) -Pattern "'Inclusion Setting'|match 'Success'|match 'Failure'|auditpol /get /category" -Quiet) { $rel }
         }) | Should -BeNullOrEmpty
     }

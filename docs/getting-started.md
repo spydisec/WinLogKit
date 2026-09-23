@@ -48,10 +48,9 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
       overrides it (`MachinePolicy` and `UserPolicy` sit above the Process
       scope, per
       [about_Execution_Policies](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies)).
-      Have the scripts signed, or ask for the policy to change. The Intune
-      pack is unaffected when uploaded with **Enforce script signature
-      check: No**, per
-      [Microsoft's remediation prerequisites](https://learn.microsoft.com/intune/device-management/tools/deploy-remediations#prerequisites).
+      Have the scripts signed, or ask for the policy to change. Fleet
+      delivery through the Intune Settings catalog or Group Policy runs no
+      kit scripts on the endpoints, so it isn't affected.
     - Execution policy is a usability guardrail, not a security boundary;
       none of this weakens anything the kit configures.
 
@@ -101,7 +100,7 @@ pipeline or an Intune/RMM check as-is.
 | `Baseline\` | The rollback copy from the first run; `snapshots\<timestamp>\` holds a copy from before every later run |
 | `Results\` | Test and coverage CSVs, timestamped |
 | `Logs\` | A log of every Enable run, including `-WhatIf` |
-| `Intune\`, `WEF\`, `GPO\` | Generated deployment files |
+| `WEF\`, `GPO\` | Generated deployment files |
 
 These are per-host output and git-ignored; only the kit and your own
 baseline CSVs belong in version control.

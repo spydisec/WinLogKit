@@ -21,7 +21,7 @@ Everything else is a **selection** of that table:
 | A selection CSV from `New-LoggingBaseline.ps1` | Per-setting control; review in Excel, keep in git |
 | Tier switch (`-IncludeHighVolume`) | Quick tests without a CSV |
 
-One selection drives everything: Enable, Test, the Intune pack, the WEF
+One selection drives everything: Enable, Test, the WEF
 subscription, the GPO pack and the ATT&CK coverage report all accept the
 same `-BaselineFile`. When a baseline file is given, tier switches are
 ignored: the file is the decision.
@@ -78,7 +78,7 @@ Usage is identical to any baseline CSV:
 ```powershell
 .\New-LoggingBaseline.ps1 -Show -BaselineFile .\presets\Workstation.csv
 .\Enable-LoggingBaseline.ps1 -BaselineFile .\presets\MemberServer.csv -WhatIf
-.\fleet\New-IntuneRemediationPack.ps1 -BaselineFile .\presets\Workstation.csv -OutDir .\Intune\Workstation
+.\fleet\New-GpoPack.ps1 -BaselineFile .\presets\MemberServer.csv -OutDir .\GPO\MemberServer
 ```
 
 To customise a role, copy the CSV, flip `Selected` values in Excel, and keep

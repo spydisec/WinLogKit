@@ -1,48 +1,37 @@
 # Deploy
 
-How to roll a baseline out to many machines through Intune or Group Policy.
-Both generators compile from the settings table, or from the same
-`-BaselineFile` selection CSV used everywhere else, so deployed artefacts
-are generated to match the tested baseline. Regenerate after any settings
-change; the generated files say not to edit them by hand.
+How to roll a baseline out to many machines: the Intune **Settings
+catalog** for cloud-managed devices, **Group Policy** for domain-joined
+fleets. Both are described from the settings table itself, and the GPO
+pack is generated from the same `-BaselineFile` selection CSV used
+everywhere else, so what you deploy matches the tested baseline.
+Regenerate after any settings change; generated files say not to edit
+them by hand.
 
 Central collection (WEF / WEC) has its own page: [Collect](wec.md).
 
 ## Intune (workstations and cloud-managed servers)
 
+Build a **Settings catalog** profile from the
+[Settings catalog](intune-csp.md) page: it maps each kit setting to its
+Policy CSP, with the value to set and Microsoft's page. No scripts run on
+the endpoints.
+
 !!! note
-    The Intune pack is generated from the tested settings table and
-    checked in CI, but hasn't yet been field-tested in a real tenant
-    ([#46](https://github.com/spydisec/WinLogKit/issues/46)). Pilot it on a small device group first.
+    The Settings catalog mapping is built from Microsoft's CSP
+    documentation and checked in CI, but hasn't yet been field-tested in a
+    real tenant ([#46](https://github.com/spydisec/WinLogKit/issues/46)).
+    Pilot it on a small device group first.
 
-```powershell
-.\fleet\New-IntuneRemediationPack.ps1 [-BaselineFile <csv>] [-IncludeHighVolume]
-```
-
-Produces a self-contained pair for Intune remediations:
-
-- `Detect-LoggingBaseline.ps1` - exit 0 compliant / exit 1 with a one-line
-  drift summary
-- `Remediate-LoggingBaseline.ps1` - applies only what is below baseline;
-  never shrinks logs, never restarts anything
-
-Prefer the **Settings catalog**? Audit policy, command-line capture,
-Windows PowerShell logging, SMB auditing and three log sizes have a
-Policy CSP; the
-[Settings catalog](intune-csp.md) page maps each kit setting to its CSP
-and lists what still needs this pack.
-
-Upload under **Devices > Manage devices > Scripts and remediations >
-Create**: run using logged-on credentials **No** (SYSTEM), enforce script
-signature check **No** (the generated scripts are unsigned; with Yes the
-device's execution policy applies and they must be signed by a trusted
-publisher, per
-[Microsoft's remediation prerequisites](https://learn.microsoft.com/intune/device-management/tools/deploy-remediations#prerequisites)),
-64-bit PowerShell **Yes**. Endpoints need nothing but the two uploaded files -
-role- and version-gating happens at runtime on each host. The AD CS
-AuditFilter is excluded from packs by design (it needs a CertSvc restart,
-which does not belong in unattended remediation).
-
+What the catalog covers: audit policy, command-line capture, Windows
+PowerShell logging, incoming NTLM auditing, SMB auditing (Windows 11 24H2
+and later) and the Application, Security and System log sizes. What it
+can't: the sizes and enablement of the other kit logs, the 32-bit and
+PowerShell 7 copies of the PowerShell policies, and outgoing NTLM
+auditing. The page lists each one and why. On a device managed only
+through the catalog, `Test-LoggingBaseline.ps1` reports those rows as
+FAIL; that's expected, and running `Enable-LoggingBaseline.ps1` once on
+the device covers them.
 ## GPO (domain-joined fleets)
 
 ```powershell
@@ -73,8 +62,8 @@ configured this way can seed a domain GPO through GPMC's Import Settings
 reminders, and the [Group Policy paths](gpo-paths.md) page lists them):
 
 - Log sizes and enablement, except the Application, Security and System
-  sizes, which have an Event Log Service template. Size the rest with the
-  Intune pack or a computer startup script.
+  sizes, which have an Event Log Service template. Size the rest with a
+  computer startup script, or run `Enable-LoggingBaseline.ps1` on the host.
 - NTLM audit values: GPO Security Options, set in the editor (paths on
   the page).
 - The AD CS AuditFilter: it needs a CertSvc restart, so set it on the CA

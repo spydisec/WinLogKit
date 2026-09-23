@@ -247,7 +247,7 @@ if ($Validate) {
 New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
 $outDirFull = (Resolve-Path $OutDir).Path
 $outFile = Join-Path $outDirFull "$SubscriptionId.xml"
-# UTF-8 without BOM, consistent with the Intune pack outputs.
+# UTF-8 without BOM, consistent with the other generated artefacts.
 [System.IO.File]::WriteAllText($outFile, $xml, (New-Object System.Text.UTF8Encoding($false)))
 
 # ------------------------------------------------------------------ output ---

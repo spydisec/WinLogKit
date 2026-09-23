@@ -26,15 +26,13 @@ is what tunes the presets. Open an issue with the *Field report* template.
   anywhere else.
 - **Shared helpers live in `WinLogKit.Common.ps1`** (host probes, registry
   reads, the audit policy reader, the selection model). A function
-  defined in two kit files fails the self-checks. The Intune pack
-  generator embeds its own helpers on purpose: the generated scripts must
-  run alone.
+  defined in two kit files fails the self-checks.
 - **Windows PowerShell 5.1 compatible, no external modules, no agents.**
   The design intent is a kit that runs on a bare server with nothing
   installed. PowerShell 7 is fully supported (CI tests every change on
   both engines), but 5.1 stays the compatibility floor: it is what ships
-  with Windows and what Intune remediations execute under, so nothing
-  5.1-incompatible can be merged. The one exception is the self-checks,
+  with Windows, so nothing 5.1-incompatible can be merged. The one
+  exception is the self-checks,
   which use Pester 5; that's a development and CI dependency, never one the
   kit needs to run.
 - **The never-do list is non-negotiable**: nothing that reboots, restarts
@@ -44,7 +42,7 @@ is what tunes the presets. Open an issue with the *Field report* template.
 - **Deviations from the Yamato sources need a documented reason** in the
   deviations table.
 - **Generated files are never edited by hand**: presets, the docs Reference
-  page, Intune packs and GPO artefacts are regenerated from their `tools\`
+  and policy pages and GPO artefacts are regenerated from their `tools\`
   generators, and CI fails on drift.
 
 ## How changes land

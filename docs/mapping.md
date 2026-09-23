@@ -49,8 +49,8 @@ never talks to the internet at runtime.**
     <text x="500" y="141" font-weight="bold">Coverage report</text>
     <text x="500" y="159" font-size="11.5">Export-AttackCoverage</text>
     <text x="500" y="272" font-weight="bold">Fleet artefacts</text>
-    <text x="500" y="290" font-size="11.5">Intune pack &#183; WEF XML</text>
-    <text x="500" y="306" font-size="11.5">GPO pack</text>
+    <text x="500" y="290" font-size="11.5">GPO pack &#183; WEF XML</text>
+    <text x="500" y="306" font-size="11.5">Intune / GPO mappings</text>
   </g>
   <g stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#arr)">
     <line x1="165" y1="76"  x2="165" y2="128"/>
@@ -100,10 +100,10 @@ Reading it top to bottom:
   log; your SIEM picks up there, deliberately outside the kit.
 
 Which application each piece touches: Enable/Test drive `auditpol.exe`,
-`wevtutil.exe`, the registry and the SMB configuration cmdlets; the Intune
-pack is consumed by **Microsoft Intune** (Scripts and remediations); the
+`wevtutil.exe`, the registry and the SMB configuration cmdlets; the
+Settings catalog mapping is applied in **Microsoft Intune**; the
 subscription XML by the **Windows Event Collector** (`wecutil`); the GPO
-pack by **GPMC / LGPO.exe**.
+pack and Group Policy paths in **GPMC / LGPO.exe**.
 
 ## Behaviour category mapping
 

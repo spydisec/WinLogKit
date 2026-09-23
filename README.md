@@ -28,9 +28,9 @@ apply.
   `-Rollback` to first-run state.
 - **Verify** the live state per behaviour category (PASS / FAIL / NOT
   APPLICABLE) with evidence CSVs.
-- **Deploy** at fleet scale as an Intune remediation pack or GPO artefacts,
-  compiled from the same table so deployed config cannot drift from the
-  tested baseline.
+- **Deploy** at fleet scale through the Intune Settings catalog or Group
+  Policy, both mapped setting by setting from the same table, plus a
+  generated GPO pack, so deployed config matches the tested baseline.
 - **Collect** centrally: a Windows Event Forwarding subscription generated
   from the same selection, forwarding the selected channels whole. The kit
   ends at the collector's ForwardedEvents log; any SIEM picks up from there.
@@ -56,7 +56,7 @@ Want your own selection? Copy a preset and flip `Selected` in Excel, or run
 `.\New-LoggingBaseline.ps1`, which walks every setting and writes a CSV that
 Enable, Test and every fleet generator accept through `-BaselineFile`.
 
-The three host scripts are at the kit root; fleet generators (Intune, GPO,
+The three host scripts are at the kit root; fleet generators (GPO,
 WEF) are in `fleet\`; `tools\` holds maintainer scripts.
 
 ## Not in scope
