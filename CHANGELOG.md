@@ -12,7 +12,7 @@ that (files outside the event log, downloads, source-side filtering, SIEM
 content) is gone. Version 2.0.0 because presets are renamed and scripts,
 switches and a data folder are removed.
 
-**Upgrading from v1 in five lines:**
+**Upgrading from v1:**
 
 | If you used | Now |
 |---|---|
@@ -21,6 +21,7 @@ switches and a data folder are removed.
 | `New-WefSubscription.ps1 -Filter Baseline` or `Test-WefFilter.ps1` | whole-channel subscription; filter at SIEM ingest |
 | `report\Invoke-WELACheck.ps1` | run WELA yourself if you want a second opinion |
 | `report\Export-AttackCoverage.ps1` | `tools\Export-AttackCoverage.ps1` |
+| the Autoruns add-on (`addons\`) | removed; uninstall it with `-Uninstall` from a v1 copy first |
 
 Transcription settings, if you applied them, are removed by `-Rollback` or
 by hand (see Removed).
@@ -60,6 +61,14 @@ by hand (see Removed).
   Run it as `.\tools\Export-AttackCoverage.ps1`.
 
 ### Removed
+- **AutorunsToWinEventLog add-on** (`addons\`, the Add-ons page, its
+  self-check and fixture; ADR-002). It downloaded Sysinternals `autorunsc`
+  and installed a scheduled task, the one part of the kit that broke its
+  no-download, no-agent rule. **Installed it on a host?** Run
+  `Install-AutorunsToWinEventLog.ps1 -Uninstall` from a v1 copy of the kit
+  before upgrading; it removes the task (the `Autoruns` log is kept unless
+  `-RemoveLog`). The registry-autorun gap is back to documented-only on
+  the Safety page. The kit now has no network action at all.
 - **WEF source-side filtering** (ADR-002). `New-WefSubscription.ps1` now
   forwards each selected channel whole. Removed: `-Filter Baseline` (the
   Security event-ID filter), the `<name>.expected-eventids.csv` sidecar,

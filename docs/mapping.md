@@ -12,9 +12,7 @@ How the kit works under the hood, in one picture. The claim it makes:
 **all configuration derives from a single settings table (coverage
 additionally reads the shipped ATT&CK snapshot), snapshots come in once
 with their dates recorded, and events flow out to your collector - the kit
-never talks to the internet at runtime.** The one opt-in exception fetches
-a tool only when you ask: the [Autoruns add-on](addons.md) installer's
-`-Download`.
+never talks to the internet at runtime.**
 
 <figure markdown>
 <svg viewBox="0 0 660 620" role="img" aria-label="Vendored snapshots feed two destinations: Yamato baselines into the settings table, and the ATT&amp;CK snapshot into the coverage report. Enable applies and Test verifies the settings table on the Windows host, generators compile fleet artefacts from it, host events flow to the Windows Event Log, over WEF to a collector, and hand off to the SIEM." style="max-width: 660px; width: 100%; height: auto; font-family: inherit;">
@@ -128,12 +126,12 @@ are in the settings table and on the [Reference page](reference.md).
 | Remote access | Logon (types 3/10); Other Logon/Logoff (4778/4779); RPC Events | TerminalServices-LocalSessionManager/Operational; SmbClient/Security | - | Full |
 | Scheduled and automated tasks | Other Object Access (4698-4702) | TaskScheduler/Operational; WMI-Activity/Operational | - | Full |
 | Scripting and command line | Process Creation (HV) | PowerShell/Operational (4103/4104); Windows PowerShell; PowerShellCore/Operational; Diagnosis-Scripted | Script block + module logging (HV); cmdline (HV) | Full for PowerShell; other interpreters visible only via 4688 command lines |
-| Persistence | Security System Extension; Other Object Access; Directory Service Changes (DC) | System (7045); TaskScheduler/Operational; WMI-Activity/Operational; Bits-Client/Operational | - | **Partial**: registry autoruns (Run keys, IFEO) need the Registry subcategory + per-key SACLs, not in this baseline. The optional [Autoruns add-on](addons.md) partially mitigates it with a daily autostart inventory (not real-time SACL auditing) |
+| Persistence | Security System Extension; Other Object Access; Directory Service Changes (DC) | System (7045); TaskScheduler/Operational; WMI-Activity/Operational; Bits-Client/Operational | - | **Partial**: registry autoruns (Run keys, IFEO) need the Registry subcategory + per-key SACLs, not in this baseline |
 | Removable and external devices | Plug and Play (6416); Removable Storage (4663) | Security; DriverFrameworks-UserMode/Operational | - | Full |
 | Blocked and denied activity | Account Lockout; Filtering Platform Connection blocks (HV) | Security; Defender/Operational; AppLocker x4; CodeIntegrity; Security-Mitigations x2; Firewall | - | Full (AppLocker channels populate only if AppLocker policy deployed) |
 | Directory and identity store | Directory Service Access (DC); Directory Service Changes (DC); SAM; Kerberos Authentication Service (DC) | Security | - | Full on DCs; standalone = local SAM only (by design) |
 | File and object access | File Share (5140/5142-5144); Removable Storage | Security | - | **Partial**: per-file auditing (4663) needs File System subcategory + SACLs on chosen paths, a per-asset design decision, deliberately not blanket-enabled |
-| Certificates and keys | Certification Services (4898/4899); Other Policy Change (CNG) | Security; Crypto-DPAPI/Debug (Optional) | AD CS `AuditFilter=127` (only when AD CS installed; CertSvc restart) | Full where AD CS present; limited elsewhere (accepted) |
+| Certificates and keys | Certification Services (4898/4899); Other Policy Change (CNG) | Security; Crypto-DPAPI/Debug (HV) | AD CS `AuditFilter=127` (only when AD CS installed; CertSvc restart) | Full where AD CS present; limited elsewhere (accepted) |
 | Network flow and sessions | Filtering Platform Connection 5156/5157 (HV); RPC Events | Firewall channel; SmbClient/Security | - | **Partial**: no byte counts / flow aggregation natively; true flow telemetry needs network-layer sources, outside host scope |
 
 The partial rows are the recognised gaps of agentless native logging
