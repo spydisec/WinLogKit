@@ -73,17 +73,23 @@ function Get-RegValue {
 # 7th = value) in case the header row is translated too.
 
 # Parses auditpol /backup output into subcategory GUID -> setting value.
-# Rows without a GUID (audit options, global SACLs) are skipped.
+# Rows without a GUID (audit options, global SACLs) are skipped. The export
+# can also hold per-user audit rows, so the system-wide rows (Policy Target
+# 'System') win; if none carry that word (a translated export), the first row
+# per subcategory is used rather than reading nothing.
 function ConvertFrom-AuditPolicyBackup {
     param([string[]]$Lines)
+    $rows = @(@($Lines | Select-Object -Skip 1 | Where-Object { $_ -match '\S' }) |
+        ConvertFrom-Csv -Header 'Machine', 'Target', 'Subcategory', 'Guid', 'Inclusion', 'Exclusion', 'Value' |
+        Where-Object { $null -ne $_ })
+    $valid = @($rows | Where-Object {
+        ("$($_.Guid)" -replace '[{}]', '').Trim() -match '^[0-9A-Fa-f]{8}(-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$' -and "$($_.Value)".Trim() -match '^[0-3]$' })
+    $system = @($valid | Where-Object { "$($_.Target)".Trim() -eq 'System' })
+    if ($system.Count -gt 0) { $valid = $system }
     $map = @{}
-    $rows = @($Lines | Select-Object -Skip 1 | Where-Object { $_ -match '\S' }) |
-        ConvertFrom-Csv -Header 'Machine', 'Target', 'Subcategory', 'Guid', 'Inclusion', 'Exclusion', 'Value'
-    foreach ($row in @($rows | Where-Object { $null -ne $_ })) {
+    foreach ($row in $valid) {
         $guid = ("$($row.Guid)" -replace '[{}]', '').Trim().ToUpper()
-        if ($guid -match '^[0-9A-F]{8}(-[0-9A-F]{4}){3}-[0-9A-F]{12}$' -and "$($row.Value)".Trim() -match '^[0-3]$') {
-            $map[$guid] = [int]"$($row.Value)".Trim()
-        }
+        if (-not $map.ContainsKey($guid)) { $map[$guid] = [int]"$($row.Value)".Trim() }
     }
     return $map
 }

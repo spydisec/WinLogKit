@@ -65,8 +65,9 @@ Options), SMB auditing (`Set-Smb*Configuration`), AD CS AuditFilter.
     prints both warnings when they apply. The invariant that protects you
     either way: **always verify the effective state afterwards** with
     `Test-LoggingBaseline.ps1`, which reads the live audit policy
-    (`auditpol /backup`, read by its numeric values so it works on any
-    Windows language) and registry, not the files you applied.
+    ([`auditpol /backup`](https://learn.microsoft.com/windows-server/administration/windows-commands/auditpol-backup),
+    read by its numeric setting values rather than the display text, so it
+    works on any Windows language) and registry, not the files you applied.
 
 !!! note
     On domain-joined hosts, local audit policy holds only until Group Policy

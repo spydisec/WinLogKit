@@ -157,11 +157,17 @@ $auditFile = Join-Path ([IO.Path]::GetTempPath()) ('winlogkit-auditpol-{0}.csv' 
 try {
     auditpol /backup /file:"$auditFile" | Out-Null
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $auditFile)) { throw "auditpol /backup failed (exit $LASTEXITCODE)" }
-    Get-Content -LiteralPath $auditFile | Select-Object -Skip 1 | Where-Object { $_ -match '\S' } |
-        ConvertFrom-Csv -Header 'Machine', 'Target', 'Subcategory', 'Guid', 'Inclusion', 'Exclusion', 'Value' | ForEach-Object {
-            $g = ("$($_.Guid)" -replace '[{}]', '').Trim().ToUpper()
-            if ($g -match '^[0-9A-F]{8}(-[0-9A-F]{4}){3}-[0-9A-F]{12}$' -and "$($_.Value)".Trim() -match '^[0-3]$') { $auditMap[$g] = [int]"$($_.Value)".Trim() }
-        }
+    $auditRows = @(Get-Content -LiteralPath $auditFile | Select-Object -Skip 1 | Where-Object { $_ -match '\S' } |
+        ConvertFrom-Csv -Header 'Machine', 'Target', 'Subcategory', 'Guid', 'Inclusion', 'Exclusion', 'Value' |
+        Where-Object { ("$($_.Guid)" -replace '[{}]', '').Trim() -match '^[0-9A-Fa-f]{8}(-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$' -and "$($_.Value)".Trim() -match '^[0-3]$' })
+    # System-wide rows win over per-user ones; a translated export without
+    # the word 'System' falls back to the first row per subcategory.
+    $systemRows = @($auditRows | Where-Object { "$($_.Target)".Trim() -eq 'System' })
+    if ($systemRows.Count -gt 0) { $auditRows = $systemRows }
+    foreach ($r in $auditRows) {
+        $g = ("$($r.Guid)" -replace '[{}]', '').Trim().ToUpper()
+        if (-not $auditMap.ContainsKey($g)) { $auditMap[$g] = [int]"$($r.Value)".Trim() }
+    }
 } finally {
     if (Test-Path -LiteralPath $auditFile) { Remove-Item -LiteralPath $auditFile -Force }
 }

@@ -365,14 +365,20 @@ try {
         $mapEn = ConvertFrom-AuditPolicyBackup -Lines (Get-Content (Join-Path $fx 'auditpol-backup-en.csv') -Encoding UTF8)
         $mapDe = ConvertFrom-AuditPolicyBackup -Lines (Get-Content (Join-Path $fx 'auditpol-backup-de.csv') -Encoding UTF8)
         $diff = @($mapEn.Keys | Where-Object { -not $mapDe.ContainsKey($_) -or $mapDe[$_] -ne $mapEn[$_] })
+        # A per-user row placed ahead of the system rows must not win.
+        $enLines = @(Get-Content (Join-Path $fx 'auditpol-backup-en.csv') -Encoding UTF8)
+        $logonGuid = '0CCE9215-69AE-11D9-BED3-505054503030'
+        $userLine = 'HOST01,User,Logon,{' + $logonGuid + '},No Auditing,,0'
+        $mapUser = ConvertFrom-AuditPolicyBackup -Lines (@($enLines[0], $userLine) + @($enLines | Select-Object -Skip 1))
+        $userSafe = ($mapEn[$logonGuid] -ne 0) -and ($mapUser[$logonGuid] -eq $mapEn[$logonGuid])
         $missingSub = @($BaselineAuditSubcategories | Where-Object { -not $mapEn.ContainsKey($_.Guid.ToUpper()) } | ForEach-Object { $_.Name })
         $textReaders = @(foreach ($rel in @('WinLogKit.Common.ps1', 'Enable-LoggingBaseline.ps1', 'Test-LoggingBaseline.ps1', 'fleet\New-IntuneRemediationPack.ps1')) {
             if (Select-String -Path (Join-Path $KitRoot $rel) -Pattern "'Inclusion Setting'|match 'Success'|match 'Failure'|auditpol /get /category" -Quiet) { $rel }
         })
-        if ($mapEn.Count -ge 50 -and $mapEn.Count -eq $mapDe.Count -and $diff.Count -eq 0 -and $missingSub.Count -eq 0 -and $textReaders.Count -eq 0 -and (Format-AuditSetting 3) -eq 'Success and Failure' -and (Get-AuditSettingValue $true $false) -eq 1) {
-            Pass "audit policy parses the same from English and German exports ($($mapEn.Count) subcategories, values not text)"
+        if ($mapEn.Count -ge 50 -and $mapEn.Count -eq $mapDe.Count -and $diff.Count -eq 0 -and $missingSub.Count -eq 0 -and $textReaders.Count -eq 0 -and $userSafe -and (Format-AuditSetting 3) -eq 'Success and Failure' -and (Get-AuditSettingValue $true $false) -eq 1) {
+            Pass "audit policy parses the same from English and German exports ($($mapEn.Count) subcategories, values not text, system rows over per-user)"
         } else {
-            Fail "locale-neutral audit reading wrong: en $($mapEn.Count) / de $($mapDe.Count) rows, $($diff.Count) differ, kit subcategories missing [$($missingSub -join ', ')], text-matching readers [$($textReaders -join ', ')]"
+            Fail "locale-neutral audit reading wrong: en $($mapEn.Count) / de $($mapDe.Count) rows, $($diff.Count) differ, kit subcategories missing [$($missingSub -join ', ')], text-matching readers [$($textReaders -join ', ')], per-user row ignored: $userSafe"
         }
     } catch { Fail "locale-neutral audit check errored: $($_.Exception.Message)" }
 }
