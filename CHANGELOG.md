@@ -3,9 +3,35 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
-## Unreleased
+## v2.0.0 - Unreleased
+
+The scope reset from [ADR-002](docs/adr/0002-scope-and-simplification.md):
+WinLogKit turns on the native Windows event logging that security
+monitoring needs, proves it is recording, and can undo it. Anything outside
+that (files outside the event log, downloads, source-side filtering, SIEM
+content) is gone. Version 2.0.0 because presets are renamed and scripts,
+switches and a data folder are removed.
+
+**Upgrading from v1 in five lines:**
+
+| If you used | Now |
+|---|---|
+| `role_*.csv` / `spydi_*.csv` / `Microsoft_*.csv` presets | `Workstation.csv`, `MemberServer.csv`, `DomainController.csv` or `ASD.csv` (table below) |
+| `-IncludeOptional` | `-IncludeHighVolume` (the old switch still parses, warns, and does nothing) |
+| `New-WefSubscription.ps1 -Filter Baseline` or `Test-WefFilter.ps1` | whole-channel subscription; filter at SIEM ingest |
+| `report\Invoke-WELACheck.ps1` | run WELA yourself if you want a second opinion |
+| `report\Export-AttackCoverage.ps1` | `tools\Export-AttackCoverage.ps1` |
+
+Transcription settings, if you applied them, are removed by `-Rollback` or
+by hand (see Removed).
 
 ### Changed
+- **README and Getting Started lead with the role presets**: pick
+  `Workstation`, `MemberServer` or `DomainController`, preview, apply,
+  verify. The README states the goal in one sentence and lists what is out
+  of scope.
+- **ADRs live in the repo** under `docs/adr/` (ADR-001 recorded after the
+  fact; ADR-002 is this release).
 - **Two tiers: Core and HighVolume** ([ADR-002](docs/adr/0002-scope-and-simplification.md)).
   The Optional tier is gone. Its two remaining items, the
   Crypto-DPAPI debug channel and IPsec Driver auditing, are now
