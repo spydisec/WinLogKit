@@ -33,13 +33,13 @@
     switches decide (Core by default).
 
 .PARAMETER OutDir
-    Where the CSVs go. Default: Results\ at the kit root (the parent of report\).
+    Where the CSVs go. Default: Results\ at the kit root (the parent of tools\).
 
 .EXAMPLE
-    .\report\Export-AttackCoverage.ps1 -IncludeHighVolume
+    .\tools\Export-AttackCoverage.ps1 -IncludeHighVolume
 
 .EXAMPLE
-    .\report\Export-AttackCoverage.ps1 -BaselineFile .\presets\Workstation.csv
+    .\tools\Export-AttackCoverage.ps1 -BaselineFile .\presets\Workstation.csv
 #>
 [CmdletBinding()]
 param(
@@ -53,7 +53,7 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
-# This script lives in report\; the settings table, shared helpers, data
+# This script lives in tools\; the settings table, shared helpers, data
 # and output folders are at the kit root.
 $kitRoot = Split-Path $PSScriptRoot -Parent
 if ([string]::IsNullOrEmpty($OutDir)) { $OutDir = Join-Path $kitRoot 'Results' }
