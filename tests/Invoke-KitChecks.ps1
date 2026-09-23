@@ -3,393 +3,51 @@
     Kit self-checks, runnable locally and in CI. Exits non-zero on any failure.
 
 .DESCRIPTION
-    Safe on any machine: nothing is applied, no admin needed. Checks:
-      1. Every .ps1 parses cleanly on the current PowerShell engine
-         (CI runs this under both Windows PowerShell 5.1 and PowerShell 7).
-      1c. Every helper function is defined in exactly one file (shared ones
-         live in WinLogKit.Common.ps1).
-      2. The settings table is internally consistent: category tags valid,
-         coverage notes complete, audit GUIDs unique and well-formed.
-      3. New-LoggingBaseline.ps1 runs end-to-end non-interactively and its
-         CSV round-trips against every ID the enable/test scripts look up.
-      4. Recommended defaults select exactly the Core tier.
+    Runs the Pester 5 suite in tests\Kit.Tests.ps1: script parsing, the
+    registry-write tripwire, one definition per helper, settings table
+    consistency, the baseline builder, the Intune and GPO packs, preset and
+    Reference page drift, ATT&CK coverage, the WEF subscription, rollback
+    baseline updates, the PowerShell 7 items and locale-neutral audit
+    reading.
+
+    Safe on any machine: nothing is applied and no admin is needed. Pester is
+    a development and CI dependency only; the kit's own scripts need no
+    modules. If Pester 5 isn't installed, this prints the command to install
+    it for the current user.
+
+.EXAMPLE
+    powershell -NoProfile -ExecutionPolicy Bypass -File tests\Invoke-KitChecks.ps1
 #>
 [CmdletBinding()]
-param(
-    # Default resolved in the body: $PSScriptRoot is not reliably available
-    # during param-default evaluation under powershell.exe -File.
-    [string]$KitRoot
-)
+param()
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
-if ([string]::IsNullOrEmpty($KitRoot)) { $KitRoot = Split-Path $PSScriptRoot -Parent }
-$failures = 0
 
-function Fail { param([string]$Msg) Write-Host "FAIL: $Msg" -ForegroundColor Red; $script:failures++ }
-function Pass { param([string]$Msg) Write-Host "PASS: $Msg" -ForegroundColor Green }
-
-Write-Host "Kit checks on PowerShell $($PSVersionTable.PSVersion) - root: $KitRoot"
-
-# 1. Parse every script -------------------------------------------------------
-# Exclusions apply to the path RELATIVE to the kit root, so a kit that itself
-# lives under e.g. C:\staging\WELA-2.1.0\kit is not silently skipped entirely.
-# WELA[^\\]* also skips unzipped release folders like WELA-2.1.0 (third-party code).
-$kitRootFull = (Resolve-Path $KitRoot).Path.TrimEnd('\')
-$parsed = 0
-foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse | Where-Object { $_.FullName.Substring($kitRootFull.Length) -notmatch '\\(WELA[^\\]*|Baseline|Logs|Results|Evidence|Intune)\\' }) {
-    $parsed++
-    $tokens = $null; $errors = $null
-    [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors) | Out-Null
-    if ($errors.Count -gt 0) {
-        Fail "$($f.Name) has parse errors: $($errors[0].Message) (line $($errors[0].Extent.StartLineNumber))"
-    } else {
-        Pass "parse $($f.Name)"
-    }
-}
-
-if ($parsed -eq 0) { Fail 'parse loop matched zero files - exclusion filter is over-matching' }
-
-# 1b. Registry-write safety tripwire. WELA issue #243: New-Item -Force on an
-# existing registry key WIPES its other values (it broke Netlogon on DCs).
-# The kit writes registry exclusively via [Microsoft.Win32.Registry]::SetValue.
-# AST-based rule, robust against variable paths: every New-Item invocation in
-# the kit must declare -ItemType Directory (or File) explicitly - a New-Item
-# without it could be a registry key creation and fails the check.
-$badNewItem = @()
-foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse |
-    Where-Object { $_.FullName.Substring($kitRootFull.Length) -notmatch '\\(WELA[^\\]*|Baseline|Logs|Results|Evidence|Intune)\\' }) {
-    $tokens = $null; $errors = $null
-    $ast = [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors)
-    $calls = $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.CommandAst] -and $n.GetCommandName() -eq 'New-Item' }, $true)
-    foreach ($c in $calls) {
-        $elems = @($c.CommandElements | ForEach-Object { $_.Extent.Text })
-        $itIdx = [array]::IndexOf($elems, '-ItemType')
-        $ok = ($itIdx -ge 0 -and $itIdx + 1 -lt $elems.Count -and $elems[$itIdx + 1] -match '^(Directory|File)$')
-        if (-not $ok) { $badNewItem += "$($f.Name):$($c.Extent.StartLineNumber)" }
-    }
-}
-if ($badNewItem) {
-    Fail "New-Item without explicit -ItemType Directory/File (could create a registry key and wipe sibling values, WELA issue #243 class): $($badNewItem -join ', ')"
-} else {
-    Pass 'every New-Item declares -ItemType Directory/File (WELA issue #243 class fenced)'
-}
-
-# 1c. One definition per helper. Shared helpers live in WinLogKit.Common.ps1;
-# a function defined in two kit files is the copy-paste drift this fences, and
-# a function defined twice in one file (PowerShell keeps the last, silently)
-# fails the same way.
-# The Intune pack generator embeds its helpers inside a here-string, which
-# the AST does not see as definitions - the generated pack must stay
-# self-contained, so that is intended.
-$defs = @{}
-foreach ($f in Get-ChildItem $KitRoot -Filter *.ps1 -Recurse |
-    Where-Object { $_.FullName.Substring($kitRootFull.Length) -notmatch '\\(WELA[^\\]*|Baseline|Logs|Results|Evidence|Intune)\\' }) {
-    $tokens = $null; $errors = $null
-    $ast = [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors)
-    # Root-relative path, so two files with the same name in different
-    # folders stay distinct.
-    $rel = $f.FullName.Substring($kitRootFull.Length).TrimStart([char]92)
-    foreach ($fn in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)) {
-        if (-not $defs.ContainsKey($fn.Name)) { $defs[$fn.Name] = @() }
-        $defs[$fn.Name] += $rel
-    }
-}
-$dupes = @($defs.Keys | Where-Object { $defs[$_].Count -gt 1 } | Sort-Object | ForEach-Object { "$_ ($($defs[$_] -join ', '))" })
-if ($dupes) {
-    Fail "function defined more than once (shared helpers belong in WinLogKit.Common.ps1): $($dupes -join '; ')"
-} else {
-    Pass "every helper function is defined exactly once ($($defs.Count) functions)"
-}
-# The shared helpers must stay in the common file: a copy that migrated back
-# into one script would still be a single definition, so name them.
-$commonExpected = @('Test-IsAdmin', 'Get-DomainRole', 'Test-PowerShell7Installed', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
-    'ConvertFrom-AuditPolicyBackup', 'Get-AuditPolicyByGuid', 'Get-AuditSettingValue', 'Format-AuditSetting', 'Get-SmbAuditState', 'Get-BaselineItemKeySet', 'Import-BaselineSelection', 'Test-ReferenceBaselineItem', 'Write-IncludeOptionalWarning', 'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
-$notInCommon = @($commonExpected | Where-Object { -not $defs.ContainsKey($_) -or (($defs[$_] -join ';') -ne 'WinLogKit.Common.ps1') })
-if ($notInCommon) {
-    Fail "shared helper not defined in WinLogKit.Common.ps1 (only): $($notInCommon -join ', ')"
-} else {
-    Pass "the $($commonExpected.Count) shared helpers are defined in WinLogKit.Common.ps1 only"
-}
-
-# 2. Settings table consistency -----------------------------------------------
-. (Join-Path $KitRoot 'WinLogKit.Settings.ps1')
-
-$bad = @()
-foreach ($grp in @($BaselineChannels, $BaselineAuditSubcategories, $BaselineRegistrySettings, $BaselineSmbAuditSettings)) {
-    foreach ($item in $grp) {
-        foreach ($c in $item.Categories) {
-            if ($BaselineCategories -notcontains $c) { $bad += "'$c'" }
-        }
-    }
-}
-foreach ($c in $BaselineAdcsAuditFilter.Categories) { if ($BaselineCategories -notcontains $c) { $bad += "'$c'" } }
-if ($bad) { Fail "unknown category tags: $($bad -join ', ')" } else { Pass 'category tags all valid' }
-
-$noteMissing = @($BaselineCategories | Where-Object { -not $BaselineCategoryNotes.ContainsKey($_) })
-if ($noteMissing) { Fail "missing coverage notes: $($noteMissing -join ', ')" } else { Pass 'coverage notes complete' }
-
-# v2 has two tiers (ADR-002): anything else would be silently never applied.
-$badTier = @(foreach ($grp in @($BaselineChannels, $BaselineAuditSubcategories, $BaselineRegistrySettings, $BaselineSmbAuditSettings, @($BaselineAdcsAuditFilter))) {
-    foreach ($item in $grp) { if (@('Core', 'HighVolume') -notcontains $item.Tier) { "$($item.Tier)" } }
-})
-if ($badTier) { Fail "items with a tier other than Core/HighVolume: $($badTier -join ', ')" } else { Pass 'every item is Core or HighVolume' }
-$guids = @($BaselineAuditSubcategories | ForEach-Object { $_.Guid.ToUpper() })
-if (@($guids | Sort-Object -Unique).Count -ne $guids.Count) { Fail 'duplicate audit subcategory GUIDs' } else { Pass 'audit GUIDs unique' }
-$badGuid = @($guids | Where-Object { $_ -notmatch '^[0-9A-F]{8}(-[0-9A-F]{4}){3}-[0-9A-F]{12}$' })
-if ($badGuid) { Fail "malformed GUIDs: $($badGuid -join ', ')" } else { Pass 'audit GUIDs well-formed' }
-
-# 3. Builder end-to-end + CSV round-trip --------------------------------------
-$tmp = Join-Path ([IO.Path]::GetTempPath()) "winlogkit-checks-$PID"
-New-Item -ItemType Directory -Path $tmp -Force | Out-Null
-try {
-    $csv1 = Join-Path $tmp 'recommended.csv'
-    $csv2 = Join-Path $tmp 'all-tiers.csv'
-    & (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -AcceptRecommended -OutFile $csv1 -Force | Out-Null
-    & (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -AcceptRecommended -IncludeHighVolume -OutFile $csv2 -Force | Out-Null
-
-    $r1 = Import-Csv $csv1
-    $r2 = Import-Csv $csv2
-
-    $expectedCount = $BaselineChannels.Count + $BaselineAuditSubcategories.Count + $BaselineRegistrySettings.Count + $BaselineSmbAuditSettings.Count + 1
-    if ($r1.Count -ne $expectedCount) { Fail "builder CSV has $($r1.Count) rows, expected $expectedCount" } else { Pass "builder CSV row count ($expectedCount)" }
-
-    $csvKeys = @{}
-    foreach ($row in $r1) { $csvKeys[("$($row.ItemType)|$($row.Id)").ToUpper()] = $true }
-    $missing = @()
-    foreach ($ch in $BaselineChannels)          { $k = ("Channel|$($ch.Name)").ToUpper();     if (-not $csvKeys[$k]) { $missing += $k } }
-    foreach ($s in $BaselineAuditSubcategories) { $k = ("AuditPolicy|$($s.Guid)").ToUpper();  if (-not $csvKeys[$k]) { $missing += $k } }
-    foreach ($rs in $BaselineRegistrySettings)  { $k = ("Registry|$($rs.Id)").ToUpper();      if (-not $csvKeys[$k]) { $missing += $k } }
-    foreach ($sa in $BaselineSmbAuditSettings)  { $k = ("SmbAudit|$($sa.Id)").ToUpper();      if (-not $csvKeys[$k]) { $missing += $k } }
-    $k = ("Registry|$($BaselineAdcsAuditFilter.Id)").ToUpper(); if (-not $csvKeys[$k]) { $missing += $k }
-    if ($missing) { Fail "CSV round-trip missing keys: $($missing -join ', ')" } else { Pass 'CSV round-trips every lookup key' }
-
-    # 4. Recommended defaults = exactly the Core tier -------------------------
-    $coreCount = @($r1 | Where-Object { $_.Tier -eq 'Core' }).Count
-    $selCore   = @($r1 | Where-Object { $_.Selected -eq 'Y' -and $_.Tier -eq 'Core' }).Count
-    $selOther  = @($r1 | Where-Object { $_.Selected -eq 'Y' -and $_.Tier -ne 'Core' }).Count
-    if ($selCore -ne $coreCount -or $selOther -ne 0) { Fail "recommended defaults wrong (core=$coreCount selected-core=$selCore selected-noncore=$selOther)" } else { Pass 'recommended defaults select exactly Core' }
-    if (@($r2 | Where-Object { $_.Selected -eq 'Y' }).Count -ne $r2.Count) { Fail 'all-tiers run did not select everything' } else { Pass 'all-tiers run selects everything' }
-
-    # 4a. The deprecated v1 -IncludeOptional switch still parses, only warns,
-    #     and selects nothing extra.
-    $csv3 = Join-Path $tmp 'include-optional.csv'
-    & (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -AcceptRecommended -IncludeOptional -OutFile $csv3 -Force -WarningVariable optWarn -WarningAction SilentlyContinue | Out-Null
-    $selCsv3 = @(Import-Csv $csv3 | Where-Object { $_.Selected -eq 'Y' }).Count
-    if (@($optWarn | Where-Object { "$_" -match 'IncludeOptional is deprecated' }).Count -gt 0 -and $selCsv3 -eq $coreCount) { Pass '-IncludeOptional warns and changes nothing' }
-    else { Fail "-IncludeOptional handling wrong (warnings: $(@($optWarn).Count), selected: $selCsv3, core: $coreCount)" }
-    # 4b. Selection CSV validation: a file with the right columns but no row
-    #     matching this kit must be rejected (otherwise Test would report every
-    #     item NOT APPLICABLE and exit 0), while one stale row only warns.
-    #     Child process: the rejection is a terminating error in-session, and
-    #     the child's stderr is captured with ErrorActionPreference relaxed,
-    #     because Windows PowerShell 5.1 turns redirected native stderr into
-    #     a terminating error under 'Stop'.
-    $engine = (Get-Process -Id $PID).Path
-    $badCsv = Join-Path $tmp 'unknown-only.csv'
-    '"ItemType","Id","Selected"', '"Channel","No-Such-Channel/Operational","Y"' | Set-Content $badCsv
-    $staleCsv = Join-Path $tmp 'one-stale-row.csv'
-    (Get-Content $csv1) + '"Channel","No-Such-Channel/Operational","Core","All","Y","Y","","",""' | Set-Content $staleCsv
-    $prevEap = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    $badOut = & $engine -NoProfile -ExecutionPolicy Bypass -File (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -Show -BaselineFile $badCsv 2>&1 | Out-String
-    $badExit = $LASTEXITCODE
-    $staleOut = & $engine -NoProfile -ExecutionPolicy Bypass -File (Join-Path $KitRoot 'New-LoggingBaseline.ps1') -Show -BaselineFile $staleCsv 2>&1 | Out-String
-    $staleExit = $LASTEXITCODE
-    $ErrorActionPreference = $prevEap
-    if ($badExit -ne 0 -and $badOut -match 'No row in the baseline file matches') { Pass 'selection CSV with no known item is rejected' } else { Fail "selection CSV with no known item was accepted (exit $badExit): $($badOut.Trim())" }
-    if ($staleExit -eq 0 -and $staleOut -match 'does not know, ignored: CHANNEL\|NO-SUCH-CHANNEL/OPERATIONAL') { Pass 'selection CSV with one unknown row warns and continues' } else { Fail "stale-row CSV handling wrong (exit $staleExit): $($staleOut.Trim())" }
-
-    # 5. Intune pack generation: files parse, placeholders replaced, selection respected
-    $packDir = Join-Path $tmp 'intune'
-    & (Join-Path $KitRoot 'fleet\New-IntuneRemediationPack.ps1') -OutDir $packDir | Out-Null
-    foreach ($f in @('Detect-LoggingBaseline.ps1', 'Remediate-LoggingBaseline.ps1')) {
-        $p = Join-Path $packDir $f
-        if (-not (Test-Path $p)) { Fail "Intune pack missing $f"; continue }
-        $tokens = $null; $errors = $null
-        [System.Management.Automation.Language.Parser]::ParseFile($p, [ref]$tokens, [ref]$errors) | Out-Null
-        if ($errors.Count -gt 0) { Fail "generated $f has parse errors: $($errors[0].Message)" } else { Pass "generated $f parses" }
-        if ((Get-Content $p -Raw) -match '__(MODE|ITEMS|COUNT|SOURCE|FILENAME)__') { Fail "generated $f has unreplaced placeholders" }
-    }
-    $packDir2 = Join-Path $tmp 'intune-csv'
-    & (Join-Path $KitRoot 'fleet\New-IntuneRemediationPack.ps1') -OutDir $packDir2 -BaselineFile $csv1 | Out-Null
-    $detect2 = Get-Content (Join-Path $packDir2 'Detect-LoggingBaseline.ps1') -Raw
-    # The recommended CSV selects only Core, so no HighVolume item may be embedded.
-    if ($detect2 -match 'EnableModuleLogging') { Fail 'Intune pack from Core-only CSV embedded a HighVolume item' } else { Pass 'Intune pack honours the baseline CSV selection' }
-
-    # 6. Presets: committed CSVs must match what the generator produces
-    $presetTmp = Join-Path $tmp 'presets'
-    & (Join-Path $KitRoot 'tools\New-PresetBaselines.ps1') -OutDir $presetTmp | Out-Null
-    # ADR-002: exactly these four ship; a stray CSV in presets\ would be an
-    # unmaintained baseline users might pick.
-    $presetNames = @('Workstation', 'MemberServer', 'DomainController', 'ASD')
-    $stray = @(Get-ChildItem (Join-Path $KitRoot 'presets') -Filter *.csv | Where-Object { $presetNames -notcontains $_.BaseName } | ForEach-Object { $_.Name })
-    if ($stray) { Fail "presets\ has files the generator does not produce: $($stray -join ', ')" } else { Pass 'presets\ holds exactly the four generated presets' }
-    foreach ($name in $presetNames) {
-        $committed = Join-Path $KitRoot "presets\$name.csv"
-        if (-not (Test-Path $committed)) { Fail "presets\$name.csv is missing - run tools\New-PresetBaselines.ps1"; continue }
-        # Compare ALL columns, so descriptive fields (Purpose, Risk, Tier...)
-        # in committed presets cannot go stale while the check passes.
-        $rowKey = { ($_.PSObject.Properties | Sort-Object Name | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join '|' }
-        $a = Import-Csv $committed | ForEach-Object $rowKey | Sort-Object
-        $b = Import-Csv (Join-Path $presetTmp "$name.csv") | ForEach-Object $rowKey | Sort-Object
-        if (Compare-Object $a $b) { Fail "presets\$name.csv drifted from the generator - rerun tools\New-PresetBaselines.ps1" } else { Pass "preset $name matches generator" }
-    }
-
-    # 6b. Reference page: committed docs\reference.md must match the generator
-    $refTmp = Join-Path $tmp 'reference.md'
-    & (Join-Path $KitRoot 'tools\Export-ReferenceTable.ps1') -OutFile $refTmp | Out-Null
-    # Line-ending-neutral compare: git checkout may normalise the committed
-    # page to CRLF while the generator writes LF.
-    $committedRef = Get-Content (Join-Path $KitRoot 'docs\reference.md') -Raw -ErrorAction SilentlyContinue
-    # The release zip ships tests\ but not docs\: skip, don't fail, there.
-    if (-not (Test-Path (Join-Path $KitRoot 'docs'))) { Write-Host 'SKIP: docs\ not present (release zip) - reference page drift not checked' -ForegroundColor DarkGray }
-    elseif ($null -eq $committedRef) { Fail 'docs\reference.md missing - run tools\Export-ReferenceTable.ps1' }
-    elseif (($committedRef -replace "`r`n", "`n") -ne ((Get-Content $refTmp -Raw) -replace "`r`n", "`n")) { Fail 'docs\reference.md drifted - rerun tools\Export-ReferenceTable.ps1' }
-    else { Pass 'reference page matches generator' }
-
-    # 7a. GPO pack: audit.csv row count matches selection; registry.txt has policy values
-    $gpoTmp = Join-Path $tmp 'gpo'
-    & (Join-Path $KitRoot 'fleet\New-GpoPack.ps1') -OutDir $gpoTmp -IncludeHighVolume | Out-Null
-    $auditRows = @(Import-Csv (Join-Path $gpoTmp 'audit.csv'))
-    $expectedAudit = @($BaselineAuditSubcategories | Where-Object { $_.Tier -eq 'Core' -or $_.Tier -eq 'HighVolume' }).Count
-    if ($auditRows.Count -eq $expectedAudit) { Pass "GPO audit.csv rows ($expectedAudit)" } else { Fail "GPO audit.csv has $($auditRows.Count) rows, expected $expectedAudit" }
-    if ((Get-Content (Join-Path $gpoTmp 'registry.txt') -Raw) -match 'EnableScriptBlockLogging') { Pass 'GPO registry.txt contains expected policy value' } else { Fail 'GPO registry.txt missing EnableScriptBlockLogging' }
-
-    # 7b. ATT&CK native mapping: event map integrity, then join sanity
-    $badMap = @()
-    foreach ($m in (Import-Csv (Join-Path $KitRoot 'data\attack\event_map.csv'))) {
-        if ($m.item_type -eq 'AuditPolicy' -and $m.item_id -ne '' -and
-            -not @($BaselineAuditSubcategories | Where-Object { $_.Guid.ToUpper() -eq $m.item_id.ToUpper() }).Count) {
-            $badMap += "GUID $($m.item_id)"
-        }
-        if ($m.item_type -eq 'Channel' -and $m.item_id -ne '' -and
-            -not @($BaselineChannels | Where-Object { $_.Name -eq $m.item_id }).Count) {
-            $badMap += "channel $($m.item_id)"
-        }
-    }
-    if ($badMap) { Fail "event_map.csv references unknown settings items: $($badMap -join ', ')" } else { Pass 'event map item ids valid against settings table' }
-
-    $covTmp = Join-Path $tmp 'cov'
-    & (Join-Path $KitRoot 'tools\Export-AttackCoverage.ps1') -OutDir $covTmp | Out-Null
-    $covDetail = Get-ChildItem $covTmp -Filter 'AttackCoverage_Detail_*.csv' | Select-Object -First 1
-    if ($null -eq $covDetail) { Fail 'coverage detail CSV not produced' } else {
-        $covRows = Import-Csv $covDetail.FullName
-        $obs = @($covRows | Where-Object { $_.Status -eq 'Observable' }).Count
-        # Core-tier native-mapping sanity: ~1480 analytic rows, ~199 of them
-        # observable at Core (measured at snapshot time); Sysmon-only rows
-        # dominate the non-observable share by design.
-        if ($covRows.Count -gt 1400 -and $obs -ge 150) { Pass "ATT&CK native coverage joins ($($covRows.Count) rows, $obs observable)" } else { Fail "ATT&CK coverage looks wrong ($($covRows.Count) rows, $obs observable)" }
-    }
-
-    # 7. WEF subscription generation: valid XML, one query per selected channel
-    $wefTmp = Join-Path $tmp 'wef'
-    & (Join-Path $KitRoot 'fleet\New-WefSubscription.ps1') -OutDir $wefTmp -BaselineFile (Join-Path $KitRoot 'presets\ASD.csv') -SubscriptionId 'CheckSub' | Out-Null
-    try {
-        [xml]$wx = Get-Content (Join-Path $wefTmp 'CheckSub.xml') -Raw
-        $qCount = [regex]::Matches($wx.Subscription.Query.'#cdata-section', '<Query ').Count
-        if ($qCount -eq 3) { Pass 'WEF subscription XML valid (3 queries for the ASD preset)' } else { Fail "WEF XML has $qCount queries, expected 3 for the ASD preset" }
-    } catch { Fail "WEF subscription XML invalid: $($_.Exception.Message)" }
-
-    # 9. WEF forwards whole channels only (v2, ADR-002): every Select is "*",
-    #    no Suppress, and the removed -Filter Baseline stops with guidance.
-    try {
-        [xml]$ql = $wx.Subscription.Query.InnerText
-        $selTexts = @($ql.QueryList.Query | ForEach-Object { @($_.Select) } | ForEach-Object { $_.'#text' })
-        $hasSuppress = @($ql.QueryList.Query | Where-Object { $_.SelectNodes('Suppress').Count -gt 0 }).Count
-        if ($selTexts.Count -eq 3 -and @($selTexts | Where-Object { $_ -ne '*' }).Count -eq 0 -and $hasSuppress -eq 0) { Pass 'WEF queries forward whole channels (Select *, no Suppress)' }
-        else { Fail "WEF queries not whole-channel: selects [$($selTexts -join ' | ')], suppress in $hasSuppress queries" }
-    } catch { Fail "WEF query list unreadable: $($_.Exception.Message)" }
-    $prevEap = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    $wefOld = & $engine -NoProfile -ExecutionPolicy Bypass -File (Join-Path $KitRoot 'fleet\New-WefSubscription.ps1') -OutDir (Join-Path $tmp 'wefOld') -Filter Baseline 2>&1 | Out-String
-    $wefOldExit = $LASTEXITCODE
-    $ErrorActionPreference = $prevEap
-    if ($wefOldExit -ne 0 -and $wefOld -match 'removed in v2') { Pass 'removed -Filter Baseline stops with a migration message' }
-    else { Fail "-Filter Baseline handling wrong (exit $wefOldExit): $($wefOld.Trim())" }
-
-    # 10. The rollback baseline picks up settings a later kit version adds
-    #     (#44). Enable needs admin, so its two state functions are lifted out
-    #     by AST and run against a first-run JSON that lacks the PowerShell 7
-    #     items: they must be added once, with their current state, and not
-    #     again on the next run.
-    try {
-        . (Join-Path $KitRoot 'WinLogKit.Common.ps1')
-        $enableAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $KitRoot 'Enable-LoggingBaseline.ps1'), [ref]$null, [ref]$null)
-        $stateFns = $enableAst.FindAll({ param($a) $a -is [System.Management.Automation.Language.FunctionDefinitionAst] -and @('Get-CurrentKitState', 'Add-NewItemsToFirstRun') -contains $a.Name }, $true)
-        foreach ($fn in $stateFns) { . ([scriptblock]::Create($fn.Extent.Text)) }
-        . ([scriptblock]::Create('function Get-AdcsRegPath { $null }'))
-        $allState = Get-CurrentKitState
-        $firstJson = Join-Path $tmp 'first-run.json'
-        @{ CapturedUtc = '2026-01-01T00:00:00'; Host = 'check'; Channels = $allState.Channels
-           Registry = @($allState.Registry | Where-Object { $_.Name -ne 'UseWindowsPowerShellPolicySetting' }); SmbAudit = $allState.SmbAudit } |
-            ConvertTo-Json -Depth 5 | Set-Content -Path $firstJson -Encoding UTF8
-        $added1 = Add-NewItemsToFirstRun -Path $firstJson
-        $added2 = Add-NewItemsToFirstRun -Path $firstJson
-        $after = Get-Content $firstJson -Raw | ConvertFrom-Json
-        $ps7Rows = @($after.Registry | Where-Object { $_.Name -eq 'UseWindowsPowerShellPolicySetting' -and $_.PSObject.Properties.Name -contains 'Existed' -and $_.AddedUtc })
-        $swapClean = (Test-Path -LiteralPath "$firstJson.bak") -and -not (Test-Path -LiteralPath "$firstJson.tmp")
-        if ($stateFns.Count -eq 2 -and $added1 -eq 4 -and $added2 -eq 0 -and $ps7Rows.Count -eq 4 -and @($after.Registry).Count -eq @($allState.Registry).Count -and $swapClean) {
-            Pass 'rollback baseline adds settings new in this kit version once (4 PowerShell 7 items), swapped in with a .bak kept'
-        } else {
-            Fail "rollback baseline extension wrong (functions $($stateFns.Count), first run added $added1, second $added2, PS7 rows $($ps7Rows.Count), registry rows $(@($after.Registry).Count)/$(@($allState.Registry).Count), .bak kept and no .tmp: $swapClean)"
-        }
-    } catch { Fail "rollback baseline extension check errored: $($_.Exception.Message)" }
-
-    # 11. PowerShell 7 follows the Windows PowerShell policy (#44): each PS7
-    #     item sits on the PowerShellCore twin of its Windows PowerShell key,
-    #     and a role preset that turns on script block or module logging also
-    #     turns on the PowerShell 7 companion.
-    $ps7Pairs = @{ PS7ScriptBlock64 = 'ScriptBlock64'; PS7ScriptBlock32 = 'ScriptBlock32'; PS7ModuleLogging64 = 'ModuleLogging64'; PS7ModuleLogging32 = 'ModuleLogging32' }
-    $ps7Bad = @()
-    foreach ($k in $ps7Pairs.Keys) {
-        $ps7Item = @($BaselineRegistrySettings | Where-Object { $_.Id -eq $k })
-        $winItem = @($BaselineRegistrySettings | Where-Object { $_.Id -eq $ps7Pairs[$k] })
-        if ($ps7Item.Count -ne 1 -or $winItem.Count -ne 1) { $ps7Bad += "$k or $($ps7Pairs[$k]) missing"; continue }
-        if ($ps7Item[0].Path -ne ($winItem[0].Path -replace '\\Windows\\PowerShell\\', '\PowerShellCore\')) { $ps7Bad += "$k is not on the PowerShellCore twin of $($ps7Pairs[$k])" }
-    }
-    foreach ($name in @('Workstation', 'MemberServer', 'DomainController')) {
-        $on = @{}; Import-Csv (Join-Path $KitRoot "presets\$name.csv") | Where-Object { $_.Selected -eq 'Y' } | ForEach-Object { $on[$_.Id] = $true }
-        foreach ($k in $ps7Pairs.Keys) { if ($on.ContainsKey($ps7Pairs[$k]) -and -not $on.ContainsKey($k)) { $ps7Bad += "$name selects $($ps7Pairs[$k]) without $k" } }
-    }
-    if ($ps7Bad) { Fail "PowerShell 7 policy items: $($ps7Bad -join '; ')" } else { Pass 'PowerShell 7 items pair with their Windows PowerShell policies, in the settings and the role presets' }
-
-    # 12. Audit policy is read as numbers, not words (#45). The same policy
-    #     exported on English and on German Windows (header row and setting
-    #     text translated, values identical) must parse to the same
-    #     GUID -> value map covering every kit subcategory, with the Option:
-    #     rows skipped; and no script may still match on the translated text.
-    try {
-        . (Join-Path $KitRoot 'WinLogKit.Common.ps1')
-        $fx = Join-Path (Join-Path $KitRoot 'tests') 'fixtures'
-        $mapEn = ConvertFrom-AuditPolicyBackup -Lines (Get-Content (Join-Path $fx 'auditpol-backup-en.csv') -Encoding UTF8)
-        $mapDe = ConvertFrom-AuditPolicyBackup -Lines (Get-Content (Join-Path $fx 'auditpol-backup-de.csv') -Encoding UTF8)
-        $diff = @($mapEn.Keys | Where-Object { -not $mapDe.ContainsKey($_) -or $mapDe[$_] -ne $mapEn[$_] })
-        # A per-user row placed ahead of the system rows must not win.
-        $enLines = @(Get-Content (Join-Path $fx 'auditpol-backup-en.csv') -Encoding UTF8)
-        $logonGuid = '0CCE9215-69AE-11D9-BED3-505054503030'
-        $userLine = 'HOST01,User,Logon,{' + $logonGuid + '},No Auditing,,0'
-        $mapUser = ConvertFrom-AuditPolicyBackup -Lines (@($enLines[0], $userLine) + @($enLines | Select-Object -Skip 1))
-        $userSafe = ($mapEn[$logonGuid] -ne 0) -and ($mapUser[$logonGuid] -eq $mapEn[$logonGuid])
-        $missingSub = @($BaselineAuditSubcategories | Where-Object { -not $mapEn.ContainsKey($_.Guid.ToUpper()) } | ForEach-Object { $_.Name })
-        $textReaders = @(foreach ($rel in @('WinLogKit.Common.ps1', 'Enable-LoggingBaseline.ps1', 'Test-LoggingBaseline.ps1', 'fleet\New-IntuneRemediationPack.ps1')) {
-            if (Select-String -Path (Join-Path $KitRoot $rel) -Pattern "'Inclusion Setting'|match 'Success'|match 'Failure'|auditpol /get /category" -Quiet) { $rel }
-        })
-        if ($mapEn.Count -ge 50 -and $mapEn.Count -eq $mapDe.Count -and $diff.Count -eq 0 -and $missingSub.Count -eq 0 -and $textReaders.Count -eq 0 -and $userSafe -and (Format-AuditSetting 3) -eq 'Success and Failure' -and (Get-AuditSettingValue $true $false) -eq 1) {
-            Pass "audit policy parses the same from English and German exports ($($mapEn.Count) subcategories, values not text, system rows over per-user)"
-        } else {
-            Fail "locale-neutral audit reading wrong: en $($mapEn.Count) / de $($mapDe.Count) rows, $($diff.Count) differ, kit subcategories missing [$($missingSub -join ', ')], text-matching readers [$($textReaders -join ', ')], per-user row ignored: $userSafe"
-        }
-    } catch { Fail "locale-neutral audit check errored: $($_.Exception.Message)" }
-}
-finally {
-    Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
-}
-
-Write-Host ''
-if ($failures -gt 0) {
-    Write-Host "$failures check(s) failed." -ForegroundColor Red
+# Pinned to Pester 5: version 6 may also be installed side by side, and the
+# suite is written and tested against 5.
+$pester = Get-Module -ListAvailable -Name Pester |
+    Where-Object { $_.Version -ge [version]'5.0' -and $_.Version -lt [version]'6.0' } |
+    Sort-Object Version -Descending | Select-Object -First 1
+if ($null -eq $pester) {
+    Write-Host 'Pester 5 is needed for the self-checks. Install it for the current user, then rerun:' -ForegroundColor Yellow
+    Write-Host '  Install-Module Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -SkipPublisherCheck'
     exit 1
 }
-Write-Host 'All kit checks passed.' -ForegroundColor Green
+Import-Module $pester.Path -Force
+
+$config = New-PesterConfiguration
+$config.Run.Path = Join-Path $PSScriptRoot 'Kit.Tests.ps1'
+$config.Run.PassThru = $true
+$config.Output.Verbosity = 'Detailed'
+$result = Invoke-Pester -Configuration $config
+
+Write-Host ''
+if ($result.Result -ne 'Passed' -or $result.FailedCount -gt 0) {
+    # Setup (BeforeAll) and discovery failures fail blocks or containers, not
+    # tests, so count them too rather than reporting "0 failed".
+    Write-Host "$($result.FailedCount) check(s) failed, $($result.FailedBlocksCount) setup block(s) failed, $($result.FailedContainersCount) test file(s) failed to load." -ForegroundColor Red
+    exit 1
+}
+Write-Host "All kit checks passed ($($result.PassedCount) passed, $($result.SkippedCount) skipped, Pester $($pester.Version))." -ForegroundColor Green
 exit 0

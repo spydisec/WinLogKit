@@ -13,6 +13,10 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 - 🐚 **PowerShell 7 is logged too.** Four new HighVolume settings make PowerShell 7 (`pwsh.exe`) follow the Windows PowerShell script block and module logging policies through its `UseWindowsPowerShellPolicySetting` option, so running `pwsh` instead of `powershell.exe` no longer escapes script block logging. The role presets turn on the two script block ones alongside the settings they follow; `ASD.csv` stays faithful to the ASD script, which predates PowerShell 7. [#44](https://github.com/spydisec/WinLogKit/issues/44)
 - 🚨 **Unregistered PowerShell 7 event log caught.** `Test-LoggingBaseline.ps1` now fails `PowerShellCore/Operational` when PowerShell 7 is installed but its event log isn't registered (Store and zip installs), where it used to report it as not applicable, and says how to register it. [#44](https://github.com/spydisec/WinLogKit/issues/44)
 
+### Changed
+
+- 🧪 **Self-checks run on Pester 5.** The checks move to a Pester suite (`tests\Kit.Tests.ps1`, one test per check) so they can be named, filtered and reported one by one. `tests\Invoke-KitChecks.ps1` is still the command to run: it finds Pester 5, runs the suite and tells you how to install Pester if it's missing. Pester is a development and CI dependency only; the kit itself still needs no modules. [#50](https://github.com/spydisec/WinLogKit/issues/50)
+
 ### Fixed
 
 - 🌍 **Verification works in any Windows language.** Test, Enable and the Intune pack read audit policy from `auditpol /backup`'s numeric setting values instead of the `auditpol /get` text, which is translated on non-English Windows (only English said "Success and Failure"), so a correctly configured non-English host no longer fails its audit checks or gets re-remediated on every Intune run. [#45](https://github.com/spydisec/WinLogKit/issues/45)

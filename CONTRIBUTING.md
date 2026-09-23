@@ -34,7 +34,9 @@ is what tunes the presets. Open an issue with the *Field report* template.
   installed. PowerShell 7 is fully supported (CI tests every change on
   both engines), but 5.1 stays the compatibility floor: it is what ships
   with Windows and what Intune remediations execute under, so nothing
-  5.1-incompatible can be merged.
+  5.1-incompatible can be merged. The one exception is the self-checks,
+  which use Pester 5; that's a development and CI dependency, never one the
+  kit needs to run.
 - **The never-do list is non-negotiable**: nothing that reboots, restarts
   services, shrinks logs, enables `CrashOnAuditFail`, sets "do not
   overwrite" retention, or applies blanket SACLs
@@ -49,11 +51,16 @@ is what tunes the presets. Open an issue with the *Field report* template.
 
 1. Fork (or branch) and make your change on a feature branch; nothing goes
    straight to `main`.
-2. Run the self-checks locally before pushing:
+2. Run the self-checks locally before pushing. They're a Pester 5 suite
+   (`tests\Kit.Tests.ps1`); install Pester 5 once for each engine you use,
+   then run the checks:
 
    ```powershell
+   Install-Module Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -SkipPublisherCheck
    powershell -NoProfile -ExecutionPolicy Bypass -File tests\Invoke-KitChecks.ps1
    ```
+
+   To run one area only: `Invoke-Pester tests\Kit.Tests.ps1 -FullNameFilter '*Presets*'`.
 
 3. Open a pull request. CI must pass:
    - **PSScriptAnalyzer** lint (config in `PSScriptAnalyzerSettings.psd1`)
