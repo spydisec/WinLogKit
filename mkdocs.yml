@@ -72,13 +72,14 @@ nav:
   - Home: index.md
   - Get started: getting-started.md
   - Baselines: baselines.md
-  - Deploy: deployment.md
+  - Deploy:
+      - Overview: deployment.md
+      - Intune Settings catalog: intune-csp.md
+      - Group Policy paths: gpo-paths.md
   - Collect: wec.md
   - Reference:
       - Commands: commands.md
       - Settings: reference.md
-      - Settings catalog: intune-csp.md
-      - Group Policy paths: gpo-paths.md
       - Coverage: mapping.md
   - Safety & FAQ: safety.md
   - Credits: credits.md

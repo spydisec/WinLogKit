@@ -323,7 +323,9 @@ Describe 'ATT&CK coverage' {
         @($rows | Where-Object { $_.Status -eq 'Observable' }).Count | Should -BeGreaterOrEqual 150
         # #49: every source ATT&CK names is mapped or classified with a
         # reason. A refresh that adds new sources fails here until curated.
-        @($rows | Where-Object { $_.Status -eq 'Unmapped' } | ForEach-Object { "$($_.TechniqueId) $($_.LogSource) $($_.EventCodes)" }) | Should -BeNullOrEmpty -Because 'curate data\attack\event_map.csv (see its README)'
+        # Checked per code (UnmappedCodes), so an unmapped code can't hide
+        # behind a mapped one in the same analytic.
+        @($rows | Where-Object { $_.Status -eq 'Unmapped' -or $_.UnmappedCodes } | ForEach-Object { "$($_.TechniqueId) $($_.LogSource) $($_.UnmappedCodes)" }) | Should -BeNullOrEmpty -Because 'curate data\attack\event_map.csv (see its README)'
     }
 }
 

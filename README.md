@@ -86,7 +86,7 @@ Full documentation: <https://spydisec.github.io/WinLogKit/>
 |---|---|
 | [Get started](https://spydisec.github.io/WinLogKit/getting-started/) | Install, first run with a role preset, execution policy |
 | [Baselines](https://spydisec.github.io/WinLogKit/baselines/) | The presets, the two tiers, building your own, deviations from the sources |
-| [Deploy](https://spydisec.github.io/WinLogKit/deployment/) | Rolling out with Intune or Group Policy |
+| [Deploy](https://spydisec.github.io/WinLogKit/deployment/) | Rolling out with the Intune Settings catalog or Group Policy, with every setting mapped |
 | [Collect](https://spydisec.github.io/WinLogKit/wec/) | Central collection with Windows Event Forwarding |
 | [Reference](https://spydisec.github.io/WinLogKit/commands/) | Commands, every setting, ATT&CK coverage |
 | [Safety & FAQ](https://spydisec.github.io/WinLogKit/safety/) | What the kit never does, volume impact, known limits |
