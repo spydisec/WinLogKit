@@ -422,26 +422,11 @@ $script:BaselineRegistrySettings = @(
        Scope = 'All'; Tier = 'HighVolume'; Categories = @('Scripting and command line')
        Purpose = 'Same as above for 32-bit PowerShell hosts.' }
 
-    # -- PowerShell transcription (text files on disk, not event log) --
-    @{ Id = 'Transcription64'
-       Path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription'; Name = 'EnableTranscripting'; Kind = 'DWord'; Value = 1
-       Scope = 'All'; Tier = 'Optional'; Categories = @('Scripting and command line')
-       Purpose = 'Writes a text transcript of every PowerShell session to disk. Storage-cheap and survives event log clearing, but transcripts land in user Documents unless OutputDirectory is set. [Output directory to be agreed with the client.]' }
-
-    @{ Id = 'TranscriptionHeader64'
-       Path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription'; Name = 'EnableInvocationHeader'; Kind = 'DWord'; Value = 1
-       Scope = 'All'; Tier = 'Optional'; Categories = @('Scripting and command line')
-       Purpose = 'Adds a timestamped header per command in transcripts, needed for timeline reconstruction.' }
-
-    @{ Id = 'Transcription32'
-       Path = 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\Transcription'; Name = 'EnableTranscripting'; Kind = 'DWord'; Value = 1
-       Scope = 'All'; Tier = 'Optional'; Categories = @('Scripting and command line')
-       Purpose = 'Same as above for 32-bit PowerShell hosts.' }
-
-    @{ Id = 'TranscriptionHeader32'
-       Path = 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\Transcription'; Name = 'EnableInvocationHeader'; Kind = 'DWord'; Value = 1
-       Scope = 'All'; Tier = 'Optional'; Categories = @('Scripting and command line')
-       Purpose = 'Same as above for 32-bit PowerShell hosts.' }
+    # PowerShell transcription is deliberately NOT in the kit (removed in
+    # #34): it writes text files outside the event log, so it needs its own
+    # folder, ACL, retention and collection path, and without an
+    # OutputDirectory it fills every user's Documents folder. Script block
+    # logging (4104) already records the code that ran, in the event log.
 
     # -- NTLM auditing (populates Microsoft-Windows-NTLM/Operational) --
     # DEVIATION: WELA configure sets RestrictSendingNTLMTraffic = 2, which is

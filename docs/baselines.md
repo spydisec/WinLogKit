@@ -30,7 +30,13 @@ same `-BaselineFile`.
 |---|---|---|
 | Core | applied | everything with low or justified volume |
 | HighVolume | ask first | process creation + command line, PowerShell script block + module logging, WFP connections, sensitive privilege use |
-| Optional | ask first | PowerShell transcription, Crypto-DPAPI debug channel, IPsec Driver auditing |
+| Optional | ask first | Crypto-DPAPI debug channel, IPsec Driver auditing |
+
+PowerShell transcription is deliberately not in the kit. It writes text
+files outside the event log (its own folder, permissions, retention and
+collection path), and script block logging (4104) already records the code
+that ran. If you need transcripts, set them by GPO to a central
+write-only share.
 
 The split exists so volume decisions are made by a human with the impact in
 front of them - `Export-AttackCoverage.ps1` quantifies what the HighVolume
@@ -107,7 +113,7 @@ and the Yamato guide):
 | Module logging (4103) | - | - | - | The heaviest setting in the kit; opt-in after a pilot, everywhere |
 | Sensitive Privilege Use | - | - | - | Known to flood with backup agents; opt-in per server role after a pilot |
 | DC-scope subcategories | - | - | ✓ | Only generate events on domain controllers |
-| Optional tier (transcription, DPAPI debug, IPsec Driver) | - | - | - | Situational by definition |
+| Optional tier (DPAPI debug, IPsec Driver) | - | - | - | Situational by definition |
 
 Usage is identical to any baseline CSV:
 

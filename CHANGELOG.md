@@ -3,6 +3,22 @@
 All notable changes to WinLogKit. Versions follow [SemVer](https://semver.org/);
 releases are tagged `vX.Y.Z` and published with a zip + SHA256 checksum.
 
+## Unreleased
+
+### Removed
+- **PowerShell transcription** (`Transcription64`, `TranscriptionHeader64`,
+  `Transcription32`, `TranscriptionHeader32`;
+  [#34](https://github.com/spydisec/WinLogKit/issues/34)). It set no
+  `OutputDirectory`, so every PowerShell session wrote a transcript into
+  the user's Documents folder (and to OneDrive under Known Folder Move).
+  Doing it safely needs a hardened folder, retention and a separate
+  collection path, which is outside an event-log kit. Script block logging
+  (4104) already records the code that ran. **Hosts where it was applied:**
+  `-Rollback` still removes the values (the first-run capture recorded
+  them as absent), or delete the `Transcription` policy keys by hand.
+  Selection CSVs that list the old rows are warned about and the rows
+  ignored.
+
 ## v1.0.0 - 2026-09-04
 
 The v1.0 restructure ([ADR-001](https://github.com/spydisec/WinLogKit/pull/30)):

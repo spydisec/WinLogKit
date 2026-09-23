@@ -15,7 +15,7 @@
       HighVolume  material event volume / performance impact. NOT applied
                   unless -IncludeHighVolume is given - listed as PENDING
                   DECISION so a human chooses.
-      Optional    situational (PowerShell transcription, DPAPI debug channel).
+      Optional    situational (Crypto-DPAPI debug channel, IPsec Driver).
                   Applied only with -IncludeOptional.
 
     2. A custom baseline file (precise): build a selection CSV with
@@ -51,8 +51,8 @@
     Connection, Sensitive Privilege Use).
 
 .PARAMETER IncludeOptional
-    Also apply Optional tier items (PowerShell transcription, Crypto-DPAPI
-    debug channel).
+    Also apply Optional tier items (Crypto-DPAPI debug channel, IPsec
+    Driver auditing).
 
 .PARAMETER BaselineFile
     Path to a selection CSV produced by New-LoggingBaseline.ps1 (columns
