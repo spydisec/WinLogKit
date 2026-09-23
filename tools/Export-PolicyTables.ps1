@@ -139,8 +139,9 @@ Things to know before you start:
 - **A policy sets a log size outright.** The kit only ever raises sizes;
   a size policy also lowers a log that was bigger. Set the larger value
   if your hosts already have one.
-- **SMB auditing needs Windows 11 24H2 or Windows Server 2025**; older
-  versions don't have those settings.
+- **SMB auditing needs Windows 11 24H2 (build 26100.3613) or later, or
+  Windows Server 2025**, per Microsoft's LanmanServer and
+  LanmanWorkstation CSP pages; older builds don't have those settings.
 - **Mind the Tier column.** Leave HighVolume rows out unless you apply
   that tier (see [Baselines](baselines.md)).
 
@@ -188,13 +189,17 @@ Things to know before you start:
   OU. They are busy there: read
   [the DC notes](safety.md#can-i-run-this-on-a-domain-controller) first.
 - **PowerShell 7 rows** need PowerShell 7's own administrative template
-  in the central store; copy it with `InstallPSCorePolicyDefinitions.ps1`
-  from the PowerShell 7 folder, or copy the `.admx` and `.adml` by hand.
+  in the domain's
+  [central store](https://learn.microsoft.com/troubleshoot/windows-client/group-policy/create-and-manage-central-store):
+  copy `PowerShellCoreExecutionPolicy.admx` from the PowerShell 7 folder
+  into `PolicyDefinitions` under SYSVOL, and its `.adml` into the
+  matching language folder (`en-US`). The `InstallPSCorePolicyDefinitions.ps1`
+  that ships with PowerShell 7 installs them on the local machine only.
 - **SMB auditing needs Windows 11 24H2 or Windows Server 2025**; older
   versions ignore those settings.
 - **Only the classic logs have a size template.** The other kit logs are
-  in the second table: size them with the Intune remediation pack or a
-  computer startup script.
+  in the second table: size them with a computer startup script, or run
+  `Enable-LoggingBaseline.ps1` on the host.
 - **Mind the Tier column.** Leave HighVolume rows out unless you apply
   that tier (see [Baselines](baselines.md)).
 - **Check the result** on a host with `Test-LoggingBaseline.ps1`: it reads
@@ -208,7 +213,7 @@ Things to know before you start:
 
 $gpMiddle = @'
 
-## Settings Group Policy can't deliver
+## Settings without a Group Policy template
 
 | Setting | Type | Why |
 |---|---|---|
