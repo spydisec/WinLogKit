@@ -203,12 +203,6 @@ tier's volume cost; the per-setting breakdown is in the detail CSV's
 - `Results\AttackCoverage_Gaps_*.csv` - techniques not observable, with the
   dominant reason
 
-## Credit
-
-The approach of joining logging configuration to ATT&CK through event
-metadata was proven by OTRF's [OSSEM-DM](https://github.com/OTRF/OSSEM-DM)
-(MIT) - full credit in `data/attack/README.md`.
-
 ## Caveats
 
 - This maps **events, not detections**: "observable" means the raw events
