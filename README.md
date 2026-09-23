@@ -113,9 +113,23 @@ for what changed. Planned work is tracked in
 
 ## License
 
-[MIT](https://github.com/spydisec/WinLogKit/blob/main/LICENSE). Not
-affiliated with or endorsed by Yamato Security, the ASD, Microsoft or MITRE.
-What the kit is built from, and each source's licence, is on the
-[Credits](https://spydisec.github.io/WinLogKit/credits/) page; the kit's
+WinLogKit's own scripts and documentation are licensed under the
+[MIT License](https://github.com/spydisec/WinLogKit/blob/main/LICENSE).
+
+The kit is built from other people's published work, each under its own
+licence:
+
+| Source | What WinLogKit uses | Licence |
+|---|---|---|
+| [Yamato Security: EnableWindowsLogSettings](https://github.com/Yamato-Security/EnableWindowsLogSettings) | Setting values: which event channels to enable and their sizes, which audit subcategories to turn on, the PowerShell logging policies. The kit's descriptions are its own wording. | GPL-3.0 |
+| [Yamato Security: WELA](https://github.com/Yamato-Security/WELA) | Setting values (NTLM and AD CS auditing), and the docs stylesheet, adapted with WELA's MIT notice kept in `docs/stylesheets/extra.css`. | MIT |
+| [Yamato Security: EventLog-Baseline-Guide](https://github.com/Yamato-Security/EventLog-Baseline-Guide) | The ASD, Microsoft client and Microsoft server baseline definitions (the `ASD` preset and the Reference page's Refs column). | MIT |
+| [MITRE ATT&CK](https://attack.mitre.org/) | Technique data in `data/attack/`, used per the [ATT&CK Terms of Use](https://attack.mitre.org/resources/legal-and-branding/terms-of-use/). | ATT&CK Terms of Use |
+
+If you redistribute WinLogKit or build on it, check those licences
+yourself. The full list, including the tools the docs point to, is on the
+[Credits](https://spydisec.github.io/WinLogKit/credits/) page, and the kit's
 deliberate deviations from the Yamato sources are
 [documented with reasons](https://spydisec.github.io/WinLogKit/baselines/#deviations-from-the-yamato-sources).
+WinLogKit is not affiliated with or endorsed by Yamato Security, the ASD,
+Microsoft or MITRE.
