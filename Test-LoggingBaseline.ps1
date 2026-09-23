@@ -178,13 +178,15 @@ foreach ($sub in $script:BaselineAuditSubcategories) {
     }
 
     $guid = $sub.Guid.ToUpper()
+    $currentValue = 0
     $current = 'Unknown'
-    if ($currentAudit.ContainsKey($guid)) { $current = $currentAudit[$guid] }
+    if ($currentAudit.ContainsKey($guid)) { $currentValue = [int]$currentAudit[$guid]; $current = Format-AuditSetting $currentValue }
 
     # Superset passes: required flags must be present; extra auditing is fine.
-    # Note: 'Inclusion Setting' text is localised on non-English Windows.
-    $hasSuccess = ($current -match 'Success')
-    $hasFailure = ($current -match 'Failure')
+    # Read from the numeric setting value (bit 1 Success, bit 2 Failure), so
+    # this works on any Windows display language (#45).
+    $hasSuccess = (($currentValue -band 1) -ne 0)
+    $hasFailure = (($currentValue -band 2) -ne 0)
     $ok = $true
     if ($sub.Success -and -not $hasSuccess) { $ok = $false }
     if ($sub.Failure -and -not $hasFailure) { $ok = $false }

@@ -15,6 +15,7 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 ### Fixed
 
+- 🌍 **Verification works in any Windows language.** Test, Enable and the Intune pack read audit policy from `auditpol /backup`'s numeric setting values instead of the `auditpol /get` text, which is translated on non-English Windows (only English said "Success and Failure"), so a correctly configured non-English host no longer fails its audit checks or gets re-remediated on every Intune run. [#45](https://github.com/spydisec/WinLogKit/issues/45)
 - ↩️ **Rollback covers settings added by later versions.** The rollback copy is taken on the first run, so a setting added by a later kit version, like the PowerShell 7 ones, was left behind by `-Rollback`. Every later run now records any setting the copy doesn't know yet, in its current state, before changing anything. [#44](https://github.com/spydisec/WinLogKit/issues/44)
 
 ## [2.0.0] - 2026-09-23

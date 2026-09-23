@@ -64,19 +64,65 @@ function Get-RegValue {
 
 # ----------------------------------------------------------- audit policy ---
 
-function Get-AuditPolicyByGuid {
-    # One auditpol call for everything; returns hashtable GUID -> inclusion setting text.
+# Audit policy is read as numbers, not words (#45). auditpol /get /r prints
+# each setting as text that is translated on non-English Windows ("Success
+# and Failure" only in English), so matching on it failed correct hosts.
+# auditpol /backup writes the same data with a numeric Setting Value
+# (0 none, 1 Success, 2 Failure, 3 both) keyed by subcategory GUID - the
+# format Group Policy uses. Columns are read by position (4th = GUID,
+# 7th = value) in case the header row is translated too.
+
+# Parses auditpol /backup output into subcategory GUID -> setting value.
+# Rows without a GUID (audit options, global SACLs) are skipped. The export
+# can also hold per-user audit rows, so the system-wide rows (Policy Target
+# 'System') win; if none carry that word (a translated export), the first row
+# per subcategory is used rather than reading nothing.
+function ConvertFrom-AuditPolicyBackup {
+    param([string[]]$Lines)
+    $rows = @(@($Lines | Select-Object -Skip 1 | Where-Object { $_ -match '\S' }) |
+        ConvertFrom-Csv -Header 'Machine', 'Target', 'Subcategory', 'Guid', 'Inclusion', 'Exclusion', 'Value' |
+        Where-Object { $null -ne $_ })
+    $valid = @($rows | Where-Object {
+        ("$($_.Guid)" -replace '[{}]', '').Trim() -match '^[0-9A-Fa-f]{8}(-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$' -and "$($_.Value)".Trim() -match '^[0-3]$' })
+    $system = @($valid | Where-Object { "$($_.Target)".Trim() -eq 'System' })
+    if ($system.Count -gt 0) { $valid = $system }
     $map = @{}
-    $lines = auditpol /get /category:* /r
-    if ($LASTEXITCODE -ne 0) {
-        throw "auditpol /get /category:* /r failed with exit code $LASTEXITCODE (run elevated): $(($lines | Select-Object -First 2) -join ' ')"
-    }
-    $csv = $lines | Where-Object { $_ -match '\S' } | ConvertFrom-Csv
-    foreach ($row in $csv) {
-        $guid = ($row.'Subcategory GUID' -replace '[{}]', '').ToUpper()
-        $map[$guid] = $row.'Inclusion Setting'
+    foreach ($row in $valid) {
+        $guid = ("$($row.Guid)" -replace '[{}]', '').Trim().ToUpper()
+        if (-not $map.ContainsKey($guid)) { $map[$guid] = [int]"$($row.Value)".Trim() }
     }
     return $map
+}
+
+# Live audit policy: subcategory GUID -> setting value 0..3. Needs admin.
+function Get-AuditPolicyByGuid {
+    $file = Join-Path ([IO.Path]::GetTempPath()) ('winlogkit-auditpol-{0}.csv' -f [guid]::NewGuid())
+    try {
+        $out = auditpol /backup /file:"$file"
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $file)) {
+            throw "auditpol /backup failed with exit code $LASTEXITCODE (run elevated): $(($out | Select-Object -First 2) -join ' ')"
+        }
+        return (ConvertFrom-AuditPolicyBackup -Lines (Get-Content -LiteralPath $file))
+    } finally {
+        if (Test-Path -LiteralPath $file) { Remove-Item -LiteralPath $file -Force }
+    }
+}
+
+# Success/Failure flags -> setting value, and back to English for output.
+function Get-AuditSettingValue {
+    param([bool]$Success, [bool]$Failure)
+    return ([int]$Success + 2 * [int]$Failure)
+}
+
+function Format-AuditSetting {
+    param($Value)
+    switch ("$Value") {
+        '0' { return 'No Auditing' }
+        '1' { return 'Success' }
+        '2' { return 'Failure' }
+        '3' { return 'Success and Failure' }
+    }
+    return 'Unknown'
 }
 
 # ------------------------------------------------------------ SMB auditing ---
