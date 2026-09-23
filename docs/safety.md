@@ -40,11 +40,16 @@ decision.
 - **English-language OS assumed for verification**: `auditpol` output text
   is localised; setting uses GUIDs and is locale-safe. Locale-neutral
   verification is planned.
-- **Native gaps**: registry autoruns need SACLs for change auditing (the
-  optional [Autoruns add-on](addons.md) adds a daily inventory of them,
-  which is a partial mitigation, not SACL coverage); no file hashes or DLL
-  loads without agents; no flow statistics. These are the recognised limits
+- **Native gaps**: registry autoruns (Run keys, IFEO) need SACLs for change
+  auditing, which the kit doesn't set; no file hashes or DLL loads without
+  agents; no flow statistics. These are the recognised limits
   of agentless native logging - the docs say so instead of pretending.
+  For registry autostart entries specifically, Microsoft's Sysinternals
+  [Autoruns](https://learn.microsoft.com/sysinternals/downloads/autoruns)
+  inventories them, and Palantir's
+  [AutorunsToWinEventLog](https://github.com/palantir/windows-event-forwarding/tree/master/AutorunsToWinEventLog)
+  shows one way to write that inventory to an event log for collection.
+  Both sit outside the kit.
 - **Domain-joined hosts**: GPO reapplies audit policy at refresh; deliver
   fleet-wide via the [deployment artefacts](deployment.md).
 
@@ -55,12 +60,8 @@ decision.
 No. The kit is a static snapshot: the Yamato baselines and the MITRE
 ATT&CK mapping data are vendored with recorded provenance (source, commit,
 date). Nothing is fetched at runtime, and nothing about your hosts,
-results or baselines leaves them. The baseline itself has no network
-action at all. The optional [Autoruns add-on](addons.md) has one,
-`Install-AutorunsToWinEventLog.ps1 -Download`, which fetches `autorunsc`
-from live.sysinternals.com when you explicitly ask; it has an offline
-alternative (bring the file yourself), so air-gapped estates need no
-network at all.
+results or baselines leaves them. The kit has no network action at all,
+so air-gapped estates work unchanged.
 
 ### How is this different from just running Yamato's batch script?
 
@@ -88,14 +89,6 @@ of Windows 11 and Windows Server 2025, which removes the third-party-agent
 objection on those versions; supporting it as a tier of the baseline is
 planned. Earlier versions still need the standalone Sysinternals build,
 which stays out of scope.
-
-The one deliberate exception today is the optional
-[AutorunsToWinEventLog add-on](addons.md), which depends on Sysinternals
-`autorunsc` (a command-line tool, not a resident agent) to add a daily
-inventory over the registry-autorun Persistence gap - partial mitigation,
-not SACL-grade change auditing. It lives in its own folder, is never
-installed by the baseline scripts, and is documented as the exception it
-is.
 
 ### Something broke / I want out. How do I undo everything?
 

@@ -64,8 +64,7 @@ To keep the kit small and safe to run on any host, it deliberately doesn't:
 
 - write files outside the event log (for example PowerShell transcripts)
 - install agents, services, scheduled tasks or third-party binaries, or
-  download anything (the optional Autoruns add-on is the one exception and
-  is moving to its own repository)
+  download anything
 - filter events at the source, or ship SIEM content (parsers, queries,
   detections); the kit ends at the collector
 - touch the [never-do list](https://spydisec.github.io/WinLogKit/safety/#what-the-kit-will-never-do)
@@ -92,7 +91,6 @@ Full documentation: <https://spydisec.github.io/WinLogKit/>
 | [Coverage](https://spydisec.github.io/WinLogKit/mapping/) | How the pieces fit, behaviour categories, ATT&CK technique coverage |
 | [Reference](https://spydisec.github.io/WinLogKit/reference/) | Every setting: event IDs, sizes, volume, preset membership |
 | [Safety & FAQ](https://spydisec.github.io/WinLogKit/safety/) | Never-do list, volume impact, known limits, common questions |
-| [Add-ons](https://spydisec.github.io/WinLogKit/addons/) | AutorunsToWinEventLog (optional, needs Sysinternals autorunsc) |
 
 ## Safety
 
