@@ -269,6 +269,37 @@ Describe 'Reference page' {
     }
 }
 
+# #47: the Settings catalog page. Every kit item is either mapped to a CSP
+# or listed as having none, and the map names nothing the kit doesn't have.
+Describe 'Settings catalog page' {
+    BeforeAll {
+        $CspMap = Import-PowerShellDataFile (Join-Path $KitRoot 'tools\csp-map.psd1')
+    }
+
+    It 'matches the generator' -Skip:(-not $HasDocs) {
+        $cspTmp = Join-Path $Tmp 'intune-csp.md'
+        & (Join-Path $KitRoot 'tools\Export-CspTable.ps1') -OutFile $cspTmp | Out-Null
+        $committed = Join-Path $KitRoot 'docs\intune-csp.md'
+        $committed | Should -Exist
+        ((Get-Content $committed -Raw) -replace "`r`n", "`n") | Should -BeExactly ((Get-Content $cspTmp -Raw) -replace "`r`n", "`n") -Because 'rerun tools\Export-CspTable.ps1'
+    }
+
+    It 'maps every audit subcategory and registry item, once' {
+        $guids = @($BaselineAuditSubcategories | ForEach-Object { $_.Guid.ToUpper() })
+        @($guids | Where-Object { $CspMap.Audit.Keys.ToUpper() -notcontains $_ }) | Should -BeNullOrEmpty
+        @($BaselineRegistrySettings | Where-Object { -not ($CspMap.Registry.ContainsKey($_.Id) -xor $CspMap.NoCsp.ContainsKey($_.Id)) } | ForEach-Object { $_.Id }) | Should -BeNullOrEmpty
+    }
+
+    It 'names only items the kit has' {
+        $ids = @($BaselineRegistrySettings | ForEach-Object { $_.Id })
+        $guids = @($BaselineAuditSubcategories | ForEach-Object { $_.Guid.ToUpper() })
+        $channels = @($BaselineChannels | ForEach-Object { $_.Name })
+        @($CspMap.Audit.Keys | Where-Object { $guids -notcontains $_.ToUpper() }) | Should -BeNullOrEmpty
+        @(@($CspMap.Registry.Keys) + @($CspMap.NoCsp.Keys) | Where-Object { $ids -notcontains $_ }) | Should -BeNullOrEmpty
+        @($CspMap.Channels.Keys | Where-Object { $channels -notcontains $_ }) | Should -BeNullOrEmpty
+    }
+}
+
 Describe 'GPO pack' {
     BeforeAll {
         $GpoTmp = Join-Path $Tmp 'gpo'

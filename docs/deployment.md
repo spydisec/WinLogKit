@@ -26,6 +26,11 @@ Produces a self-contained pair for Intune remediations:
 - `Remediate-LoggingBaseline.ps1` - applies only what is below baseline;
   never shrinks logs, never restarts anything
 
+Prefer the **Settings catalog**? Audit policy, command-line capture,
+Windows PowerShell logging and three log sizes have a Policy CSP; the
+[Settings catalog](intune-csp.md) page maps each kit setting to its CSP
+and lists what still needs this pack.
+
 Upload under **Devices > Manage devices > Scripts and remediations >
 Create**: run using logged-on credentials **No** (SYSTEM), enforce script
 signature check **No** (the generated scripts are unsigned; with Yes the
