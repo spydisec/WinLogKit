@@ -134,8 +134,9 @@ files, and CI fails if the committed copies drift.
 - `New-PresetBaselines.ps1` - the four presets (run it under Windows
   PowerShell 5.1 so the CSVs keep their UTF-8 BOM).
 - `Export-ReferenceTable.ps1` - the [Reference](reference.md) page.
-- `Export-CspTable.ps1` - the [Settings catalog](intune-csp.md) page,
-  from the settings table and the curated CSP names in `csp-map.psd1`.
+- `Export-PolicyTables.ps1` - the [Settings catalog](intune-csp.md) and
+  [Group Policy paths](gpo-paths.md) pages, from the settings table and
+  the curated CSP names and Group Policy paths in `policy-map.psd1`.
 - `Export-AttackCoverage.ps1` - joins a selection against the vendored
   MITRE ATT&CK snapshot and reports which techniques it makes observable,
   and why the rest are not (NotSelected, NotInKit, RequiresSysmon, NotNative

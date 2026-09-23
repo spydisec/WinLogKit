@@ -13,26 +13,24 @@
                     audit.csv). Application is driven by the subcategory
                     GUIDs; the name column is informational.
       registry.txt  LGPO.exe text format for the policy-key registry values
-                    (PowerShell logging, process command line capture).
+                    (PowerShell logging, process command line capture, and
+                    SMB signing/encryption auditing through its Lanman
+                    Server / Lanman Workstation policies).
 
     Applying:
       Local / image builds (LGPO.exe from Microsoft's Security Compliance
       Toolkit):
         LGPO.exe /ac .\GPO\audit.csv
         LGPO.exe /t  .\GPO\registry.txt
-      Domain GPO: create/edit a GPO whose Advanced Audit Policy Configuration
-      matches audit.csv (same subcategory names and values), or use SCT
-      tooling to import; the registry values are the ADMX-backed PowerShell
-      logging and Audit Process Creation settings under Administrative
-      Templates.
+      Domain GPO: docs\gpo-paths.md lists the Group Policy path and value
+      for every setting, generated from the same settings table.
 
     NOT included, by design (printed as reminders):
-      - Channel sizes/enablement: no clean GPO mechanism for non-classic
-        channels; deliver via startup script or the Intune pack.
+      - Channel sizes/enablement: only the classic Application, Security
+        and System logs have a Group Policy template (see gpo-paths.md);
+        size the rest with a startup script or the Intune pack.
       - NTLM audit values (MSV1_0 / Netlogon): these are GPO *Security
         Options* ("Network security: Restrict NTLM: ..."), set them in GPMC.
-      - SMB signing/encryption auditing: Set-Smb*Configuration or the
-        Server 2025 ADMX.
       - AD CS AuditFilter: CertSvc restart territory, keep it manual.
 
     Requires: Windows PowerShell 5.1+. No admin; changes nothing on the host.
@@ -119,6 +117,16 @@ foreach ($rs in $script:BaselineRegistrySettings) {
     $regEntries.Add("Computer`r`n$keyPath`r`n$($rs.Name)`r`n$typeData")
     $regCount++
 }
+# SMB signing/encryption auditing has Group Policy (Network > Lanman Server
+# / Lanman Workstation, Windows 11 24H2 and Server 2025 onwards; older
+# versions ignore the values). Same value names as the Set-Smb*Configuration
+# parameters.
+foreach ($sa in $script:BaselineSmbAuditSettings) {
+    if (-not (Test-ItemSelected $sel 'SmbAudit' $sa.Id $sa.Tier)) { continue }
+    $service = 'LanmanWorkstation'; if ($sa.Side -eq 'Server') { $service = 'LanmanServer' }
+    $regEntries.Add("Computer`r`nSOFTWARE\Policies\Microsoft\Windows\$service`r`n$($sa.Id)`r`nDWORD:$([int][bool]$sa.Value)")
+    $regCount++
+}
 [System.IO.File]::WriteAllText((Join-Path $outDirFull 'registry.txt'), (($regEntries -join "`r`n`r`n") + "`r`n"), $utf8NoBom)
 
 # ------------------------------------------------------------------ output ---
@@ -130,13 +138,13 @@ Write-Host ''
 Write-Host 'Apply locally / in image builds (LGPO.exe from the Microsoft Security Compliance Toolkit):' -ForegroundColor White
 Write-Host "  LGPO.exe /ac `"$outDirFull\audit.csv`""
 Write-Host "  LGPO.exe /t  `"$outDirFull\registry.txt`""
-Write-Host 'Domain GPO: mirror audit.csv in Advanced Audit Policy Configuration and the registry values via Administrative Templates.'
+Write-Host 'Domain GPO: every setting''s Group Policy path and value is on the docs page gpo-paths.md (https://spydisec.github.io/WinLogKit/gpo-paths/).'
 if ($skipped.Count -gt 0) {
     Write-Host ''
     Write-Host 'Selected but NOT in this pack (different GPO mechanisms):' -ForegroundColor Yellow
     $skipped | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
 }
-Write-Host 'Also not in GPO packs by design: channel sizes/enablement (startup script or Intune pack), SMB auditing (Set-Smb*Configuration), AD CS AuditFilter.' -ForegroundColor Yellow
+Write-Host 'Also not in GPO packs by design: channel sizes/enablement (Event Log Service templates for Application/Security/System, a startup script or the Intune pack for the rest), AD CS AuditFilter.' -ForegroundColor Yellow
 $totalAudit = @($script:BaselineAuditSubcategories).Count
 if ($auditCount -lt $totalAudit) {
     Write-Host ''
