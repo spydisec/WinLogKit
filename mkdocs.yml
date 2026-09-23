@@ -77,6 +77,7 @@ nav:
   - Reference:
       - Commands: commands.md
       - Settings: reference.md
+      - Settings catalog: intune-csp.md
       - Coverage: mapping.md
   - Safety & FAQ: safety.md
   - Credits: credits.md
