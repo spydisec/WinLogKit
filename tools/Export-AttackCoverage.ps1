@@ -108,19 +108,28 @@ foreach ($p in @($analyticsCsv, $mapCsv)) {
     if (-not (Test-Path $p)) { Write-Error "Mapping data not found: $p (see data\attack\README.md)"; exit 1 }
 }
 
-# Lookup: "source|event" exact, then "source|" fallback.
+# Lookup: "source|event" exact, then "source|" fallback. A row with a
+# technique_id applies to that technique only and is tried first: some
+# ATT&CK analytics name a source without an event code (a bare
+# "WinEventLog:Security"), and only the technique says what they mean.
 $eventMap = @{}
 foreach ($m in (Import-Csv $mapCsv)) {
-    $eventMap[("$($m.match_source)|$($m.match_event)")] = $m
+    $scope = ''
+    if ($m.PSObject.Properties['technique_id'] -and "$($m.technique_id)" -ne '') { $scope = "$($m.technique_id)|" }
+    $eventMap[("$scope$($m.match_source)|$($m.match_event)")] = $m
 }
 # Status ranking: pick the strongest outcome across an analytic's codes.
 $rank = @{ 'Observable' = 6; 'NotSelected' = 5; 'NotInKit' = 4; 'Unmapped' = 3; 'NotNative' = 2; 'RequiresSysmon' = 1 }
 
 function Resolve-One {
-    param([string]$Source, [string]$Code)
+    param([string]$Technique, [string]$Source, [string]$Code)
     $m = $null
-    if ($eventMap.ContainsKey("$Source|$Code")) { $m = $eventMap["$Source|$Code"] }
-    elseif ($eventMap.ContainsKey("$Source|")) { $m = $eventMap["$Source|"] }
+    # Exact event first (technique-scoped, then general), then the source
+    # fallbacks: a technique row without an event must not swallow that
+    # technique's other, specific events.
+    foreach ($key in @("$Technique|$Source|$Code", "$Source|$Code", "$Technique|$Source|", "$Source|")) {
+        if ($eventMap.ContainsKey($key)) { $m = $eventMap[$key]; break }
+    }
     if ($null -eq $m) {
         if ($Source -match '(?i)sysmon') {
             return @{ Status = 'RequiresSysmon'; Via = "Source: $Source" }
@@ -148,10 +157,13 @@ function Resolve-One {
 
 foreach ($r in (Import-Csv $analyticsCsv)) {
     $codes = @("$($r.event_codes)".Split(';') | Where-Object { $_ -ne '' })
+    # Some analytics carry their codes only in the detail text
+    # ("EventCode=4778, EventCode=4779"): use those rather than none.
+    if ($codes.Count -eq 0) { $codes = @([regex]::Matches("$($r.channel_detail)", 'EventCode=(\d+)') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique) }
     if ($codes.Count -eq 0) { $codes = @('') }
     $best = $null
     foreach ($c in $codes) {
-        $res = Resolve-One -Source $r.log_source -Code $c
+        $res = Resolve-One -Technique $r.technique_id -Source $r.log_source -Code $c
         if ($null -eq $best -or $rank[$res.Status] -gt $rank[$best.Status]) { $best = $res }
     }
     $detail.Add([pscustomobject]@{

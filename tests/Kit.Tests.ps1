@@ -347,6 +347,9 @@ Describe 'ATT&CK coverage' {
         $rows = @(Import-Csv $detail.FullName)
         $rows.Count | Should -BeGreaterThan 1400
         @($rows | Where-Object { $_.Status -eq 'Observable' }).Count | Should -BeGreaterOrEqual 150
+        # #49: every source ATT&CK names is mapped or classified with a
+        # reason. A refresh that adds new sources fails here until curated.
+        @($rows | Where-Object { $_.Status -eq 'Unmapped' } | ForEach-Object { "$($_.TechniqueId) $($_.LogSource) $($_.EventCodes)" }) | Should -BeNullOrEmpty -Because 'curate data\attack\event_map.csv (see its README)'
     }
 }
 

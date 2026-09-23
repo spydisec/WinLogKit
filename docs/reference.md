@@ -74,7 +74,7 @@ Reading the columns:
 | Account Lockout | Audit subcategory | 4625 | - | Low | A Y | :material-check: | :material-check: | :material-check: |
 | Logoff | Audit subcategory | 4634, 4647 | - | Low | A C S Y | :material-check: | :material-check: | :material-check: |
 | Logon | Audit subcategory | 4624, 4625, 4648 | - | Low | A C S Y | :material-check: | :material-check: | :material-check: |
-| Other Logon/Logoff Events | Audit subcategory | 4800, 4801, 4778, 4779 | - | Low | A Y | :material-check: | :material-check: | :material-check: |
+| Other Logon/Logoff Events | Audit subcategory | 4778, 4779, 4800, 4801 | - | Low | A Y | :material-check: | :material-check: | :material-check: |
 | Special Logon | Audit subcategory | 4672 | - | Low | A C S Y | :material-check: | :material-check: | :material-check: |
 | Certification Services | Audit subcategory | 4898, 4899 | - | Low | Y | :material-check: | :material-check: | :material-check: |
 | File Share | Audit subcategory | 5140, 5142-5144 | - | Watch | A Y | :material-check: | :material-check: | :material-check: |
