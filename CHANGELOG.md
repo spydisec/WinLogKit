@@ -8,6 +8,10 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 ## [Unreleased]
 
+## [2.2.2] - 2026-09-24
+
+Documentation only: one checklist for fitting the kit to your own infrastructure before rolling it out. No script or setting changes; nothing to do when upgrading from 2.2.1.
+
 ### Changed
 
 - 🧭 **One checklist for fitting the kit to your environment.** The Safety page opens with what to settle before rolling out (your selection, a pilot, SIEM cost, sensitive logs, Group Policy precedence, change process, rollback, your own obligations), linked from the README and Getting started.
