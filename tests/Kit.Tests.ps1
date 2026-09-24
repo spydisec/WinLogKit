@@ -406,6 +406,23 @@ Describe 'AppLocker readiness note' {
         $src | Should -Match "Get-Command Get-AppLockerPolicy -ErrorAction SilentlyContinue"
     }
 }
+# The same SMB setting exists on client and server: Ids stay unique and
+# Setting names the cmdlet property.
+Describe 'SMB audit items' {
+    It 'has unique Ids and one item per side and setting' {
+        $ids = @($BaselineSmbAuditSettings | ForEach-Object { $_.Id })
+        @($ids | Sort-Object -Unique).Count | Should -Be $ids.Count
+        $pairs = @($BaselineSmbAuditSettings | ForEach-Object { "$($_.Side)|$(Get-SmbSettingName $_)" })
+        @($pairs | Sort-Object -Unique).Count | Should -Be $pairs.Count
+    }
+
+    It 'maps an item to its Setting, else its Id, for table entries and rollback records alike' {
+        Get-SmbSettingName @{ Id = 'ServerAuditInsecureGuestLogon'; Setting = 'AuditInsecureGuestLogon' } | Should -Be 'AuditInsecureGuestLogon'
+        Get-SmbSettingName @{ Id = 'AuditServerDoesNotSupportSigning' } | Should -Be 'AuditServerDoesNotSupportSigning'
+        Get-SmbSettingName ([pscustomobject]@{ Id = 'X'; Setting = 'Y' }) | Should -Be 'Y'
+        Get-SmbSettingName ([pscustomobject]@{ Id = 'X' }) | Should -Be 'X'
+    }
+}
 Describe 'Rollback baseline' {
     BeforeAll {
         $enableAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $KitRoot 'Enable-LoggingBaseline.ps1'), [ref]$null, [ref]$null)

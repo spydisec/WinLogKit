@@ -105,6 +105,7 @@
         AuditClientDoesNotSupportSigning    = @{ Csp = 'LanmanServer/AuditClientDoesNotSupportSigning'; Doc = 'policy-csp-lanmanserver'; Gp = 'Administrative Templates > Network > Lanman Server > Audit client does not support signing' }
         AuditServerDoesNotSupportEncryption = @{ Csp = 'LanmanWorkstation/AuditServerDoesNotSupportEncryption'; Doc = 'policy-csp-lanmanworkstation'; Gp = 'Administrative Templates > Network > Lanman Workstation > Audit server does not support encryption' }
         AuditInsecureGuestLogon             = @{ Csp = 'LanmanWorkstation/AuditInsecureGuestLogon'; Doc = 'policy-csp-lanmanworkstation'; Gp = 'Administrative Templates > Network > Lanman Workstation > Audit insecure guest logon' }
+        ServerAuditInsecureGuestLogon       = @{ Csp = 'LanmanServer/AuditInsecureGuestLogon'; Doc = 'policy-csp-lanmanserver'; Gp = 'Administrative Templates > Network > Lanman Server > Audit insecure guest logon' }
         AuditServerDoesNotSupportSigning    = @{ Csp = 'LanmanWorkstation/AuditServerDoesNotSupportSigning'; Doc = 'policy-csp-lanmanworkstation'; Gp = 'Administrative Templates > Network > Lanman Workstation > Audit server does not support signing' }
     }
 

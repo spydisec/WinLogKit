@@ -86,6 +86,7 @@ Things to know before you start:
 | AuditServerDoesNotSupportEncryption | SMB audit | Core | `LanmanWorkstation/AuditServerDoesNotSupportEncryption` | 1 (Enabled) | [LanmanWorkstation](https://learn.microsoft.com/windows/client-management/mdm/policy-csp-lanmanworkstation) |
 | AuditServerDoesNotSupportSigning | SMB audit | Core | `LanmanWorkstation/AuditServerDoesNotSupportSigning` | 1 (Enabled) | [LanmanWorkstation](https://learn.microsoft.com/windows/client-management/mdm/policy-csp-lanmanworkstation) |
 | AuditInsecureGuestLogon | SMB audit | Core | `LanmanWorkstation/AuditInsecureGuestLogon` | 1 (Enabled) | [LanmanWorkstation](https://learn.microsoft.com/windows/client-management/mdm/policy-csp-lanmanworkstation) |
+| ServerAuditInsecureGuestLogon | SMB audit | Core | `LanmanServer/AuditInsecureGuestLogon` | 1 (Enabled) | [LanmanServer](https://learn.microsoft.com/windows/client-management/mdm/policy-csp-lanmanserver) |
 | Security | Log size | Core | `EventLogService/SpecifyMaximumFileSizeSecurityLog` | Enabled, 1048576 KB | [EventLogService](https://learn.microsoft.com/windows/client-management/mdm/policy-csp-eventlogservice) |
 | System | Log size | Core | `EventLogService/SpecifyMaximumFileSizeSystemLog` | Enabled, 131072 KB | [EventLogService](https://learn.microsoft.com/windows/client-management/mdm/policy-csp-eventlogservice) |
 | Application | Log size | Core | `EventLogService/SpecifyMaximumFileSizeApplicationLog` | Enabled, 131072 KB | [EventLogService](https://learn.microsoft.com/windows/client-management/mdm/policy-csp-eventlogservice) |
@@ -131,5 +132,7 @@ domain-joined hosts, see [Group Policy paths](gpo-paths.md)).
 | Microsoft-Windows-TaskScheduler/Operational | Log | No CSP for this log's size or enablement. |
 | Microsoft-Windows-SMBServer/Audit | Log | No CSP for this log's size. |
 | Microsoft-Windows-SmbClient/Audit | Log | No CSP for this log's size. |
+| Microsoft-Windows-SMBServer/Security | Log | No CSP for this log's size or enablement. |
+| Microsoft-Windows-SMBServer/Operational | Log | No CSP for this log's size or enablement. |
 | Microsoft-Windows-Crypto-DPAPI/Debug | Log | No CSP for this log's size or enablement. |
 | AdcsAuditFilter | Registry | No CSP, and it needs a CertSvc restart: set it on the CA in a change window (`Enable-LoggingBaseline.ps1` there). |

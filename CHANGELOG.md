@@ -8,6 +8,10 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 ## [Unreleased]
 
+### Added
+
+- 🖧 **SMB server guest logons and security events are collected.** The server side of insecure guest-logon auditing is now on too (event 3023), with the two server logs it can land in: SMBServer/Security (Microsoft's docs; also session authentication failures 551, access denied 1006/1007/1009, weak session keys 1906) and SMBServer/Operational (where current Windows 11 builds write 3023). Both logs are raised from 8 MB to 128 MB. Mapped on the Settings catalog and Group Policy pages and carried in the GPO pack. Windows 11 24H2 / Server 2025 and later.
+
 ## [2.2.0] - 2026-09-24
 
 Tighter checks on what the kit already claims, from a review of Yamato WELA's open issues: advanced audit policy can't be silently overridden, Test flags CrashOnAuditFail and empty AppLocker logs, SMB guest logons are audited, "do not overwrite" logs are repaired, and failed log changes are no longer reported as success.

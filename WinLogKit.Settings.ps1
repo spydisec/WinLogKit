@@ -209,6 +209,17 @@ $script:BaselineChannels = @(
        Categories = @('Remote access','Network flow and sessions')
        Purpose = 'SMB client audit events, including signing/encryption capability auditing (31998/31999) and insecure guest logons (31997) on Windows 11 24H2 / Server 2025 and later, and NTLM-blocking diagnostics.' }
 
+    # SMB server security and operational events (#72 follow-up). Microsoft's
+    # insecure-guest-logon page puts event 3023 in SMBServer/Security; the
+    # provider definition on Windows 11 build 26200 puts it in
+    # SMBServer/Operational. Both are collected, so it's kept either way.
+    @{ Name = 'Microsoft-Windows-SMBServer/Security';                                   TargetBytes = $mb128; MustEnable = $true;  Tier = 'Core'; DefaultSize = '8 MB'; MayBeAbsent = $true
+       Categories = @('Remote access','Authentication')
+       Purpose = 'SMB server security events: session authentication failures (551), share and anonymous access denied (1006/1007/1009), weak session keys (1906), and insecure guest logons (3023, per Microsoft''s docs).' }
+
+    @{ Name = 'Microsoft-Windows-SMBServer/Operational';                                TargetBytes = $mb128; MustEnable = $true;  Tier = 'Core'; DefaultSize = '8 MB'; MayBeAbsent = $true
+       Categories = @('Remote access','Authentication')
+       Purpose = 'SMB server operational events, including insecure guest logons (3023) where the provider writes them here (as current Windows 11 builds do) when the server-side guest-logon audit is on.' }
     @{ Name = 'Microsoft-Windows-Crypto-DPAPI/Debug';                                   TargetBytes = $mb128; MustEnable = $true;  Tier = 'HighVolume'; DefaultSize = '1 MB'; MayBeAbsent = $true; Situational = $true
        Categories = @('Certificates and keys')
        Purpose = 'DPAPI key operations. Added by WELA v2.1 configure. A debug-class channel, so opt-in: enable only if DPAPI theft (e.g. Mimikatz backup key export) is a monitored scenario.'
@@ -528,11 +539,15 @@ $script:BaselineSmbAuditSettings = @(
        Categories = @('Remote access','Network flow and sessions')
        Purpose = 'SMB client logs servers that cannot do SMB signing (event 31998 in SmbClient/Audit). Windows 11 24H2 / Server 2025 and later.' }
 
-    # Client side only: the server-side switch writes its event (3023) to
-    # SMBServer/Operational, a log the kit doesn't collect.
     @{ Id = 'AuditInsecureGuestLogon'; Side = 'Client'; Value = $true; Tier = 'Core'; Scope = 'All'
        Categories = @('Remote access','Authentication')
        Purpose = 'SMB client logs when a share logs it on as the Guest account, an unauthenticated insecure guest logon (event 31997 in SmbClient/Audit). Windows 11 24H2 / Server 2025 and later.' }
+
+    # Same cmdlet setting on the server side, so it needs its own Id; Setting
+    # names the Set-SmbServerConfiguration parameter (defaults to Id).
+    @{ Id = 'ServerAuditInsecureGuestLogon'; Setting = 'AuditInsecureGuestLogon'; Side = 'Server'; Value = $true; Tier = 'Core'; Scope = 'All'
+       Categories = @('Remote access','Authentication')
+       Purpose = 'SMB server logs when a client is logged on as the Guest account, an unauthenticated insecure guest logon (event 3023, in SMBServer/Security or SMBServer/Operational depending on the build). Windows 11 24H2 / Server 2025 and later.' }
 )
 
 # -----------------------------------------------------------------------------

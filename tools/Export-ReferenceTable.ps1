@@ -72,7 +72,7 @@ function Get-PurposeEventText {
 }
 
 # Kit-added items that Yamato's own scripts do not contain: the SMB
-# auditing (all SmbAudit rows plus its two channels), the NTLM audit
+# auditing (all SmbAudit rows plus its four channels), the NTLM audit
 # registry values, the PowerShell 7 policy fallbacks (#44) and the forced
 # subcategory audit setting (#71). They must not
 # carry the Y letter. Situational items (the old Optional tier: IPsec Driver,
@@ -80,7 +80,7 @@ function Get-PurposeEventText {
 # whatever their tier.
 $yExcludedIds = @('NtlmOutboundAudit', 'NtlmInboundAudit', 'NtlmDomainAudit',
     'PS7ScriptBlock64', 'PS7ScriptBlock32', 'PS7ModuleLogging64', 'PS7ModuleLogging32', 'ForceSubcategoryAudit')
-$yExcludedChannels = @('Microsoft-Windows-SMBServer/Audit', 'Microsoft-Windows-SmbClient/Audit')
+$yExcludedChannels = @('Microsoft-Windows-SMBServer/Audit', 'Microsoft-Windows-SmbClient/Audit', 'Microsoft-Windows-SMBServer/Security', 'Microsoft-Windows-SMBServer/Operational')
 function Test-Situational {
     param([hashtable]$Item)
     return ($Item.ContainsKey('Situational') -and $Item.Situational)
@@ -164,7 +164,7 @@ foreach ($rs in $script:BaselineRegistrySettings) {
 $af = $script:BaselineAdcsAuditFilter
 $rows.Add("| AD CS AuditFilter (needs CertSvc restart) | Registry | $((Get-PurposeEventText $af.Purpose) -join ', ') | - | $(Format-Volume $af) | $(Format-RefText 'Registry' $af.Id $af.Tier) | $(Format-RoleColumn 'Registry' $af.Id) |")
 foreach ($sa in $script:BaselineSmbAuditSettings) {
-    $rows.Add("| $($sa.Side): $($sa.Id) | SMB audit (24H2+) | $((Get-PurposeEventText $sa.Purpose) -join ', ') | - | Low | $(Format-RefText 'SmbAudit' $sa.Id $sa.Tier) | $(Format-RoleColumn 'SmbAudit' $sa.Id) |")
+    $rows.Add("| $($sa.Side): $(Get-SmbSettingName $sa) | SMB audit (24H2+) | $((Get-PurposeEventText $sa.Purpose) -join ', ') | - | Low | $(Format-RefText 'SmbAudit' $sa.Id $sa.Tier) | $(Format-RoleColumn 'SmbAudit' $sa.Id) |")
 }
 
 # ---- write the page ---------------------------------------------------------
