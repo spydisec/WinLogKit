@@ -127,6 +127,19 @@ function Format-AuditSetting {
 # Current state of the SMB audit settings (Windows 11 24H2 / Server 2025+).
 # Returns a hashtable Id -> current bool; items missing from the hashtable are
 # unsupported on this OS (the properties only exist on Server 2025 / Win11 24H2+).
+# Whether Group Policy forces a classic log to "do not overwrite": Event
+# Log Service > <log> > "Control Event Log behavior when the log file
+# reaches its maximum size" = Enabled (registry value Retention, per
+# Microsoft's EventLogService CSP). Only the classic logs have that policy.
+# A local change would be undone at the next refresh, so the kit reports it
+# instead of fighting it. Compared as text: DWORD or string both read as 1.
+function Test-RetentionForcedByPolicy {
+    param([string]$LogName)
+    if (@('Application', 'Security', 'Setup', 'System') -notcontains $LogName) { return $false }
+    $v = Get-RegValue -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EventLog\$LogName" -Name 'Retention'
+    return ("$v" -eq '1')
+}
+
 # The Set-/Get-Smb*Configuration property an SMB audit item maps to: its
 # Setting when it has one (the same setting exists on client and server,
 # and Ids must be unique), otherwise its Id. Works for settings-table

@@ -468,8 +468,14 @@ try {
         # fails it (#73). Only Retain is changed: AutoBackup keeps logging by
         # archiving full logs, which is a deliberate choice.
         $needCircular = ("$($log.LogMode)" -eq 'Retain')
+        # Forced by Group Policy: a local change would be undone at the next
+        # refresh, so report where to change it instead.
+        $policyRetain = ($needCircular -and (Test-RetentionForcedByPolicy $ch.Name))
+        $policyNote = "retention 'do not overwrite' is set by Group Policy (Event Log Service > $($ch.Name) > Control Event Log behavior when the log file reaches its maximum size): set it to Disabled or Not configured there"
+        if ($policyRetain) { $needCircular = $false }
 
         if (-not $needSize -and -not $needEnable -and -not $needCircular) {
+            if ($policyRetain) { Add-Result 'Channel' $ch.Name 'PendingDecision' $policyNote; continue }
             Add-Result 'Channel' $ch.Name 'AlreadyCorrect' "$([math]::Round($log.MaximumSizeInBytes/1MB)) MB, enabled=$($log.IsEnabled)"
             continue
         }
@@ -478,6 +484,7 @@ try {
         if ($needSize)   { $desc += "size $([math]::Round($log.MaximumSizeInBytes/1MB)) MB -> $([math]::Round($ch.TargetBytes/1MB)) MB" }
         if ($needEnable) { $desc += 'enable (currently disabled)' }
         if ($needCircular) { $desc += 'retention "do not overwrite" -> overwrite as needed' }
+        if ($policyRetain) { $desc += $policyNote }
         $descText = $desc -join ', '
 
         if ($PSCmdlet.ShouldProcess($ch.Name, $descText)) {

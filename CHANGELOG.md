@@ -12,6 +12,10 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 - 🖧 **SMB server guest logons and security events are collected.** The server side of insecure guest-logon auditing is now on too (event 3023), with the two server logs it can land in: SMBServer/Security (Microsoft's docs; also session authentication failures 551, access denied 1006/1007/1009, weak session keys 1906) and SMBServer/Operational (where current Windows 11 builds write 3023). Both logs are raised from 8 MB to 128 MB. Mapped on the Settings catalog and Group Policy pages and carried in the GPO pack. Windows 11 24H2 / Server 2025 and later.
 
+### Fixed
+
+- 🏛️ **Group Policy-forced "do not overwrite" is reported, not fought.** When Group Policy sets a classic log to "do not overwrite" (Event Log Service > "Control Event Log behavior when the log file reaches its maximum size" = Enabled, as some published GPO baselines do), Enable's repair was undone at the next policy refresh and Test failed forever. Enable now leaves that log's retention alone, and both scripts name the policy to change. The Group Policy paths page says to leave it Disabled or Not configured.
+
 ## [2.2.0] - 2026-09-24
 
 Tighter checks on what the kit already claims, from a review of Yamato WELA's open issues: advanced audit policy can't be silently overridden, Test flags CrashOnAuditFail and empty AppLocker logs, SMB guest logons are audited, "do not overwrite" logs are repaired, and failed log changes are no longer reported as success.

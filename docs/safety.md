@@ -12,7 +12,7 @@ kit never touches them, in any mode:
 | Never touched | Why |
 |---|---|
 | `CrashOnAuditFail` ("Audit: Shut down system immediately if unable to log security audits") | A full Security log **halts the machine** with `STOP C0000244`; until reset, only Administrators can log on - IIS fails, AD replication fails. ([Microsoft KB832981](https://learn.microsoft.com/troubleshoot/developer/webapps/iis/health-diagnostic-performance/users-cannot-access-web-sites-when-log-full)) The test **fails** if another policy has turned it on. |
-| "Do not overwrite events" retention | Logging silently stops when the log fills; with CrashOnAuditFail it crashes the host. The test **fails** this mode on the kit's logs, and Enable sets them back to overwrite as needed, with a warning (`-Rollback` restores the original). |
+| "Do not overwrite events" retention | Logging silently stops when the log fills; with CrashOnAuditFail it crashes the host. The test **fails** this mode on the kit's logs, and Enable sets them back to overwrite as needed, with a warning (`-Rollback` restores the original). When Group Policy forces it (Event Log Service > "Control Event Log behavior when the log file reaches its maximum size" = Enabled), Enable leaves it and both scripts say to change the policy instead. |
 | Global object access auditing | SACLs on every kernel/file/registry object - extreme volume, measurable performance degradation. |
 | Blanket File System / Registry SACLs | A careless wildcard SACL can bury a file server. Scoping SACLs is a design decision, never a default. |
 | Shrinking logs, rebooting, restarting services | Sizes are only raised; the one restart-requiring setting (AD CS AuditFilter) is set with a warning and left to your change window. |
