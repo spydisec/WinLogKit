@@ -71,8 +71,8 @@ function Get-PurposeEventText {
     return @($ids)
 }
 
-# Kit-added items that Yamato's own scripts do not contain: the Server 2025
-# SMB auditing (all SmbAudit rows plus its two channels), the NTLM audit
+# Kit-added items that Yamato's own scripts do not contain: the SMB
+# auditing (all SmbAudit rows plus its two channels), the NTLM audit
 # registry values, the PowerShell 7 policy fallbacks (#44) and the forced
 # subcategory audit setting (#71). They must not
 # carry the Y letter. Situational items (the old Optional tier: IPsec Driver,
@@ -164,7 +164,7 @@ foreach ($rs in $script:BaselineRegistrySettings) {
 $af = $script:BaselineAdcsAuditFilter
 $rows.Add("| AD CS AuditFilter (needs CertSvc restart) | Registry | $((Get-PurposeEventText $af.Purpose) -join ', ') | - | $(Format-Volume $af) | $(Format-RefText 'Registry' $af.Id $af.Tier) | $(Format-RoleColumn 'Registry' $af.Id) |")
 foreach ($sa in $script:BaselineSmbAuditSettings) {
-    $rows.Add("| $($sa.Side): $($sa.Id) | SMB audit (2025+) | $((Get-PurposeEventText $sa.Purpose) -join ', ') | - | Low | $(Format-RefText 'SmbAudit' $sa.Id $sa.Tier) | $(Format-RoleColumn 'SmbAudit' $sa.Id) |")
+    $rows.Add("| $($sa.Side): $($sa.Id) | SMB audit (24H2+) | $((Get-PurposeEventText $sa.Purpose) -join ', ') | - | Low | $(Format-RefText 'SmbAudit' $sa.Id $sa.Tier) | $(Format-RoleColumn 'SmbAudit' $sa.Id) |")
 }
 
 # ---- write the page ---------------------------------------------------------

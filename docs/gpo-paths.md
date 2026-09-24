@@ -89,6 +89,7 @@ Things to know before you start:
 | AuditClientDoesNotSupportSigning | SMB audit | Core | Administrative Templates > Network > Lanman Server > Audit client does not support signing | Enabled |
 | AuditServerDoesNotSupportEncryption | SMB audit | Core | Administrative Templates > Network > Lanman Workstation > Audit server does not support encryption | Enabled |
 | AuditServerDoesNotSupportSigning | SMB audit | Core | Administrative Templates > Network > Lanman Workstation > Audit server does not support signing | Enabled |
+| AuditInsecureGuestLogon | SMB audit | Core | Administrative Templates > Network > Lanman Workstation > Audit insecure guest logon | Enabled |
 | Security | Log size | Core | Administrative Templates > Windows Components > Event Log Service > Security > Specify the maximum log file size (KB) | Enabled, 1048576 KB |
 | System | Log size | Core | Administrative Templates > Windows Components > Event Log Service > System > Specify the maximum log file size (KB) | Enabled, 131072 KB |
 | Application | Log size | Core | Administrative Templates > Windows Components > Event Log Service > Application > Specify the maximum log file size (KB) | Enabled, 131072 KB |

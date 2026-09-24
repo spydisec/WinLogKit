@@ -56,7 +56,7 @@ Reading the columns:
 | Microsoft-Windows-TerminalServices-LocalSessionManager/Operational | Channel | - | 1 MB -> 128 MB | Low | Y | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-TaskScheduler/Operational | Channel | - | 1 MB -> 128 MB | Low | Y | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-SMBServer/Audit | Channel | 3021, 3022 | 8 MB -> 128 MB | Low | - | :material-check: | :material-check: | :material-check: |
-| Microsoft-Windows-SmbClient/Audit | Channel | 31998, 31999 | 8 MB -> 128 MB | Low | - | :material-check: | :material-check: | :material-check: |
+| Microsoft-Windows-SmbClient/Audit | Channel | 31998, 31999, 31997 | 8 MB -> 128 MB | Low | - | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-Crypto-DPAPI/Debug | Channel | - | 1 MB -> 128 MB | Watch | - | - | - | - |
 | Credential Validation | Audit subcategory | 4776 | - | Low | C S Y | :material-check: | :material-check: | :material-check: |
 | Kerberos Authentication Service (DC) | Audit subcategory | 4768, 4771 | - | Low | Y | - | - | :material-check: |
@@ -107,7 +107,8 @@ Reading the columns:
 | `CurrentControlSet\Services\Netlogon\Parameters\AuditNTLMInDomain (DC)` | Registry | - | - | Low | - | - | - | :material-check: |
 | `CurrentControlSet\Control\Lsa\SCENoApplyLegacyAuditPolicy` | Registry | - | - | Low | - | :material-check: | :material-check: | :material-check: |
 | AD CS AuditFilter (needs CertSvc restart) | Registry | 4886-4899 | - | Low | Y | :material-check: | :material-check: | :material-check: |
-| Server: AuditClientDoesNotSupportEncryption | SMB audit (2025+) | 3021 | - | Low | - | :material-check: | :material-check: | :material-check: |
-| Server: AuditClientDoesNotSupportSigning | SMB audit (2025+) | 3022 | - | Low | - | :material-check: | :material-check: | :material-check: |
-| Client: AuditServerDoesNotSupportEncryption | SMB audit (2025+) | 31998 | - | Low | - | :material-check: | :material-check: | :material-check: |
-| Client: AuditServerDoesNotSupportSigning | SMB audit (2025+) | 31999 | - | Low | - | :material-check: | :material-check: | :material-check: |
+| Server: AuditClientDoesNotSupportEncryption | SMB audit (24H2+) | 3022 | - | Low | - | :material-check: | :material-check: | :material-check: |
+| Server: AuditClientDoesNotSupportSigning | SMB audit (24H2+) | 3021 | - | Low | - | :material-check: | :material-check: | :material-check: |
+| Client: AuditServerDoesNotSupportEncryption | SMB audit (24H2+) | 31999 | - | Low | - | :material-check: | :material-check: | :material-check: |
+| Client: AuditServerDoesNotSupportSigning | SMB audit (24H2+) | 31998 | - | Low | - | :material-check: | :material-check: | :material-check: |
+| Client: AuditInsecureGuestLogon | SMB audit (24H2+) | 31997 | - | Low | - | :material-check: | :material-check: | :material-check: |
