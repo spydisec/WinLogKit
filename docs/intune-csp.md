@@ -129,6 +129,8 @@ domain-joined hosts, see [Group Policy paths](gpo-paths.md)).
 | Microsoft-Windows-DriverFrameworks-UserMode/Operational | Log | No CSP for this log's size or enablement. |
 | Microsoft-Windows-WMI-Activity/Operational | Log | No CSP for this log's size. |
 | Microsoft-Windows-TerminalServices-LocalSessionManager/Operational | Log | No CSP for this log's size. |
+| Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational | Log | No CSP for this log's size or enablement. |
+| Microsoft-Windows-RemoteDesktopServices-RdpCoreTS/Operational | Log | No CSP for this log's size or enablement. |
 | Microsoft-Windows-TaskScheduler/Operational | Log | No CSP for this log's size or enablement. |
 | Microsoft-Windows-SMBServer/Audit | Log | No CSP for this log's size. |
 | Microsoft-Windows-SmbClient/Audit | Log | No CSP for this log's size. |

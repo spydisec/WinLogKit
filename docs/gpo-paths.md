@@ -129,6 +129,8 @@ Things to know before you start:
 | Microsoft-Windows-DriverFrameworks-UserMode/Operational | Log | No Group Policy template for this log's size or enablement. |
 | Microsoft-Windows-WMI-Activity/Operational | Log | No Group Policy template for this log's size. |
 | Microsoft-Windows-TerminalServices-LocalSessionManager/Operational | Log | No Group Policy template for this log's size. |
+| Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational | Log | No Group Policy template for this log's size or enablement. |
+| Microsoft-Windows-RemoteDesktopServices-RdpCoreTS/Operational | Log | No Group Policy template for this log's size or enablement. |
 | Microsoft-Windows-TaskScheduler/Operational | Log | No Group Policy template for this log's size or enablement. |
 | Microsoft-Windows-SMBServer/Audit | Log | No Group Policy template for this log's size. |
 | Microsoft-Windows-SmbClient/Audit | Log | No Group Policy template for this log's size. |
