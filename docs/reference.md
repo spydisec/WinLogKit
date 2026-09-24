@@ -54,6 +54,8 @@ Reading the columns:
 | Microsoft-Windows-DriverFrameworks-UserMode/Operational | Channel | - | 1 MB -> 128 MB | Low | Y | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-WMI-Activity/Operational | Channel | - | 1 MB -> 128 MB | Low | Y | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-TerminalServices-LocalSessionManager/Operational | Channel | - | 1 MB -> 128 MB | Low | Y | :material-check: | :material-check: | :material-check: |
+| Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational | Channel | 261, 1149 | 1 MB -> 128 MB | Low | - | :material-check: | :material-check: | :material-check: |
+| Microsoft-Windows-RemoteDesktopServices-RdpCoreTS/Operational | Channel | 131, 140 | 1 MB -> 128 MB | Low | - | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-TaskScheduler/Operational | Channel | - | 1 MB -> 128 MB | Low | Y | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-SMBServer/Audit | Channel | 3021, 3022 | 8 MB -> 128 MB | Low | - | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-SmbClient/Audit | Channel | 31998, 31999, 31997 | 8 MB -> 128 MB | Low | - | :material-check: | :material-check: | :material-check: |

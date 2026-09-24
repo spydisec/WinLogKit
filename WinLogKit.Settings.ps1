@@ -197,6 +197,17 @@ $script:BaselineChannels = @(
        Categories = @('Remote access')
        Purpose = 'RDP session connect/disconnect/reconnect (21/24/25) with source address - survives Security log clearing.' }
 
+    # Kit additions: the two RDP logs before the session starts. Both are on
+    # by default at 1 MB, so they wrap within hours on an exposed host.
+    # Event IDs as their providers define them.
+    @{ Name = 'Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational'; TargetBytes = $mb128; MustEnable = $true;  Tier = 'Core'; DefaultSize = '1 MB'; MayBeAbsent = $true
+       Categories = @('Remote access','Authentication')
+       Purpose = 'RDP connections reaching the listener (261) and successful network-level authentication with user and source address (1149), logged before any session or Security-log logon exists.' }
+
+    @{ Name = 'Microsoft-Windows-RemoteDesktopServices-RdpCoreTS/Operational';          TargetBytes = $mb128; MustEnable = $true;  Tier = 'Core'; DefaultSize = '1 MB'; MayBeAbsent = $true
+       Categories = @('Remote access','Authentication')
+       Purpose = 'RDP transport: new connections accepted with the client address (131) and connections failed on a bad user name or password (140), the RDP brute-force signal.' }
+
     @{ Name = 'Microsoft-Windows-TaskScheduler/Operational';                            TargetBytes = $mb128; MustEnable = $true;  Tier = 'Core'; DefaultSize = '1 MB'
        Categories = @('Scheduled and automated tasks','Persistence')
        Purpose = 'Task registration, updates and execution. DISABLED by default so must be enabled. Tasks are a top persistence mechanism.' }

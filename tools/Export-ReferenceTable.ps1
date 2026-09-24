@@ -72,7 +72,8 @@ function Get-PurposeEventText {
 }
 
 # Kit-added items that Yamato's own scripts do not contain: the SMB
-# auditing (all SmbAudit rows plus its four channels), the NTLM audit
+# auditing (all SmbAudit rows plus its four channels), the two pre-session
+# RDP logs, the NTLM audit
 # registry values, the PowerShell 7 policy fallbacks (#44) and the forced
 # subcategory audit setting (#71). They must not
 # carry the Y letter. Situational items (the old Optional tier: IPsec Driver,
@@ -80,7 +81,8 @@ function Get-PurposeEventText {
 # whatever their tier.
 $yExcludedIds = @('NtlmOutboundAudit', 'NtlmInboundAudit', 'NtlmDomainAudit',
     'PS7ScriptBlock64', 'PS7ScriptBlock32', 'PS7ModuleLogging64', 'PS7ModuleLogging32', 'ForceSubcategoryAudit')
-$yExcludedChannels = @('Microsoft-Windows-SMBServer/Audit', 'Microsoft-Windows-SmbClient/Audit', 'Microsoft-Windows-SMBServer/Security', 'Microsoft-Windows-SMBServer/Operational')
+$yExcludedChannels = @('Microsoft-Windows-SMBServer/Audit', 'Microsoft-Windows-SmbClient/Audit', 'Microsoft-Windows-SMBServer/Security', 'Microsoft-Windows-SMBServer/Operational',
+    'Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational', 'Microsoft-Windows-RemoteDesktopServices-RdpCoreTS/Operational')
 function Test-Situational {
     param([hashtable]$Item)
     return ($Item.ContainsKey('Situational') -and $Item.Situational)
