@@ -30,6 +30,10 @@ Things to know before you start:
   that ships with PowerShell 7 installs them on the local machine only.
 - **SMB auditing needs Windows 11 24H2 or Windows Server 2025**; older
   versions ignore those settings.
+- **Leave "Control Event Log behavior when the log file reaches its
+  maximum size" Disabled or Not configured** (Event Log Service > each
+  classic log). Enabled means "do not overwrite": logging stops when the
+  log fills. Test fails it, and Enable won't override Group Policy.
 - **Only the classic logs have a size template.** The other kit logs are
   in the second table: size them with a computer startup script, or run
   `Enable-LoggingBaseline.ps1` on the host.

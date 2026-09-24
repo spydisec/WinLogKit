@@ -423,6 +423,29 @@ Describe 'SMB audit items' {
         Get-SmbSettingName ([pscustomobject]@{ Id = 'X' }) | Should -Be 'X'
     }
 }
+# "Do not overwrite" forced by Group Policy: report, don't fight it.
+Describe 'Retention forced by policy' {
+    It 'reads the Event Log Service policy for the classic logs only' {
+        Mock Get-RegValue { 1 }
+        Test-RetentionForcedByPolicy 'Security' | Should -BeTrue
+        Test-RetentionForcedByPolicy 'Microsoft-Windows-PowerShell/Operational' | Should -BeFalse
+    }
+
+    It 'treats DWORD and string 1 alike, and absent or 0 as not forced' {
+        Mock Get-RegValue { '1' }
+        Test-RetentionForcedByPolicy 'System' | Should -BeTrue
+        Mock Get-RegValue { 0 }
+        Test-RetentionForcedByPolicy 'System' | Should -BeFalse
+        Mock Get-RegValue { $null }
+        Test-RetentionForcedByPolicy 'Application' | Should -BeFalse
+    }
+
+    It 'is checked by Enable before changing retention, and by Test' {
+        foreach ($rel in 'Enable-LoggingBaseline.ps1', 'Test-LoggingBaseline.ps1') {
+            Select-String -Path (Join-Path $KitRoot $rel) -Pattern 'Test-RetentionForcedByPolicy' -Quiet | Should -BeTrue -Because $rel
+        }
+    }
+}
 Describe 'Rollback baseline' {
     BeforeAll {
         $enableAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $KitRoot 'Enable-LoggingBaseline.ps1'), [ref]$null, [ref]$null)

@@ -150,7 +150,13 @@ foreach ($ch in $script:BaselineChannels) {
     $problems = @()
     if ($ch.MustEnable -and -not $log.IsEnabled)      { $problems += 'disabled' }
     if ($log.MaximumSizeInBytes -lt $ch.TargetBytes)  { $problems += "size $actualMB MB below target $targetMB MB" }
-    if ($log.LogMode -eq 'Retain')                    { $problems += 'retention set to "do not overwrite" - log will stop recording when full (Enable-LoggingBaseline.ps1 sets it to overwrite as needed)' }
+    if ($log.LogMode -eq 'Retain') {
+        if (Test-RetentionForcedByPolicy $ch.Name) {
+            $problems += "retention set to 'do not overwrite' by Group Policy - log will stop recording when full. Change it in the policy (Event Log Service > $($ch.Name) > Control Event Log behavior when the log file reaches its maximum size: Disabled or Not configured); Enable won't override Group Policy"
+        } else {
+            $problems += 'retention set to "do not overwrite" - log will stop recording when full (Enable-LoggingBaseline.ps1 sets it to overwrite as needed)'
+        }
+    }
 
     $actual = "enabled=$($log.IsEnabled), $actualMB MB, mode=$($log.LogMode)"
     if ($problems.Count -eq 0) {

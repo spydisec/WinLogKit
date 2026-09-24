@@ -38,7 +38,8 @@ left alone; log sizes are only ever raised.
   only; see [Disk space](safety.md#disk-space)).
 - A kit log set to "do not overwrite" (logging stops when it fills) is
   switched to overwrite as needed, with a warning; "archive when full" is
-  left alone.
+  left alone, and so is a classic log whose retention Group Policy forces
+  (Enable says which policy to change).
 - First real run captures the rollback baseline; `-Rollback` restores it,
   including a log's original "do not overwrite" setting.
 - Never reboots, never restarts services; the one setting needing a service
