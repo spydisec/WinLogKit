@@ -397,6 +397,15 @@ Describe 'Audit integrity' {
         Select-String -Path (Join-Path $KitRoot 'Test-LoggingBaseline.ps1') -Pattern "-Name 'CrashOnAuditFail'" -Quiet | Should -BeTrue
     }
 }
+# #74: Test tells you when the AppLocker logs can't record anything.
+Describe 'AppLocker readiness note' {
+    It 'checks for an effective AppLocker policy, read-only, and never fails on it' {
+        $src = Get-Content (Join-Path $KitRoot 'Test-LoggingBaseline.ps1') -Raw
+        $src | Should -Match 'Get-AppLockerPolicy -Effective'
+        $src | Should -Not -Match 'Set-AppLockerPolicy'
+        $src | Should -Match "Get-Command Get-AppLockerPolicy -ErrorAction SilentlyContinue"
+    }
+}
 Describe 'Rollback baseline' {
     BeforeAll {
         $enableAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $KitRoot 'Enable-LoggingBaseline.ps1'), [ref]$null, [ref]$null)

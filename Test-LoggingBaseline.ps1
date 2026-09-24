@@ -387,6 +387,27 @@ Write-Host ''
 Write-Host '=== Log storage (assessed channels at their maximum size) ===' -ForegroundColor White
 Write-LogStorageCheck (@(Get-LogStorageCheck -Logs $storageLogs))
 
+# Informational (#74): the AppLocker logs pass as enabled, but only record
+# anything while an AppLocker policy is in effect. The kit never creates one.
+$appLockerLogs = @($script:BaselineChannels | Where-Object { $_.Name -like 'Microsoft-Windows-AppLocker/*' -and $null -eq (Get-SkipReason $_.Tier 'Channel' $_.Name) })
+if ($appLockerLogs.Count -gt 0) {
+    Write-Host ''
+    Write-Host '=== AppLocker ===' -ForegroundColor White
+    if (-not (Get-Command Get-AppLockerPolicy -ErrorAction SilentlyContinue)) {
+        Write-Host '[NOTE] AppLocker isn''t available on this edition of Windows, so the AppLocker logs will stay empty.' -ForegroundColor Yellow
+    } else {
+        $ruleCount = $null
+        try { $ruleCount = @((Get-AppLockerPolicy -Effective -ErrorAction Stop).RuleCollections | ForEach-Object { $_ }).Count } catch { $ruleCount = $null }
+        if ($null -eq $ruleCount) {
+            Write-Host '[NOTE] Could not read the effective AppLocker policy; the AppLocker logs only record while one is in effect.' -ForegroundColor Yellow
+        } elseif ($ruleCount -eq 0) {
+            Write-Host '[NOTE] No AppLocker policy is in effect, so the AppLocker logs will stay empty. To get these events, deploy an AppLocker policy in audit-only mode (the kit doesn''t create one).' -ForegroundColor Yellow
+        } else {
+            Write-Host "[OK   ] $ruleCount AppLocker rule(s) in effect; the AppLocker logs will record their decisions." -ForegroundColor DarkGray
+        }
+    }
+}
+
 # ---------------------------------------------------------------- output ----
 
 if (-not (Test-Path $OutputDir)) { New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null }
