@@ -359,6 +359,28 @@ Describe 'WEF subscription' {
 # #44: the rollback baseline picks up settings a later kit version adds.
 # Enable needs admin, so its two state functions are lifted out by AST and
 # run against a first-run JSON that lacks the PowerShell 7 items.
+# #70: a failed wevtutil must be an Error, not a "Changed". Read-only calls
+# (gl) exercise the helper without touching any log.
+Describe 'Channel writes' {
+    BeforeAll {
+        $enableAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $KitRoot 'Enable-LoggingBaseline.ps1'), [ref]$null, [ref]$null)
+        $fn = $enableAst.Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Invoke-Wevtutil' }, $true)
+        . ([scriptblock]::Create($fn.Extent.Text))
+    }
+
+    It 'throws with the exit code when wevtutil fails' {
+        { Invoke-Wevtutil @('gl', 'WinLogKit-No-Such-Log') } | Should -Throw '*failed (exit*'
+    }
+
+    It 'passes when wevtutil succeeds' {
+        { Invoke-Wevtutil @('gl', 'Application') } | Should -Not -Throw
+    }
+
+    It 'routes every wevtutil call in Enable through the checked helper' {
+        $calls = @($enableAst.FindAll({ param($n) $n -is [System.Management.Automation.Language.CommandAst] -and $n.GetCommandName() -eq 'wevtutil' }, $true))
+        $calls.Count | Should -Be 1 -Because 'only Invoke-Wevtutil may call wevtutil directly'
+    }
+}
 Describe 'Rollback baseline' {
     BeforeAll {
         $enableAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $KitRoot 'Enable-LoggingBaseline.ps1'), [ref]$null, [ref]$null)

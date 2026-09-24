@@ -107,6 +107,21 @@ if ([string]::IsNullOrEmpty($LogDir))      { $LogDir      = Join-Path $PSScriptR
 # WinLogKit.Common.ps1. The registry writers live here because this is
 # the one script that writes; they use the .NET API for the reason noted
 # there (a required value is literally named '*').
+
+# wevtutil reports failure only through its exit code: check it, and throw
+# with its own message so the caller records an Error (#70). Stderr is
+# collected, not turned into a terminating error: Windows PowerShell 5.1
+# would do that under 'Stop', PowerShell 7 wouldn't.
+function Invoke-Wevtutil {
+    param([string[]]$Arguments)
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $output = & wevtutil @Arguments 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) { throw "wevtutil $($Arguments -join ' ') failed (exit $LASTEXITCODE): $($output.Trim())" }
+    } finally { $ErrorActionPreference = $prev }
+}
+
 function Set-RegValue {
     param([string]$Path, [string]$Name, $Value, [string]$Kind)
     $kindEnum = [Microsoft.Win32.RegistryValueKind]::$Kind
@@ -222,7 +237,7 @@ try {
                 if ($null -eq $log) { Add-Result 'Channel' $ch.Name 'NotApplicable' 'Channel no longer present'; continue }
                 if ($PSCmdlet.ShouldProcess($ch.Name, "Restore size=$($ch.MaximumSizeInBytes) enabled=$($ch.IsEnabled)")) {
                     $enabledText = 'false'; if ($ch.IsEnabled) { $enabledText = 'true' }
-                    wevtutil sl "$($ch.Name)" /ms:$($ch.MaximumSizeInBytes) /e:$enabledText 2>&1 | Out-Null
+                    Invoke-Wevtutil @('sl', $ch.Name, "/ms:$($ch.MaximumSizeInBytes)", "/e:$enabledText")
                     Add-Result 'Channel' $ch.Name 'Changed' "Restored to $([math]::Round($ch.MaximumSizeInBytes/1MB)) MB, enabled=$($ch.IsEnabled)"
                 }
             } catch { Add-Result 'Channel' $ch.Name 'Error' $_.Exception.Message; $exitCode = 1 }
@@ -445,8 +460,8 @@ try {
 
         if ($PSCmdlet.ShouldProcess($ch.Name, $descText)) {
             try {
-                if ($needSize)   { wevtutil sl "$($ch.Name)" /ms:$($ch.TargetBytes) 2>&1 | Out-Null }
-                if ($needEnable) { wevtutil sl "$($ch.Name)" /e:true 2>&1 | Out-Null }
+                if ($needSize)   { Invoke-Wevtutil @('sl', $ch.Name, "/ms:$($ch.TargetBytes)") }
+                if ($needEnable) { Invoke-Wevtutil @('sl', $ch.Name, '/e:true') }
                 Add-Result 'Channel' $ch.Name 'Changed' $descText
             } catch { Add-Result 'Channel' $ch.Name 'Error' $_.Exception.Message; $exitCode = 1 }
         } else {
