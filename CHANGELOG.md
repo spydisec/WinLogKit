@@ -8,6 +8,18 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-24
+
+Tighter checks on what the kit already claims, from a review of Yamato WELA's open issues: advanced audit policy can't be silently overridden, Test flags CrashOnAuditFail and empty AppLocker logs, SMB guest logons are audited, "do not overwrite" logs are repaired, and failed log changes are no longer reported as success.
+
+**Upgrading from 2.1.x**
+
+| If you used | Now |
+|---|---|
+| A role preset (`Workstation`, `MemberServer`, `DomainController`) or the tier switches | Rerun Enable: two new Core settings apply (force subcategory audit settings; SMB client guest-logon auditing on Windows 11 24H2 / Server 2025). |
+| Your own selection CSV | Rerun the builder (`New-LoggingBaseline.ps1`) to pick up the two new settings; unlisted items stay off. |
+| Test in a pipeline | Test can now also fail on `CrashOnAuditFail` being on. Enable also changes a kit log's "do not overwrite" retention to circular (with a warning; `-Rollback` restores it). |
+
 ### Added
 
 - 🛡️ **Advanced audit policy can't be silently overridden.** A new Core setting turns on "Audit: Force audit policy subcategory settings to override audit policy category settings" (`SCENoApplyLegacyAuditPolicy`). It's Windows' default, but a policy that turns it off lets legacy category-level audit policy override every subcategory the kit applies; now Enable sets it, Test verifies it, and the Settings catalog and Group Policy pages map it. The role presets include it; ASD stays faithful to its script. [#71](https://github.com/spydisec/WinLogKit/issues/71)
