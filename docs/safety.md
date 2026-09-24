@@ -11,7 +11,7 @@ kit never touches them, in any mode:
 
 | Never touched | Why |
 |---|---|
-| `CrashOnAuditFail` ("Audit: Shut down system immediately if unable to log security audits") | A full Security log **halts the machine** with `STOP C0000244`; until reset, only Administrators can log on - IIS fails, AD replication fails. ([Microsoft KB832981](https://learn.microsoft.com/troubleshoot/developer/webapps/iis/health-diagnostic-performance/users-cannot-access-web-sites-when-log-full)) |
+| `CrashOnAuditFail` ("Audit: Shut down system immediately if unable to log security audits") | A full Security log **halts the machine** with `STOP C0000244`; until reset, only Administrators can log on - IIS fails, AD replication fails. ([Microsoft KB832981](https://learn.microsoft.com/troubleshoot/developer/webapps/iis/health-diagnostic-performance/users-cannot-access-web-sites-when-log-full)) The test **fails** if another policy has turned it on. |
 | "Do not overwrite events" retention | Logging silently stops when the log fills; with CrashOnAuditFail it crashes the host. The test **fails** this mode wherever found. |
 | Global object access auditing | SACLs on every kernel/file/registry object - extreme volume, measurable performance degradation. |
 | Blanket File System / Registry SACLs | A careless wildcard SACL can bury a file server. Scoping SACLs is a design decision, never a default. |

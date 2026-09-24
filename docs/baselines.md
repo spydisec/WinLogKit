@@ -139,6 +139,7 @@ reason. Everything else is faithful.
 | PrintService/Operational | Batch sizes it but never enables it | Enabled | The log is disabled by default; sizing a disabled log records nothing. |
 | AD CS AuditFilter | WELA restarts CertSvc automatically | Sets value, warns, never restarts | Service restarts belong in a change window, not a script side effect. |
 | Other Policy Change Events | Guide text says leave off (5447 noise); both Yamato scripts enable it | Enabled (Core), noise note attached | Follows the scripts; drop it if 5447 floods after the pilot week. |
+| `SCENoApplyLegacyAuditPolicy` (Audit: Force audit policy subcategory settings) | Not set | Set to 1 (Core) | Windows' default, set explicitly so Test catches a policy that turns it off; otherwise a legacy category-level audit policy silently overrides every subcategory setting. |
 
 WELA's `configure` command is deliberately never called by the kit: it
 prompts interactively, restarts CertSvc itself, and sets the NTLM deny

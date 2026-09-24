@@ -181,11 +181,11 @@ values as files, for LGPO or as a reference. Intune instead? See
 
 Things to know before you start:
 
-- **Turn on "Audit: Force audit policy subcategory settings (Windows Vista
-  or later) to override audit policy category settings"** (Windows
-  Settings > Security Settings > Local Policies > Security Options) in the
-  same GPO, so basic audit policy can't override the advanced settings
-  below ([Microsoft's guidance](https://learn.microsoft.com/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing)).
+- **Include "Audit: Force audit policy subcategory settings (Windows
+  Vista or later) to override audit policy category settings"** (the
+  `ForceSubcategoryAudit` row) in the same GPO, so basic audit policy
+  can't override the advanced settings below
+  ([Microsoft's guidance](https://learn.microsoft.com/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing)).
 - **Rows marked (DC)** belong in a GPO linked to the Domain Controllers
   OU. They are busy there: read
   [the DC notes](safety.md#can-i-run-this-on-a-domain-controller) first.

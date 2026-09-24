@@ -46,7 +46,8 @@ left alone; log sizes are only ever raised.
 
 Read-only verification: channels (enabled, sized, circular retention),
 audit subcategories (superset-aware - more auditing than required passes),
-registry values, SMB audit settings. Per-behaviour-category PASS/FAIL/NOT
+registry values, SMB audit settings, and that `CrashOnAuditFail` is off
+(the kit never sets it; the test fails if something else has). Per-behaviour-category PASS/FAIL/NOT
 APPLICABLE, detail + summary CSVs, non-zero exit on any failure. Ends
 with the same [disk space](safety.md#disk-space) check as Enable, for
 information only.

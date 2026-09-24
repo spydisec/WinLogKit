@@ -227,6 +227,17 @@ foreach ($rs in $script:BaselineRegistrySettings) {
     }
 }
 
+# CrashOnAuditFail is on the never-do list: the kit never sets it, but
+# another policy might (#75). On, a full Security log halts the host.
+# Always assessed, whatever the selection; the kit never changes it.
+$crash = Get-RegValue -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name 'CrashOnAuditFail'
+$crashLabel = 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\CrashOnAuditFail'
+if ($null -eq $crash -or "$crash" -eq '0') {
+    Add-Row @('Logging tampered with') 'Safety' $crashLabel '0 or absent' $(if ($null -eq $crash) { '<absent>' } else { "$crash" }) 'PASS'
+} else {
+    Add-Row @('Logging tampered with') 'Safety' $crashLabel '0 or absent' "$crash" 'FAIL' 'CrashOnAuditFail is on: the host halts when the Security log fills. Set by another policy; the kit never changes it. See Safety (never-do list).'
+}
+
 # ------------------- SMB signing/encryption auditing (Server 2025+) ---------
 
 $smbState = Get-SmbAuditState

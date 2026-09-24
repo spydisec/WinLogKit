@@ -105,6 +105,7 @@ Reading the columns:
 | `CurrentControlSet\Control\Lsa\MSV1_0\RestrictSendingNTLMTraffic` | Registry | - | - | Low | - | :material-check: | :material-check: | :material-check: |
 | `CurrentControlSet\Control\Lsa\MSV1_0\AuditReceivingNTLMTraffic` | Registry | - | - | Low | - | :material-check: | :material-check: | :material-check: |
 | `CurrentControlSet\Services\Netlogon\Parameters\AuditNTLMInDomain (DC)` | Registry | - | - | Low | - | - | - | :material-check: |
+| `CurrentControlSet\Control\Lsa\SCENoApplyLegacyAuditPolicy` | Registry | - | - | Low | - | :material-check: | :material-check: | :material-check: |
 | AD CS AuditFilter (needs CertSvc restart) | Registry | 4886-4899 | - | Low | Y | :material-check: | :material-check: | :material-check: |
 | Server: AuditClientDoesNotSupportEncryption | SMB audit (2025+) | 3021 | - | Low | - | :material-check: | :material-check: | :material-check: |
 | Server: AuditClientDoesNotSupportSigning | SMB audit (2025+) | 3022 | - | Low | - | :material-check: | :material-check: | :material-check: |
