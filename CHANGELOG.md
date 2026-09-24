@@ -8,6 +8,10 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 ## [Unreleased]
 
+### Changed
+
+- 🧭 **One checklist for fitting the kit to your environment.** The Safety page opens with what to settle before rolling out (your selection, a pilot, SIEM cost, sensitive logs, Group Policy precedence, change process, rollback, your own obligations), linked from the README and Getting started.
+
 ## [2.2.1] - 2026-09-24
 
 More of the logs that matter for lateral movement, and one fix, from a cross-check against other published Windows auditing baselines: SMB server guest logons and security events, the two RDP logs written before a session starts, and Group Policy-forced "do not overwrite" retention reported instead of fought.

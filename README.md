@@ -98,7 +98,13 @@ The kit never touches the settings that can hang or lock out a host
 (`CrashOnAuditFail`, "do not overwrite" retention, global object access
 auditing, blanket SACLs) and never reboots, restarts services or shrinks
 logs. Heavy settings carry a risk note the builder shows before you select
-them. Use at your own risk.
+them.
+
+It's a starting point: fit it to your own infrastructure (selection, pilot,
+SIEM cost, Group Policy, change process) before rolling out, using the
+checklist in
+[Safety & FAQ](https://spydisec.github.io/WinLogKit/safety/#fit-it-to-your-environment-first).
+Provided as is, without warranty; use at your own risk.
 
 ## Contributing
 
