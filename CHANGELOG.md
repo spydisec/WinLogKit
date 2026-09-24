@@ -16,6 +16,7 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 ### Fixed
 
+- ♻️ **Enable repairs "do not overwrite" retention.** Test failed a kit log set to "do not overwrite events" (logging stops when it fills), but nothing fixed it. Enable now switches such a log to overwrite as needed, with a warning in case it was kept that way on purpose, and records the original mode so `-Rollback` restores it; rollback copies from earlier versions gain the mode on the next run. "Archive when full" is left alone. [#73](https://github.com/spydisec/WinLogKit/issues/73)
 - 🔢 **SMB audit event numbers corrected.** The settings table had signing and encryption swapped: per the SMB providers' own event definitions, 3021 / 31998 are signing and 3022 / 31999 encryption. The Reference page and the Safety FAQ now match, and the SMB settings are described as Windows 11 24H2 / Server 2025 and later rather than Server 2025 only. [#72](https://github.com/spydisec/WinLogKit/issues/72)
 - 🧯 **Failed log changes are reported as failures.** Enable sent `wevtutil` output to nowhere and never checked its exit code, so a log resize or enable that failed was reported as Changed (and `-Rollback` had the same gap). It now reports an Error with `wevtutil`'s own message and exits non-zero. [#70](https://github.com/spydisec/WinLogKit/issues/70)
 
@@ -46,6 +47,7 @@ Simpler fleet delivery, documented setting by setting: Intune through the Settin
 
 ### Fixed
 
+- ♻️ **Enable repairs "do not overwrite" retention.** Test failed a kit log set to "do not overwrite events" (logging stops when it fills), but nothing fixed it. Enable now switches such a log to overwrite as needed, with a warning in case it was kept that way on purpose, and records the original mode so `-Rollback` restores it; rollback copies from earlier versions gain the mode on the next run. "Archive when full" is left alone. [#73](https://github.com/spydisec/WinLogKit/issues/73)
 - 🌍 **Verification works in any Windows language.** Test and Enable read audit policy from `auditpol /backup`'s numeric setting values instead of the `auditpol /get` text, which is translated on non-English Windows (only English said "Success and Failure"), so a correctly configured non-English host no longer fails its audit checks or gets re-applied on every run. [#45](https://github.com/spydisec/WinLogKit/issues/45)
 - ↩️ **Rollback covers settings added by later versions.** The rollback copy is taken on the first run, so a setting added by a later kit version, like the PowerShell 7 ones, was left behind by `-Rollback`. Every later run now records any setting the copy doesn't know yet, in its current state, before changing anything. [#44](https://github.com/spydisec/WinLogKit/issues/44)
 
@@ -98,6 +100,7 @@ A scope reset ([ADR-002](docs/adr/0002-scope-and-simplification.md)): WinLogKit 
 
 ### Fixed
 
+- ♻️ **Enable repairs "do not overwrite" retention.** Test failed a kit log set to "do not overwrite events" (logging stops when it fills), but nothing fixed it. Enable now switches such a log to overwrite as needed, with a warning in case it was kept that way on purpose, and records the original mode so `-Rollback` restores it; rollback copies from earlier versions gain the mode on the next run. "Archive when full" is left alone. [#73](https://github.com/spydisec/WinLogKit/issues/73)
 - 🏷️ **Reference labels for the former Optional items.** Moving IPsec Driver and the DPAPI debug channel to HighVolume had relabelled them as high volume and as part of Yamato's set; they are back to their 1.0.0 labels. [#54](https://github.com/spydisec/WinLogKit/pull/54)
 - 🧪 **Self-checks run from the release zip.** The zip ships `tests\` but not `docs\`, so the Reference page drift check failed there; it now skips with a message when `docs\` is absent. [#54](https://github.com/spydisec/WinLogKit/pull/54)
 - 🔐 **Security policy scope.** SECURITY.md no longer lists a download path that doesn't exist, and says plainly that the scripts make no outbound requests while the WEF subscription you deploy forwards events by design. [#54](https://github.com/spydisec/WinLogKit/pull/54)
@@ -172,6 +175,7 @@ The 1.0 restructure ([ADR-001](docs/adr/0001-v1-layout.md)): a docs cut, one cop
 
 ### Fixed
 
+- ♻️ **Enable repairs "do not overwrite" retention.** Test failed a kit log set to "do not overwrite events" (logging stops when it fills), but nothing fixed it. Enable now switches such a log to overwrite as needed, with a warning in case it was kept that way on purpose, and records the original mode so `-Rollback` restores it; rollback copies from earlier versions gain the mode on the next run. "Archive when full" is left alone. [#73](https://github.com/spydisec/WinLogKit/issues/73)
 - 🛡️ **Registry writes can't wipe sibling values.** After reviewing an upstream WELA bug where `New-Item -Force` wiped existing registry values, every kit registry write goes through `Registry::SetValue`, and a CI check keeps it that way. The WELA download was also made forward-compatible. [#19](https://github.com/spydisec/WinLogKit/pull/19)
 
 ## [0.7.0] - 2026-08-31
@@ -191,6 +195,7 @@ The 1.0 restructure ([ADR-001](docs/adr/0001-v1-layout.md)): a docs cut, one cop
 
 ### Fixed
 
+- ♻️ **Enable repairs "do not overwrite" retention.** Test failed a kit log set to "do not overwrite events" (logging stops when it fills), but nothing fixed it. Enable now switches such a log to overwrite as needed, with a warning in case it was kept that way on purpose, and records the original mode so `-Rollback` restores it; rollback copies from earlier versions gain the mode on the next run. "Archive when full" is left alone. [#73](https://github.com/spydisec/WinLogKit/issues/73)
 - 📦 **Release zip contents.** The zip left out `data\`, `presets\`, `tools\` and `tests\`, so coverage and presets failed from a zip install; it now carries them. [#12](https://github.com/spydisec/WinLogKit/pull/12)
 
 ## [0.5.0] - 2026-08-31
@@ -221,6 +226,7 @@ The 1.0 restructure ([ADR-001](docs/adr/0001-v1-layout.md)): a docs cut, one cop
 
 ### Fixed
 
+- ♻️ **Enable repairs "do not overwrite" retention.** Test failed a kit log set to "do not overwrite events" (logging stops when it fills), but nothing fixed it. Enable now switches such a log to overwrite as needed, with a warning in case it was kept that way on purpose, and records the original mode so `-Rollback` restores it; rollback copies from earlier versions gain the mode on the next run. "Archive when full" is left alone. [#73](https://github.com/spydisec/WinLogKit/issues/73)
 - 🔧 **Field-test fixes.** WELA staging, DevSkim TLS alerts, and a baseline tree view in the builder. [#4](https://github.com/spydisec/WinLogKit/pull/4)
 
 ## [0.2.0] - 2026-08-31

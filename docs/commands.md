@@ -36,7 +36,11 @@ left alone; log sizes are only ever raised.
 - Checks disk space first: whether the selected logs, once full at their
   new maximum sizes, still leave enough free space on their drive (warns
   only; see [Disk space](safety.md#disk-space)).
-- First real run captures the rollback baseline; `-Rollback` restores it.
+- A kit log set to "do not overwrite" (logging stops when it fills) is
+  switched to overwrite as needed, with a warning; "archive when full" is
+  left alone.
+- First real run captures the rollback baseline; `-Rollback` restores it,
+  including a log's original "do not overwrite" setting.
 - Never reboots, never restarts services; the one setting needing a service
   restart (AD CS AuditFilter) is set with a warning and left to your change
   window.

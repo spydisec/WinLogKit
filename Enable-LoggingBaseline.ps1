@@ -235,10 +235,16 @@ try {
             try {
                 $log = Get-WinEvent -ListLog $ch.Name -ErrorAction SilentlyContinue
                 if ($null -eq $log) { Add-Result 'Channel' $ch.Name 'NotApplicable' 'Channel no longer present'; continue }
-                if ($PSCmdlet.ShouldProcess($ch.Name, "Restore size=$($ch.MaximumSizeInBytes) enabled=$($ch.IsEnabled)")) {
+                # The kit only ever changes retention from Retain to circular (#73),
+                # so Retain is the one mode to put back; older baselines have no
+                # LogMode and leave retention alone.
+                $restoreRetain = ($ch.PSObject.Properties.Name -contains 'LogMode' -and $ch.LogMode -eq 'Retain')
+                if ($PSCmdlet.ShouldProcess($ch.Name, "Restore size=$($ch.MaximumSizeInBytes) enabled=$($ch.IsEnabled)$(if ($restoreRetain) { ' retention=Retain' })")) {
                     $enabledText = 'false'; if ($ch.IsEnabled) { $enabledText = 'true' }
-                    Invoke-Wevtutil @('sl', $ch.Name, "/ms:$($ch.MaximumSizeInBytes)", "/e:$enabledText")
-                    Add-Result 'Channel' $ch.Name 'Changed' "Restored to $([math]::Round($ch.MaximumSizeInBytes/1MB)) MB, enabled=$($ch.IsEnabled)"
+                    $wevArgs = @('sl', $ch.Name, "/ms:$($ch.MaximumSizeInBytes)", "/e:$enabledText")
+                    if ($restoreRetain) { $wevArgs += '/rt:true' }
+                    Invoke-Wevtutil $wevArgs
+                    Add-Result 'Channel' $ch.Name 'Changed' "Restored to $([math]::Round($ch.MaximumSizeInBytes/1MB)) MB, enabled=$($ch.IsEnabled)$(if ($restoreRetain) { ', retention=Retain' })"
                 }
             } catch { Add-Result 'Channel' $ch.Name 'Error' $_.Exception.Message; $exitCode = 1 }
         }
@@ -290,7 +296,7 @@ try {
         foreach ($ch in $script:BaselineChannels) {
             $log = Get-WinEvent -ListLog $ch.Name -ErrorAction SilentlyContinue
             if ($null -ne $log) {
-                $chState += @{ Name = $ch.Name; MaximumSizeInBytes = $log.MaximumSizeInBytes; IsEnabled = $log.IsEnabled }
+                $chState += @{ Name = $ch.Name; MaximumSizeInBytes = $log.MaximumSizeInBytes; IsEnabled = $log.IsEnabled; LogMode = "$($log.LogMode)" }
             }
         }
 
@@ -358,9 +364,20 @@ try {
         $newCh  = @($now.Channels | Where-Object { -not $known.ContainsKey(("C|$($_.Name)").ToUpper()) } | ForEach-Object { $_.AddedUtc = $addedUtc; $_ })
         $newSmb = @($now.SmbAudit | Where-Object { -not $known.ContainsKey(("S|$($_.Id)").ToUpper()) } | ForEach-Object { $_.AddedUtc = $addedUtc; $_ })
         $count = $newReg.Count + $newCh.Count + $newSmb.Count
-        if ($count -eq 0) { return 0 }
         $smbOld = @(); if ($first.PSObject.Properties.Name -contains 'SmbAudit') { $smbOld = @($first.SmbAudit | Where-Object { $null -ne $_ }) }
         $chOld  = @(); if ($first.PSObject.Properties.Name -contains 'Channels') { $chOld = @($first.Channels | Where-Object { $null -ne $_ }) }
+        # Baselines from before #73 have no retention mode. Earlier versions
+        # never changed it, so the current mode is the pre-kit mode: record it
+        # so -Rollback can restore a Retain log the kit makes circular.
+        $nowCh = @{}; foreach ($c in @($now.Channels)) { $nowCh[$c.Name.ToUpper()] = $c }
+        $backfilled = 0
+        foreach ($c in $chOld) {
+            if ($c.PSObject.Properties.Name -notcontains 'LogMode' -and $nowCh.ContainsKey($c.Name.ToUpper())) {
+                $c | Add-Member -NotePropertyName LogMode -NotePropertyValue $nowCh[$c.Name.ToUpper()].LogMode
+                $backfilled++
+            }
+        }
+        if ($count + $backfilled -eq 0) { return 0 }
         $json = @{
             CapturedUtc = $first.CapturedUtc
             Host        = $first.Host
@@ -447,8 +464,12 @@ try {
 
         $needSize   = ($log.MaximumSizeInBytes -lt $ch.TargetBytes)   # only ever raise, never shrink
         $needEnable = ($ch.MustEnable -and -not $log.IsEnabled)
+        # "Do not overwrite events" stops logging when the log fills, and Test
+        # fails it (#73). Only Retain is changed: AutoBackup keeps logging by
+        # archiving full logs, which is a deliberate choice.
+        $needCircular = ("$($log.LogMode)" -eq 'Retain')
 
-        if (-not $needSize -and -not $needEnable) {
+        if (-not $needSize -and -not $needEnable -and -not $needCircular) {
             Add-Result 'Channel' $ch.Name 'AlreadyCorrect' "$([math]::Round($log.MaximumSizeInBytes/1MB)) MB, enabled=$($log.IsEnabled)"
             continue
         }
@@ -456,12 +477,17 @@ try {
         $desc = @()
         if ($needSize)   { $desc += "size $([math]::Round($log.MaximumSizeInBytes/1MB)) MB -> $([math]::Round($ch.TargetBytes/1MB)) MB" }
         if ($needEnable) { $desc += 'enable (currently disabled)' }
+        if ($needCircular) { $desc += 'retention "do not overwrite" -> overwrite as needed' }
         $descText = $desc -join ', '
 
         if ($PSCmdlet.ShouldProcess($ch.Name, $descText)) {
             try {
                 if ($needSize)   { Invoke-Wevtutil @('sl', $ch.Name, "/ms:$($ch.TargetBytes)") }
                 if ($needEnable) { Invoke-Wevtutil @('sl', $ch.Name, '/e:true') }
+                if ($needCircular) {
+                    Invoke-Wevtutil @('sl', $ch.Name, '/rt:false')
+                    Write-Host "           $($ch.Name) was set to 'do not overwrite' (logging stops when full). Now overwrites the oldest events; -Rollback restores it. If it was kept that way on purpose for archiving, set it back and exclude this log." -ForegroundColor Yellow
+                }
                 Add-Result 'Channel' $ch.Name 'Changed' $descText
             } catch { Add-Result 'Channel' $ch.Name 'Error' $_.Exception.Message; $exitCode = 1 }
         } else {
