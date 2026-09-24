@@ -381,6 +381,22 @@ Describe 'Channel writes' {
         $calls.Count | Should -Be 1 -Because 'only Invoke-Wevtutil may call wevtutil directly'
     }
 }
+# #71 / #75: the kit sets "force subcategory settings" and checks that
+# CrashOnAuditFail is off, but never sets CrashOnAuditFail itself.
+Describe 'Audit integrity' {
+    It 'sets SCENoApplyLegacyAuditPolicy = 1 in Core on every host' {
+        $item = @($BaselineRegistrySettings | Where-Object { $_.Name -eq 'SCENoApplyLegacyAuditPolicy' })
+        $item.Count | Should -Be 1
+        $item[0].Value | Should -Be 1
+        $item[0].Tier | Should -Be 'Core'
+        $item[0].Scope | Should -Be 'All'
+    }
+
+    It 'never sets CrashOnAuditFail, and Test checks it' {
+        @($BaselineRegistrySettings | Where-Object { $_.Name -eq 'CrashOnAuditFail' }) | Should -BeNullOrEmpty
+        Select-String -Path (Join-Path $KitRoot 'Test-LoggingBaseline.ps1') -Pattern "-Name 'CrashOnAuditFail'" -Quiet | Should -BeTrue
+    }
+}
 Describe 'Rollback baseline' {
     BeforeAll {
         $enableAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $KitRoot 'Enable-LoggingBaseline.ps1'), [ref]$null, [ref]$null)

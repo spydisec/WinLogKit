@@ -487,6 +487,15 @@ $script:BaselineRegistrySettings = @(
        Path = 'HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters'; Name = 'AuditNTLMInDomain'; Kind = 'DWord'; Value = 7
        Scope = 'DomainController'; Tier = 'Core'; Categories = @('Authentication')
        Purpose = 'Audit all NTLM authentication passing through this domain controller (7 = all). Audit-only.' }
+
+    # Kit addition (#71): not in the Yamato sources. Windows' default is
+    # already on; setting it explicitly means Test catches a policy that
+    # turns it off, which would let legacy category-level audit policy
+    # override every subcategory setting above.
+    @{ Id = 'ForceSubcategoryAudit'
+       Path = 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa'; Name = 'SCENoApplyLegacyAuditPolicy'; Kind = 'DWord'; Value = 1
+       Scope = 'All'; Tier = 'Core'; Categories = @('Logging tampered with')
+       Purpose = '"Audit: Force audit policy subcategory settings to override audit policy category settings". Stops a category-level (legacy) audit policy, from Group Policy or Local Security Policy, overriding the advanced subcategory settings this kit applies. On by default in Windows; set explicitly so a policy that turns it off is caught.' }
 )
 
 # -----------------------------------------------------------------------------

@@ -73,12 +73,13 @@ function Get-PurposeEventText {
 
 # Kit-added items that Yamato's own scripts do not contain: the Server 2025
 # SMB auditing (all SmbAudit rows plus its two channels), the NTLM audit
-# registry values and the PowerShell 7 policy fallbacks (#44). They must not
+# registry values, the PowerShell 7 policy fallbacks (#44) and the forced
+# subcategory audit setting (#71). They must not
 # carry the Y letter. Situational items (the old Optional tier: IPsec Driver,
 # the DPAPI debug channel) are opt-in extras outside Yamato's set too,
 # whatever their tier.
 $yExcludedIds = @('NtlmOutboundAudit', 'NtlmInboundAudit', 'NtlmDomainAudit',
-    'PS7ScriptBlock64', 'PS7ScriptBlock32', 'PS7ModuleLogging64', 'PS7ModuleLogging32')
+    'PS7ScriptBlock64', 'PS7ScriptBlock32', 'PS7ModuleLogging64', 'PS7ModuleLogging32', 'ForceSubcategoryAudit')
 $yExcludedChannels = @('Microsoft-Windows-SMBServer/Audit', 'Microsoft-Windows-SmbClient/Audit')
 function Test-Situational {
     param([hashtable]$Item)

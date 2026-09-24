@@ -13,11 +13,11 @@ values as files, for LGPO or as a reference. Intune instead? See
 
 Things to know before you start:
 
-- **Turn on "Audit: Force audit policy subcategory settings (Windows Vista
-  or later) to override audit policy category settings"** (Windows
-  Settings > Security Settings > Local Policies > Security Options) in the
-  same GPO, so basic audit policy can't override the advanced settings
-  below ([Microsoft's guidance](https://learn.microsoft.com/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing)).
+- **Include "Audit: Force audit policy subcategory settings (Windows
+  Vista or later) to override audit policy category settings"** (the
+  `ForceSubcategoryAudit` row) in the same GPO, so basic audit policy
+  can't override the advanced settings below
+  ([Microsoft's guidance](https://learn.microsoft.com/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing)).
 - **Rows marked (DC)** belong in a GPO linked to the Domain Controllers
   OU. They are busy there: read
   [the DC notes](safety.md#can-i-run-this-on-a-domain-controller) first.
@@ -84,6 +84,7 @@ Things to know before you start:
 | NtlmOutboundAudit | Registry | Core | Windows Settings > Security Settings > Local Policies > Security Options > Network security: Restrict NTLM: Outgoing NTLM traffic to remote servers | Audit all |
 | NtlmInboundAudit | Registry | Core | Windows Settings > Security Settings > Local Policies > Security Options > Network security: Restrict NTLM: Audit Incoming NTLM Traffic | Enable auditing for all accounts |
 | NtlmDomainAudit (DC) | Registry | Core | Windows Settings > Security Settings > Local Policies > Security Options > Network security: Restrict NTLM: Audit NTLM authentication in this domain | Enable all |
+| ForceSubcategoryAudit | Registry | Core | Windows Settings > Security Settings > Local Policies > Security Options > Audit: Force audit policy subcategory settings (Windows Vista or later) to override audit policy category settings | Enabled |
 | AuditClientDoesNotSupportEncryption | SMB audit | Core | Administrative Templates > Network > Lanman Server > Audit client does not support encryption | Enabled |
 | AuditClientDoesNotSupportSigning | SMB audit | Core | Administrative Templates > Network > Lanman Server > Audit client does not support signing | Enabled |
 | AuditServerDoesNotSupportEncryption | SMB audit | Core | Administrative Templates > Network > Lanman Workstation > Audit server does not support encryption | Enabled |

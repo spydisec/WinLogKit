@@ -92,6 +92,8 @@
                                 Gp = 'Windows Settings > Security Settings > Local Policies > Security Options > Network security: Restrict NTLM: Outgoing NTLM traffic to remote servers'; GpValue = 'Audit all' }
         NtlmInboundAudit   = @{ Csp = 'LocalPoliciesSecurityOptions/NetworkSecurity_RestrictNTLM_AuditIncomingNTLMTraffic'; CspValue = '2 (enable auditing for all accounts)'; Doc = 'policy-csp-localpoliciessecurityoptions'
                                 Gp = 'Windows Settings > Security Settings > Local Policies > Security Options > Network security: Restrict NTLM: Audit Incoming NTLM Traffic'; GpValue = 'Enable auditing for all accounts' }
+        ForceSubcategoryAudit = @{ Csp = 'LocalPoliciesSecurityOptions/Audit_ForceAuditPolicySubcategorySettingsToOverrideAuditPolicyCategorySettings'; CspValue = '1 (Enabled; Windows 11 22H2 with KB5053657, 24H2 and later)'; Doc = 'policy-csp-localpoliciessecurityoptions'
+                                Gp = 'Windows Settings > Security Settings > Local Policies > Security Options > Audit: Force audit policy subcategory settings (Windows Vista or later) to override audit policy category settings'; GpValue = 'Enabled' }
         NtlmDomainAudit    = @{ NoCsp = 'No CSP. Domain controllers only; set it by GPO on the DCs.'
                                 Gp = 'Windows Settings > Security Settings > Local Policies > Security Options > Network security: Restrict NTLM: Audit NTLM authentication in this domain'; GpValue = 'Enable all' }
     }
