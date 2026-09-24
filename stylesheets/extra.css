@@ -1,0 +1,98 @@
+/* =========================================================================
+   WinLogKit docs - spydi theme (steel blue + signal teal)
+   Adapted from the WELA docs stylesheet (website/docs/stylesheets/extra.css
+   in https://github.com/Yamato-Security/WELA), used under the MIT License:
+
+   Copyright (c) 2025 YamatoSecurity
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+   ========================================================================= */
+
+/* ---- Custom primary / accent palette (theme.palette primary: custom) ---- */
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color:        #1b3a4b;
+  --md-primary-fg-color--light: #2c5a73;
+  --md-primary-fg-color--dark:  #102530;
+  --md-primary-bg-color:        #ffffff;
+  --md-primary-bg-color--light: #ffffffb3;
+}
+
+[data-md-color-accent="custom"] {
+  /* #0f766e keeps >= 4.5:1 contrast with white button text on hover/focus */
+  --md-accent-fg-color:             #0f766e;
+  --md-accent-fg-color--transparent:#0f766e1a;
+  --md-accent-bg-color:             #ffffff;
+  --md-accent-bg-color--light:      #ffffffb3;
+}
+
+/* Light scheme: calm blue links */
+[data-md-color-scheme="default"] {
+  --md-typeset-a-color: #16688f;
+}
+
+/* Dark scheme: lift header and links for contrast */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #132b38;
+  --md-typeset-a-color:  #5ec8e5;
+  --md-accent-fg-color:  #2dd4bf;
+}
+
+/* ---- Top tabs: main topics read as primary navigation ---- */
+.md-tabs__link {
+  font-weight: 600;
+  opacity: 0.92;
+}
+.md-tabs__link--active {
+  opacity: 1;
+}
+
+/* Subtle header gradient */
+.md-header {
+  background: linear-gradient(90deg, var(--md-primary-fg-color--dark), var(--md-primary-fg-color));
+}
+.md-tabs {
+  background: var(--md-primary-fg-color);
+}
+
+/* Wider content column for the dense baseline/coverage tables */
+.md-grid {
+  max-width: 68rem;
+}
+
+/* =========================================================================
+   Misc readability
+   ========================================================================= */
+/* Diagrams and screenshots sit calmly on both grounds */
+.md-typeset figure {
+  margin: 1.2rem auto;
+}
+.md-typeset figcaption {
+  color: var(--md-default-fg-color--light);
+  font-size: 0.8rem;
+}
+
+/* Wide tables use the full column instead of overflowing oddly */
+.md-typeset table:not([class]) {
+  display: table;
+  width: 100%;
+}
+
+.md-typeset code {
+  border-radius: 4px;
+}
