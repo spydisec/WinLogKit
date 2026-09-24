@@ -8,6 +8,18 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-09-24
+
+More of the logs that matter for lateral movement, and one fix, from a cross-check against other published Windows auditing baselines: SMB server guest logons and security events, the two RDP logs written before a session starts, and Group Policy-forced "do not overwrite" retention reported instead of fought.
+
+**Upgrading from 2.2.0**
+
+| If you used | Now |
+|---|---|
+| A role preset or the tier switches | Rerun Enable: four new Core logs (SMBServer/Security, SMBServer/Operational and the two RDP logs, each raised to 128 MB) and SMB server guest-logon auditing apply. The disk check shows the extra space. |
+| Your own selection CSV | Rerun the builder (`New-LoggingBaseline.ps1`) to pick up the new items; unlisted items stay off. |
+| A GPO that sets "Control Event Log behavior when the log file reaches its maximum size" | Enable no longer tries to change those logs' retention; change the policy to Disabled or Not configured (Test says which log). |
+
 ### Added
 
 - 🖧 **SMB server guest logons and security events are collected.** The server side of insecure guest-logon auditing is now on too (event 3023), with the two server logs it can land in: SMBServer/Security (Microsoft's docs; also session authentication failures 551, access denied 1006/1007/1009, weak session keys 1906) and SMBServer/Operational (where current Windows 11 builds write 3023). Both logs are raised from 8 MB to 128 MB. Mapped on the Settings catalog and Group Policy pages and carried in the GPO pack. Windows 11 24H2 / Server 2025 and later.
