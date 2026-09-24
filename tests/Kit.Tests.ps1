@@ -424,6 +424,24 @@ Describe 'Rollback baseline' {
         @($After.Registry).Count | Should -Be @($AllState.Registry).Count
     }
 
+    # #73: baselines from before retention repair have no LogMode.
+    It 'backfills retention mode into older baselines without counting it as new settings' {
+        $oldJson = Join-Path $Tmp 'first-run-old.json'
+        @{ CapturedUtc = '2026-01-01T00:00:00'; Host = 'check'
+           Channels = @($AllState.Channels | ForEach-Object { @{ Name = $_.Name; MaximumSizeInBytes = $_.MaximumSizeInBytes; IsEnabled = $_.IsEnabled } })
+           Registry = $AllState.Registry; SmbAudit = $AllState.SmbAudit } | ConvertTo-Json -Depth 5 | Set-Content -Path $oldJson -Encoding UTF8
+        Add-NewItemsToFirstRun -Path $oldJson | Should -Be 0
+        $filled = Get-Content $oldJson -Raw | ConvertFrom-Json
+        @($filled.Channels | Where-Object { $_.PSObject.Properties.Name -notcontains 'LogMode' }) | Should -BeNullOrEmpty
+        @($AllState.Channels).Count | Should -BeGreaterThan 0
+    }
+
+    It 'only ever makes retention circular, and restores Retain only on rollback' {
+        $src = Get-Content (Join-Path $KitRoot 'Enable-LoggingBaseline.ps1') -Raw
+        ([regex]::Matches($src, "'/rt:false'")).Count | Should -Be 1
+        ([regex]::Matches($src, "'/rt:true'")).Count | Should -Be 1
+        $src | Should -Match '\$restoreRetain\) \{ \$wevArgs \+= ''/rt:true'''
+    }
     It 'swaps the file in with a .bak kept and no .tmp left' {
         "$FirstJson.bak" | Should -Exist
         "$FirstJson.tmp" | Should -Not -Exist
