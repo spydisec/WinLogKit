@@ -4,6 +4,43 @@ The settings that can genuinely hurt a Windows machine, how the kit avoids
 every one of them, and which of the *safe* settings still cost real disk
 and money.
 
+## Fit it to your environment first
+
+WinLogKit is a sourced starting point, not a finished policy for your
+estate. Before rolling it out:
+
+- **Pick, then adjust, a selection.** Start from the role preset, copy it,
+  and turn settings on or off for your hosts
+  ([Baselines](baselines.md#role-presets)). Keep your copy in version
+  control.
+- **Pilot it.** Run `-WhatIf`, apply on a test host that mirrors
+  production, and watch it for at least a week: event volume, disk (the
+  [storage check](#disk-space)) and anything your monitoring or backup
+  agents do differently.
+- **Check the cost downstream.** Every event you turn on is ingested,
+  stored and licensed by your SIEM. Agree ingest and retention with whoever
+  runs and pays for it.
+- **Treat the logs as sensitive.** Command-line capture and PowerShell
+  logging can record credentials typed on a command line. Restrict who can
+  read these logs and where they're forwarded.
+- **Know what else sets policy.** On domain-joined hosts, Group Policy
+  replaces local settings at the next refresh: deliver fleet-wide through
+  [Group Policy or Intune](deployment.md), and check that nothing else
+  (other baselines, security tools) sets conflicting audit policy or log
+  retention.
+- **Follow your change process.** The kit never reboots or restarts
+  services, but it does change audit policy and log settings. Schedule it
+  like any other configuration change, especially on domain controllers
+  and certificate authorities.
+- **Verify, and keep the way back.** Run `Test-LoggingBaseline.ps1` after
+  every change. The first real run saves a rollback copy, and `-Rollback`
+  restores it.
+- **Check your obligations.** Retention periods, privacy and sector rules
+  differ by organisation and country; the kit doesn't decide them for you.
+
+WinLogKit is provided as is, without warranty, under the
+[MIT License](https://github.com/spydisec/WinLogKit/blob/main/LICENSE).
+
 ## What the kit will never do
 
 Windows auditing has settings that can hang, halt or lock out a server. The

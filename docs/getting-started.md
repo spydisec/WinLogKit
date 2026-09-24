@@ -90,8 +90,11 @@ pipeline or an Intune/RMM check as-is.
    decisions; [Coverage](mapping.md) shows what they add. To build a
    selection from scratch instead, run `.\New-LoggingBaseline.ps1`
    ([Baselines](baselines.md#building-your-own)).
-3. **Roll it out** with Intune or Group Policy ([Deploy](deployment.md)).
-4. **Collect it centrally**, if you use Windows Event Forwarding
+3. **Fit it to your environment**: SIEM cost, Group Policy, change process
+   and your own obligations
+   ([checklist](safety.md#fit-it-to-your-environment-first)).
+4. **Roll it out** with Intune or Group Policy ([Deploy](deployment.md)).
+5. **Collect it centrally**, if you use Windows Event Forwarding
    ([Collect](wec.md)).
 
 ## Where things land
