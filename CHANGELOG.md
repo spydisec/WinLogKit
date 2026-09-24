@@ -8,6 +8,10 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 ## [Unreleased]
 
+### Fixed
+
+- 🧯 **Failed log changes are reported as failures.** Enable sent `wevtutil` output to nowhere and never checked its exit code, so a log resize or enable that failed was reported as Changed (and `-Rollback` had the same gap). It now reports an Error with `wevtutil`'s own message and exits non-zero. [#70](https://github.com/spydisec/WinLogKit/issues/70)
+
 ## [2.1.0] - 2026-09-24
 
 Simpler fleet delivery, documented setting by setting: Intune through the Settings catalog, a Group Policy path for every setting, and SMB auditing in the GPO pack. Plus PowerShell 7 logging, a disk-space check before you apply, verification that works in any Windows language, and an ATT&CK mapping with no gaps left unexplained.
