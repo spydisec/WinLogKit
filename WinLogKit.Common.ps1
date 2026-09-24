@@ -124,7 +124,7 @@ function Format-AuditSetting {
 
 # ------------------------------------------------------------ SMB auditing ---
 
-# Current state of the Server 2025+ SMB signing/encryption audit settings.
+# Current state of the SMB audit settings (Windows 11 24H2 / Server 2025+).
 # Returns a hashtable Id -> current bool; items missing from the hashtable are
 # unsupported on this OS (the properties only exist on Server 2025 / Win11 24H2+).
 function Get-SmbAuditState {

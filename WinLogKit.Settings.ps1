@@ -203,11 +203,11 @@ $script:BaselineChannels = @(
 
     @{ Name = 'Microsoft-Windows-SMBServer/Audit';                                      TargetBytes = $mb128; MustEnable = $false; Tier = 'Core'; DefaultSize = '8 MB'; MayBeAbsent = $true
        Categories = @('Remote access','Network flow and sessions')
-       Purpose = 'SMB server audit events, including Windows Server 2025 signing/encryption capability auditing (3021/3022) - identifies clients that cannot do SMB signing or encryption before you enforce it.' }
+       Purpose = 'SMB server audit events, including signing/encryption capability auditing on Windows 11 24H2 / Server 2025 and later (3021/3022) - identifies clients that cannot do SMB signing or encryption before you enforce it.' }
 
     @{ Name = 'Microsoft-Windows-SmbClient/Audit';                                      TargetBytes = $mb128; MustEnable = $false; Tier = 'Core'; DefaultSize = '8 MB'; MayBeAbsent = $true
        Categories = @('Remote access','Network flow and sessions')
-       Purpose = 'SMB client audit events, including Windows Server 2025 signing/encryption capability auditing (31998/31999) and NTLM-blocking diagnostics.' }
+       Purpose = 'SMB client audit events, including signing/encryption capability auditing (31998/31999) and insecure guest logons (31997) on Windows 11 24H2 / Server 2025 and later, and NTLM-blocking diagnostics.' }
 
     @{ Name = 'Microsoft-Windows-Crypto-DPAPI/Debug';                                   TargetBytes = $mb128; MustEnable = $true;  Tier = 'HighVolume'; DefaultSize = '1 MB'; MayBeAbsent = $true; Situational = $true
        Categories = @('Certificates and keys')
@@ -499,11 +499,12 @@ $script:BaselineRegistrySettings = @(
 )
 
 # -----------------------------------------------------------------------------
-# 3b. SMB SIGNING/ENCRYPTION AUDITING (Windows Server 2025 / Win 11 24H2+)
+# 3b. SMB AUDITING (Windows 11 24H2 / Windows Server 2025 and later)
 #
-# New in Windows Server 2025: audit which peers cannot do SMB signing or
-# encryption, so enforcement can be planned on evidence instead of breaking
-# file shares. Configured via Set-SmbServerConfiguration /
+# Audit which peers cannot do SMB signing or encryption, so enforcement can
+# be planned on evidence instead of breaking file shares, and when the SMB
+# client logs on as Guest (insecure guest logons, #72). Event IDs as the
+# SMBServer / SMBClient providers define them. Configured via Set-SmbServerConfiguration /
 # Set-SmbClientConfiguration (documented by Microsoft in "What's new in
 # Windows Server 2025"), not registry or auditpol, so these have their own
 # item type. On older OSes the properties do not exist and the scripts report
@@ -513,19 +514,25 @@ $script:BaselineRegistrySettings = @(
 $script:BaselineSmbAuditSettings = @(
     @{ Id = 'AuditClientDoesNotSupportEncryption'; Side = 'Server'; Value = $true; Tier = 'Core'; Scope = 'All'
        Categories = @('Remote access','Network flow and sessions')
-       Purpose = 'SMB server logs clients that cannot do SMB encryption (event 3021 in SMBServer/Audit). Windows Server 2025+ only.' }
+       Purpose = 'SMB server logs clients that cannot do SMB encryption (event 3022 in SMBServer/Audit). Windows 11 24H2 / Server 2025 and later.' }
 
     @{ Id = 'AuditClientDoesNotSupportSigning'; Side = 'Server'; Value = $true; Tier = 'Core'; Scope = 'All'
        Categories = @('Remote access','Network flow and sessions')
-       Purpose = 'SMB server logs clients that cannot do SMB signing (event 3022 in SMBServer/Audit). Windows Server 2025+ only.' }
+       Purpose = 'SMB server logs clients that cannot do SMB signing (event 3021 in SMBServer/Audit). Windows 11 24H2 / Server 2025 and later.' }
 
     @{ Id = 'AuditServerDoesNotSupportEncryption'; Side = 'Client'; Value = $true; Tier = 'Core'; Scope = 'All'
        Categories = @('Remote access','Network flow and sessions')
-       Purpose = 'SMB client logs servers that cannot do SMB encryption (event 31998 in SmbClient/Audit). Windows Server 2025+ only.' }
+       Purpose = 'SMB client logs servers that cannot do SMB encryption (event 31999 in SmbClient/Audit). Windows 11 24H2 / Server 2025 and later.' }
 
     @{ Id = 'AuditServerDoesNotSupportSigning'; Side = 'Client'; Value = $true; Tier = 'Core'; Scope = 'All'
        Categories = @('Remote access','Network flow and sessions')
-       Purpose = 'SMB client logs servers that cannot do SMB signing (event 31999 in SmbClient/Audit). Windows Server 2025+ only.' }
+       Purpose = 'SMB client logs servers that cannot do SMB signing (event 31998 in SmbClient/Audit). Windows 11 24H2 / Server 2025 and later.' }
+
+    # Client side only: the server-side switch writes its event (3023) to
+    # SMBServer/Operational, a log the kit doesn't collect.
+    @{ Id = 'AuditInsecureGuestLogon'; Side = 'Client'; Value = $true; Tier = 'Core'; Scope = 'All'
+       Categories = @('Remote access','Authentication')
+       Purpose = 'SMB client logs when a share logs it on as the Guest account, an unauthenticated insecure guest logon (event 31997 in SmbClient/Audit). Windows 11 24H2 / Server 2025 and later.' }
 )
 
 # -----------------------------------------------------------------------------

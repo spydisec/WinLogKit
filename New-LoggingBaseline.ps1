@@ -158,14 +158,14 @@ foreach ($rs in $script:BaselineRegistrySettings) {
 }
 foreach ($sa in $script:BaselineSmbAuditSettings) {
     $items.Add([pscustomobject]@{
-        Section  = 'SMB audit settings (Windows Server 2025+)'
+        Section  = 'SMB audit settings (Windows 11 24H2 / Server 2025+)'
         ItemType = 'SmbAudit'
         Id       = $sa.Id
         Name     = "$($sa.Side): $($sa.Id) = $($sa.Value)"
         Tier     = $sa.Tier
         Scope    = $sa.Scope
         Purpose  = $sa.Purpose
-        Risk     = 'No effect on OSes before Windows Server 2025 / Windows 11 24H2 (reported NOT APPLICABLE there). Audit-only; nothing is blocked.'
+        Risk     = 'No effect before Windows 11 24H2 / Windows Server 2025 (reported NOT APPLICABLE there). Audit-only; nothing is blocked.'
         Categories = ($sa.Categories -join '; ')
     })
 }
@@ -258,7 +258,7 @@ if ($AcceptRecommended) {
     Write-Host 'Keys: [Enter]=default  [y]=include  [n]=exclude  [a]=defaults for rest of section  [t]=show tree  [q]=abort'
     Write-Host ''
 
-    foreach ($section in @('Event log channels', 'Advanced audit policy subcategories', 'Registry settings', 'SMB audit settings (Windows Server 2025+)')) {
+    foreach ($section in @('Event log channels', 'Advanced audit policy subcategories', 'Registry settings', 'SMB audit settings (Windows 11 24H2 / Server 2025+)')) {
         $sectionItems = @($items | Where-Object { $_.Section -eq $section })
         Write-Host "=== $section ($($sectionItems.Count) items) ===" -ForegroundColor White
         $acceptRest = $false

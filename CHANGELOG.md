@@ -12,9 +12,11 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 - 🛡️ **Advanced audit policy can't be silently overridden.** A new Core setting turns on "Audit: Force audit policy subcategory settings to override audit policy category settings" (`SCENoApplyLegacyAuditPolicy`). It's Windows' default, but a policy that turns it off lets legacy category-level audit policy override every subcategory the kit applies; now Enable sets it, Test verifies it, and the Settings catalog and Group Policy pages map it. The role presets include it; ASD stays faithful to its script. [#71](https://github.com/spydisec/WinLogKit/issues/71)
 - 🚨 **Test checks that CrashOnAuditFail is off.** It's on the never-do list and the kit never sets it, but another policy might; Test now fails if it's on, since a full Security log would then halt the host. [#75](https://github.com/spydisec/WinLogKit/issues/75)
+- 👤 **Insecure SMB guest logons are audited.** A new Core SMB setting makes the SMB client log when a share logs it on as the Guest account, an unauthenticated logon (event 31997 in SmbClient/Audit, Windows 11 24H2 / Server 2025 and later). Mapped on the Settings catalog and Group Policy pages and carried in the GPO pack. The server-side switch isn't included: it writes to SMBServer/Operational, a log the kit doesn't collect. [#72](https://github.com/spydisec/WinLogKit/issues/72)
 
 ### Fixed
 
+- 🔢 **SMB audit event numbers corrected.** The settings table had signing and encryption swapped: per the SMB providers' own event definitions, 3021 / 31998 are signing and 3022 / 31999 encryption. The Reference page and the Safety FAQ now match, and the SMB settings are described as Windows 11 24H2 / Server 2025 and later rather than Server 2025 only. [#72](https://github.com/spydisec/WinLogKit/issues/72)
 - 🧯 **Failed log changes are reported as failures.** Enable sent `wevtutil` output to nowhere and never checked its exit code, so a log resize or enable that failed was reported as Changed (and `-Rollback` had the same gap). It now reports an Error with `wevtutil`'s own message and exits non-zero. [#70](https://github.com/spydisec/WinLogKit/issues/70)
 
 ## [2.1.0] - 2026-09-24

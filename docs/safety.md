@@ -153,7 +153,9 @@ categories PASS) and rollback.
 ### What's special on Server 2025 and Windows 11 24H2?
 
 Both can audit which SMB peers cannot do signing or encryption (events
-3021/3022 server-side, 31998/31999 client-side; availability per
+3021 signing / 3022 encryption server-side, 31998 signing / 31999
+encryption client-side) and when the SMB client logs on as Guest (31997);
+availability per
 Microsoft's
 [SMB feature descriptions](https://learn.microsoft.com/windows-server/storage/file-server/smb-feature-descriptions)).
 The kit enables these audit-only settings and sizes both Audit channels;

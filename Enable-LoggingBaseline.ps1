@@ -550,9 +550,9 @@ try {
         }
     }
 
-    # --------------------- SMB signing/encryption auditing (Server 2025+) ---
+    # ------------------- SMB auditing (Windows 11 24H2 / Server 2025+) ---
     Write-Host ''
-    Write-Host '=== SMB signing/encryption auditing (Windows Server 2025+) ===' -ForegroundColor White
+    Write-Host '=== SMB auditing (Windows 11 24H2 / Server 2025+) ===' -ForegroundColor White
     $smbState = Get-SmbAuditState
     foreach ($sa in $script:BaselineSmbAuditSettings) {
         $decision = Get-ItemDecision $sa.Tier 'SmbAudit' $sa.Id

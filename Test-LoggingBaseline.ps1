@@ -238,7 +238,7 @@ if ($null -eq $crash -or "$crash" -eq '0') {
     Add-Row @('Logging tampered with') 'Safety' $crashLabel '0 or absent' "$crash" 'FAIL' 'CrashOnAuditFail is on: the host halts when the Security log fills. Set by another policy; the kit never changes it. See Safety (never-do list).'
 }
 
-# ------------------- SMB signing/encryption auditing (Server 2025+) ---------
+# ----------------------- SMB auditing (Windows 11 24H2 / Server 2025+) ------
 
 $smbState = Get-SmbAuditState
 foreach ($sa in $script:BaselineSmbAuditSettings) {

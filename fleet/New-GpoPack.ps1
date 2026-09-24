@@ -14,8 +14,8 @@
                     GUIDs; the name column is informational.
       registry.txt  LGPO.exe text format for the policy-key registry values
                     (PowerShell logging, process command line capture, and
-                    SMB signing/encryption auditing through its Lanman
-                    Server / Lanman Workstation policies).
+                    SMB auditing through its Lanman Server / Lanman
+                    Workstation policies).
 
     Applying:
       Local / image builds (LGPO.exe from Microsoft's Security Compliance
@@ -117,7 +117,7 @@ foreach ($rs in $script:BaselineRegistrySettings) {
     $regEntries.Add("Computer`r`n$keyPath`r`n$($rs.Name)`r`n$typeData")
     $regCount++
 }
-# SMB signing/encryption auditing has Group Policy (Network > Lanman Server
+# SMB auditing has Group Policy (Network > Lanman Server
 # / Lanman Workstation, Windows 11 24H2 and Server 2025 onwards; older
 # versions ignore the values). Same value names as the Set-Smb*Configuration
 # parameters.
