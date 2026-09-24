@@ -124,7 +124,7 @@ foreach ($rs in $script:BaselineRegistrySettings) {
 foreach ($sa in $script:BaselineSmbAuditSettings) {
     if (-not (Test-ItemSelected $sel 'SmbAudit' $sa.Id $sa.Tier)) { continue }
     $service = 'LanmanWorkstation'; if ($sa.Side -eq 'Server') { $service = 'LanmanServer' }
-    $regEntries.Add("Computer`r`nSOFTWARE\Policies\Microsoft\Windows\$service`r`n$($sa.Id)`r`nDWORD:$([int][bool]$sa.Value)")
+    $regEntries.Add("Computer`r`nSOFTWARE\Policies\Microsoft\Windows\$service`r`n$(Get-SmbSettingName $sa)`r`nDWORD:$([int][bool]$sa.Value)")
     $regCount++
 }
 [System.IO.File]::WriteAllText((Join-Path $outDirFull 'registry.txt'), (($regEntries -join "`r`n`r`n") + "`r`n"), $utf8NoBom)

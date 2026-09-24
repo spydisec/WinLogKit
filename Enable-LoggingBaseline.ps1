@@ -139,7 +139,7 @@ function Remove-RegValue {
 
 function Set-SmbAuditSetting {
     param([hashtable]$Item)
-    $setParams = @{ $Item.Id = $Item.Value; Force = $true }
+    $setParams = @{ (Get-SmbSettingName $Item) = $Item.Value; Force = $true }
     if ($Item.Side -eq 'Server') { Set-SmbServerConfiguration @setParams } else { Set-SmbClientConfiguration @setParams }
 }
 
@@ -255,7 +255,7 @@ try {
                 try {
                     if (-not $smbNow.ContainsKey($sb.Id)) { continue }
                     if ($PSCmdlet.ShouldProcess("SMB audit: $($sb.Id)", "Restore to $($sb.Value)")) {
-                        Set-SmbAuditSetting -Item @{ Id = $sb.Id; Side = $sb.Side; Value = [bool]$sb.Value }
+                        Set-SmbAuditSetting -Item @{ Id = $sb.Id; Setting = (Get-SmbSettingName $sb); Side = $sb.Side; Value = [bool]$sb.Value }
                         Add-Result 'SmbAudit' $sb.Id 'Changed' "Restored to $($sb.Value)"
                     }
                 } catch { Add-Result 'SmbAudit' $sb.Id 'Error' $_.Exception.Message; $exitCode = 1 }
@@ -318,7 +318,7 @@ try {
         $smbNow = Get-SmbAuditState
         foreach ($sa in $script:BaselineSmbAuditSettings) {
             if ($smbNow.ContainsKey($sa.Id)) {
-                $smbState += @{ Id = $sa.Id; Side = $sa.Side; Value = $smbNow[$sa.Id] }
+                $smbState += @{ Id = $sa.Id; Setting = (Get-SmbSettingName $sa); Side = $sa.Side; Value = $smbNow[$sa.Id] }
             }
         }
 

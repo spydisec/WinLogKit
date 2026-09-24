@@ -161,7 +161,7 @@ foreach ($sa in $script:BaselineSmbAuditSettings) {
         Section  = 'SMB audit settings (Windows 11 24H2 / Server 2025+)'
         ItemType = 'SmbAudit'
         Id       = $sa.Id
-        Name     = "$($sa.Side): $($sa.Id) = $($sa.Value)"
+        Name     = "$($sa.Side): $(Get-SmbSettingName $sa) = $($sa.Value)"
         Tier     = $sa.Tier
         Scope    = $sa.Scope
         Purpose  = $sa.Purpose

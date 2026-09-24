@@ -127,6 +127,17 @@ function Format-AuditSetting {
 # Current state of the SMB audit settings (Windows 11 24H2 / Server 2025+).
 # Returns a hashtable Id -> current bool; items missing from the hashtable are
 # unsupported on this OS (the properties only exist on Server 2025 / Win11 24H2+).
+# The Set-/Get-Smb*Configuration property an SMB audit item maps to: its
+# Setting when it has one (the same setting exists on client and server,
+# and Ids must be unique), otherwise its Id. Works for settings-table
+# hashtables and for items read back from a rollback baseline.
+function Get-SmbSettingName {
+    param($Item)
+    if ($Item -is [hashtable]) { if ($Item.ContainsKey('Setting') -and $Item.Setting) { return $Item.Setting } }
+    elseif ($Item.PSObject.Properties.Name -contains 'Setting' -and $Item.Setting) { return $Item.Setting }
+    return $Item.Id
+}
+
 function Get-SmbAuditState {
     $state = @{}
     $srv = $null; $cli = $null
@@ -135,8 +146,9 @@ function Get-SmbAuditState {
     foreach ($item in $script:BaselineSmbAuditSettings) {
         $cfg = $srv
         if ($item.Side -eq 'Client') { $cfg = $cli }
-        if ($null -ne $cfg -and ($cfg.PSObject.Properties.Name -contains $item.Id)) {
-            $state[$item.Id] = [bool]$cfg.($item.Id)
+        $name = Get-SmbSettingName $item
+        if ($null -ne $cfg -and ($cfg.PSObject.Properties.Name -contains $name)) {
+            $state[$item.Id] = [bool]$cfg.($name)
         }
     }
     return $state

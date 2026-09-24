@@ -57,6 +57,8 @@ Reading the columns:
 | Microsoft-Windows-TaskScheduler/Operational | Channel | - | 1 MB -> 128 MB | Low | Y | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-SMBServer/Audit | Channel | 3021, 3022 | 8 MB -> 128 MB | Low | - | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-SmbClient/Audit | Channel | 31998, 31999, 31997 | 8 MB -> 128 MB | Low | - | :material-check: | :material-check: | :material-check: |
+| Microsoft-Windows-SMBServer/Security | Channel | 551, 1006, 1007, 1009, 1906, 3023 | 8 MB -> 128 MB | Low | - | :material-check: | :material-check: | :material-check: |
+| Microsoft-Windows-SMBServer/Operational | Channel | 3023 | 8 MB -> 128 MB | Low | - | :material-check: | :material-check: | :material-check: |
 | Microsoft-Windows-Crypto-DPAPI/Debug | Channel | - | 1 MB -> 128 MB | Watch | - | - | - | - |
 | Credential Validation | Audit subcategory | 4776 | - | Low | C S Y | :material-check: | :material-check: | :material-check: |
 | Kerberos Authentication Service (DC) | Audit subcategory | 4768, 4771 | - | Low | Y | - | - | :material-check: |
@@ -112,3 +114,4 @@ Reading the columns:
 | Client: AuditServerDoesNotSupportEncryption | SMB audit (24H2+) | 31999 | - | Low | - | :material-check: | :material-check: | :material-check: |
 | Client: AuditServerDoesNotSupportSigning | SMB audit (24H2+) | 31998 | - | Low | - | :material-check: | :material-check: | :material-check: |
 | Client: AuditInsecureGuestLogon | SMB audit (24H2+) | 31997 | - | Low | - | :material-check: | :material-check: | :material-check: |
+| Server: AuditInsecureGuestLogon | SMB audit (24H2+) | 3023 | - | Low | - | :material-check: | :material-check: | :material-check: |

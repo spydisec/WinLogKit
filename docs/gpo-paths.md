@@ -90,6 +90,7 @@ Things to know before you start:
 | AuditServerDoesNotSupportEncryption | SMB audit | Core | Administrative Templates > Network > Lanman Workstation > Audit server does not support encryption | Enabled |
 | AuditServerDoesNotSupportSigning | SMB audit | Core | Administrative Templates > Network > Lanman Workstation > Audit server does not support signing | Enabled |
 | AuditInsecureGuestLogon | SMB audit | Core | Administrative Templates > Network > Lanman Workstation > Audit insecure guest logon | Enabled |
+| ServerAuditInsecureGuestLogon | SMB audit | Core | Administrative Templates > Network > Lanman Server > Audit insecure guest logon | Enabled |
 | Security | Log size | Core | Administrative Templates > Windows Components > Event Log Service > Security > Specify the maximum log file size (KB) | Enabled, 1048576 KB |
 | System | Log size | Core | Administrative Templates > Windows Components > Event Log Service > System > Specify the maximum log file size (KB) | Enabled, 131072 KB |
 | Application | Log size | Core | Administrative Templates > Windows Components > Event Log Service > Application > Specify the maximum log file size (KB) | Enabled, 131072 KB |
@@ -127,5 +128,7 @@ Things to know before you start:
 | Microsoft-Windows-TaskScheduler/Operational | Log | No Group Policy template for this log's size or enablement. |
 | Microsoft-Windows-SMBServer/Audit | Log | No Group Policy template for this log's size. |
 | Microsoft-Windows-SmbClient/Audit | Log | No Group Policy template for this log's size. |
+| Microsoft-Windows-SMBServer/Security | Log | No Group Policy template for this log's size or enablement. |
+| Microsoft-Windows-SMBServer/Operational | Log | No Group Policy template for this log's size or enablement. |
 | Microsoft-Windows-Crypto-DPAPI/Debug | Log | No Group Policy template for this log's size or enablement. |
 | AdcsAuditFilter | Registry | No Group Policy template, and it needs a CertSvc restart: set it on the CA in a change window (`Enable-LoggingBaseline.ps1` there). |

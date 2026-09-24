@@ -154,7 +154,8 @@ categories PASS) and rollback.
 
 Both can audit which SMB peers cannot do signing or encryption (events
 3021 signing / 3022 encryption server-side, 31998 signing / 31999
-encryption client-side) and when the SMB client logs on as Guest (31997);
+encryption client-side) and insecure guest logons (31997 on the client,
+3023 on the server);
 availability per
 Microsoft's
 [SMB feature descriptions](https://learn.microsoft.com/windows-server/storage/file-server/smb-feature-descriptions)).
