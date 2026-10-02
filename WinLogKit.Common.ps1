@@ -52,7 +52,7 @@ function Get-OsType {
 # Registry access uses the .NET API throughout, not *-ItemProperty, because
 # one required value is literally named '*' and the ItemProperty cmdlets
 # treat that as a wildcard.
-function ConvertTo-NetRegPath { param([string]$Path) $Path -replace '^HKLM:\\', 'HKEY_LOCAL_MACHINE\' }
+function ConvertTo-NetRegPath { param([string]$Path) $Path -replace '^HKLM:\\', 'HKEY_LOCAL_MACHINE\' -replace '^HKCU:\\', 'HKEY_CURRENT_USER\' }
 
 function Get-RegValue {
     param([string]$Path, [string]$Name)
@@ -138,6 +138,40 @@ function Test-RetentionForcedByPolicy {
     if (@('Application', 'Security', 'Setup', 'System') -notcontains $LogName) { return $false }
     $v = Get-RegValue -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\EventLog\$LogName" -Name 'Retention'
     return ("$v" -eq '1')
+}
+
+# The PowerShell transcription policy (#91). The kit never sets it (removed
+# in 2.0.0, #36), but another policy might. Enabled with no OutputDirectory,
+# every Windows PowerShell session writes a transcript into the user's
+# Documents folder: Microsoft documents that as the policy's default and
+# says to restrict access to the output location. The policy exists under
+# Computer and User Configuration, Computer taking precedence, so the user
+# hive (of the account running this) is read only when the machine hive has
+# no value. Returns a hashtable:
+#   State             Off | Directed (on, folder set) | Undirected (on, no folder)
+#   OutputDirectory   the configured folder, or ''
+#   Scope             Machine | User (which hive decided) | '' (neither configured)
+#   Wow6432NodeValue  the Wow6432Node copy's EnableTranscripting as text, '' if absent
+# Read-only; compared as text so DWORD and string 1 read the same.
+function Get-TranscriptionPolicyState {
+    $machine = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription'
+    $user    = 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription'
+    $scope = 'Machine'; $path = $machine
+    $raw = Get-RegValue -Path $machine -Name 'EnableTranscripting'
+    if ($null -eq $raw) {
+        $scope = 'User'; $path = $user
+        $raw = Get-RegValue -Path $user -Name 'EnableTranscripting'
+        if ($null -eq $raw) { $scope = '' }
+    }
+    $on  = ("$raw" -eq '1')
+    $dir = ''
+    if ($on) { $dir = "$(Get-RegValue -Path $path -Name 'OutputDirectory')".Trim() }
+    $wowRaw = Get-RegValue -Path 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\Transcription' -Name 'EnableTranscripting'
+    $wow = ''
+    if ($null -ne $wowRaw) { $wow = "$wowRaw" }
+    $state = 'Off'
+    if ($on) { if ($dir -ne '') { $state = 'Directed' } else { $state = 'Undirected' } }
+    return @{ State = $state; OutputDirectory = $dir; Scope = $scope; Wow6432NodeValue = $wow }
 }
 
 # The Set-/Get-Smb*Configuration property an SMB audit item maps to: its

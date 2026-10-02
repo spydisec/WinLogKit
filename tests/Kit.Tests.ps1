@@ -116,7 +116,7 @@ Describe 'Scripts' {
             $expected = @('Test-IsAdmin', 'Get-DomainRole', 'Test-PowerShell7Installed', 'Get-OsType', 'ConvertTo-NetRegPath', 'Get-RegValue',
                 'ConvertFrom-AuditPolicyBackup', 'Get-AuditPolicyByGuid', 'Get-AuditSettingValue', 'Format-AuditSetting', 'Get-SmbAuditState',
                 'Get-BaselineItemKeySet', 'Import-BaselineSelection', 'Test-ReferenceBaselineItem', 'Write-IncludeOptionalWarning',
-                'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected')
+                'Test-TierSelected', 'Resolve-BaselineSelection', 'Test-ItemSelected', 'Get-TranscriptionPolicyState')
             $notInCommon = @($expected | Where-Object { -not $Defs.ContainsKey($_) -or (($Defs[$_] -join ';') -ne 'WinLogKit.Common.ps1') })
             $notInCommon | Should -BeNullOrEmpty
         }
@@ -395,6 +395,72 @@ Describe 'Audit integrity' {
     It 'never sets CrashOnAuditFail, and Test checks it' {
         @($BaselineRegistrySettings | Where-Object { $_.Name -eq 'CrashOnAuditFail' }) | Should -BeNullOrEmpty
         Select-String -Path (Join-Path $KitRoot 'Test-LoggingBaseline.ps1') -Pattern "-Name 'CrashOnAuditFail'" -Quiet | Should -BeTrue
+    }
+}
+# #91: transcription on with no OutputDirectory fills every user's Documents
+# folder. The kit never sets it; Test reports it.
+Describe 'Transcription policy check' {
+    It 'never sets the transcription policy' {
+        @($BaselineRegistrySettings | Where-Object { $_.Path -like '*\PowerShell\Transcription' }) | Should -BeNullOrEmpty
+    }
+
+    It 'reads Off when the value is absent or 0' {
+        Mock Get-RegValue { $null }
+        (Get-TranscriptionPolicyState).State | Should -Be 'Off'
+        Mock Get-RegValue { 0 }
+        (Get-TranscriptionPolicyState).State | Should -Be 'Off'
+    }
+
+    It 'reads Directed when on with an OutputDirectory, and keeps the folder' {
+        Mock Get-RegValue { if ($Name -eq 'OutputDirectory') { 'D:\Transcripts' } else { 1 } }
+        $s = Get-TranscriptionPolicyState
+        $s.State | Should -Be 'Directed'
+        $s.OutputDirectory | Should -Be 'D:\Transcripts'
+    }
+
+    It 'reads Undirected when on with no OutputDirectory, DWORD or string' {
+        Mock Get-RegValue { if ($Name -eq 'OutputDirectory') { $null } else { 1 } }
+        (Get-TranscriptionPolicyState).State | Should -Be 'Undirected'
+        Mock Get-RegValue { if ($Name -eq 'OutputDirectory') { '  ' } else { '1' } }
+        (Get-TranscriptionPolicyState).State | Should -Be 'Undirected'
+    }
+
+    It 'reports the Wow6432Node copy as text, absent as empty' {
+        Mock Get-RegValue { if ($Path -like '*Wow6432Node*') { 1 } else { $null } }
+        $s = Get-TranscriptionPolicyState
+        $s.State | Should -Be 'Off'
+        $s.Wow6432NodeValue | Should -Be '1'
+        Mock Get-RegValue { if ($Path -like '*Wow6432Node*') { 0 } elseif ($Name -eq 'OutputDirectory') { $null } else { 1 } }
+        $s = Get-TranscriptionPolicyState
+        $s.State | Should -Be 'Undirected'
+        $s.Wow6432NodeValue | Should -Be '0'
+        Mock Get-RegValue { if ($Path -like '*Wow6432Node*') { $null } else { 1 } }
+        (Get-TranscriptionPolicyState).Wow6432NodeValue | Should -Be ''
+    }
+
+    It 'falls back to the user policy only when the machine hive has no value' {
+        Mock Get-RegValue { if ($Path -like 'HKCU:*') { if ($Name -eq 'OutputDirectory') { $null } else { 1 } } else { $null } }
+        $s = Get-TranscriptionPolicyState
+        $s.State | Should -Be 'Undirected'
+        $s.Scope | Should -Be 'User'
+        Mock Get-RegValue { if ($Path -like 'HKCU:*') { 1 } elseif ($Path -like '*Wow6432Node*') { $null } else { 0 } }
+        $s = Get-TranscriptionPolicyState
+        $s.State | Should -Be 'Off'
+        $s.Scope | Should -Be 'Machine'
+        Mock Get-RegValue { $null }
+        (Get-TranscriptionPolicyState).Scope | Should -Be ''
+    }
+
+    It 'maps HKCU: as well as HKLM: for the .NET registry API' {
+        ConvertTo-NetRegPath 'HKCU:\SOFTWARE\Policies\X' | Should -Be 'HKEY_CURRENT_USER\SOFTWARE\Policies\X'
+        ConvertTo-NetRegPath 'HKLM:\SOFTWARE\Policies\X' | Should -Be 'HKEY_LOCAL_MACHINE\SOFTWARE\Policies\X'
+    }
+
+    It 'is assessed by Test as an uncategorised Safety row that fails only when Undirected' {
+        $src = Get-Content (Join-Path $KitRoot 'Test-LoggingBaseline.ps1') -Raw
+        $src | Should -Match 'Get-TranscriptionPolicyState'
+        $src | Should -Match "'Undirected' \{ Add-Row @\(\) 'Safety' .*'FAIL'"
+        $src | Should -Match "'Directed'   \{ Add-Row @\(\) 'Safety' .*'PASS'"
     }
 }
 # #74: Test tells you when the AppLocker logs can't record anything.
