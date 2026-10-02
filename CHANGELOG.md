@@ -16,7 +16,7 @@ One new read-only check: `Test-LoggingBaseline.ps1` now reports the PowerShell t
 
 | If you used | Now |
 |---|---|
-| `Test-LoggingBaseline.ps1` in a pipeline or RMM check | A host with transcription on and no `OutputDirectory` now fails (exit 1) where it passed before. Fix the policy, not the kit: set an `OutputDirectory` with restricted access, or remove the `Transcription` policy key. Transcription that is directed to a folder passes with a note. |
+| `Test-LoggingBaseline.ps1` in a pipeline or RMM check | A host with transcription on and no `OutputDirectory` now fails (exit 1) where it passed before. Fix the policy, not the kit: set an `OutputDirectory` with restricted access (per [Microsoft's PowerShell Group Policy settings](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_group_policy_settings#turn-on-powershell-transcription)), or remove the `Transcription` policy key. Transcription that is directed to a folder passes with a note. |
 | Anything else | Nothing to do. |
 
 ### Added
