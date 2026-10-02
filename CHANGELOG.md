@@ -10,7 +10,7 @@ Releases are tagged `vX.Y.Z` and published with a zip and a SHA256 checksum.
 
 ### Added
 
-- 🧾 **Transcription policy check.** `Test-LoggingBaseline.ps1` now has a read-only Safety row for the PowerShell transcription policy, which the kit never sets. On with no `OutputDirectory` fails, because every session then writes a transcript into the user's Documents folder; on with a folder passes with a note; off passes. The Safety never-do table explains it. [#91](https://github.com/spydisec/WinLogKit/issues/91)
+- 🧾 **Transcription policy check.** `Test-LoggingBaseline.ps1` now has a read-only Safety row for the PowerShell transcription policy, which the kit never sets. On with no `OutputDirectory` fails, because every session then writes a transcript into the user's Documents folder; on with a folder passes with a note; off passes. Machine policy takes precedence; the user policy of the account running the test is read when no machine policy is set, and a `Wow6432Node` copy that disagrees is noted. The Safety never-do table explains it. [#91](https://github.com/spydisec/WinLogKit/issues/91)
 
 ## [2.2.2] - 2026-09-24
 

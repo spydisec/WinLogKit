@@ -425,11 +425,35 @@ Describe 'Transcription policy check' {
         (Get-TranscriptionPolicyState).State | Should -Be 'Undirected'
     }
 
-    It 'notes the Wow6432Node copy separately' {
+    It 'reports the Wow6432Node copy as text, absent as empty' {
         Mock Get-RegValue { if ($Path -like '*Wow6432Node*') { 1 } else { $null } }
         $s = Get-TranscriptionPolicyState
         $s.State | Should -Be 'Off'
-        $s.Wow6432NodeOn | Should -BeTrue
+        $s.Wow6432NodeValue | Should -Be '1'
+        Mock Get-RegValue { if ($Path -like '*Wow6432Node*') { 0 } elseif ($Name -eq 'OutputDirectory') { $null } else { 1 } }
+        $s = Get-TranscriptionPolicyState
+        $s.State | Should -Be 'Undirected'
+        $s.Wow6432NodeValue | Should -Be '0'
+        Mock Get-RegValue { if ($Path -like '*Wow6432Node*') { $null } else { 1 } }
+        (Get-TranscriptionPolicyState).Wow6432NodeValue | Should -Be ''
+    }
+
+    It 'falls back to the user policy only when the machine hive has no value' {
+        Mock Get-RegValue { if ($Path -like 'HKCU:*') { if ($Name -eq 'OutputDirectory') { $null } else { 1 } } else { $null } }
+        $s = Get-TranscriptionPolicyState
+        $s.State | Should -Be 'Undirected'
+        $s.Scope | Should -Be 'User'
+        Mock Get-RegValue { if ($Path -like 'HKCU:*') { 1 } elseif ($Path -like '*Wow6432Node*') { $null } else { 0 } }
+        $s = Get-TranscriptionPolicyState
+        $s.State | Should -Be 'Off'
+        $s.Scope | Should -Be 'Machine'
+        Mock Get-RegValue { $null }
+        (Get-TranscriptionPolicyState).Scope | Should -Be ''
+    }
+
+    It 'maps HKCU: as well as HKLM: for the .NET registry API' {
+        ConvertTo-NetRegPath 'HKCU:\SOFTWARE\Policies\X' | Should -Be 'HKEY_CURRENT_USER\SOFTWARE\Policies\X'
+        ConvertTo-NetRegPath 'HKLM:\SOFTWARE\Policies\X' | Should -Be 'HKEY_LOCAL_MACHINE\SOFTWARE\Policies\X'
     }
 
     It 'is assessed by Test as an uncategorised Safety row that fails only when Undirected' {

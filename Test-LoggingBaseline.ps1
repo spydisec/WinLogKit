@@ -252,12 +252,19 @@ if ($null -eq $crash -or "$crash" -eq '0') {
 # one, so it drives the exit code without landing in a behaviour category.
 $tx = Get-TranscriptionPolicyState
 $txLabel = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription\EnableTranscripting'
-$txWow = ''
-if ($tx.Wow6432NodeOn -and $tx.State -eq 'Off') { $txWow = ' The Wow6432Node copy of the key enables it; check that path too.' }
+$txExpected = 'absent or 0, or 1 with an OutputDirectory'
+$txScope = ''
+if ($tx.Scope -eq 'User') { $txScope = ' (user policy of the account running this test; no machine policy is set)' }
+# The Wow6432Node copy is noted whenever it is present and disagrees with
+# the effective state, in either direction; an absent copy is not a mismatch.
+$txNote = ''
+if ($tx.Wow6432NodeValue -ne '' -and (($tx.Wow6432NodeValue -eq '1') -ne ($tx.State -ne 'Off'))) {
+    $txNote = " The Wow6432Node copy of the key reads EnableTranscripting=$($tx.Wow6432NodeValue), which differs; check that path too."
+}
 switch ($tx.State) {
-    'Off'        { Add-Row @() 'Safety' $txLabel 'absent or 0, or 1 with an OutputDirectory' '<absent or 0>' 'PASS' $txWow.Trim() }
-    'Directed'   { Add-Row @() 'Safety' $txLabel 'absent or 0, or 1 with an OutputDirectory' "1, OutputDirectory=$($tx.OutputDirectory)" 'PASS' 'Transcription is on and directed to a folder. Set by another policy; the kit never changes it. Keep that folder readable only by the people who need the transcripts.' }
-    'Undirected' { Add-Row @() 'Safety' $txLabel 'absent or 0, or 1 with an OutputDirectory' '1, no OutputDirectory' 'FAIL' 'Transcription is on with no OutputDirectory: every Windows PowerShell session writes a transcript into the user''s Documents folder, including anything typed on a command line. Set by another policy, not the kit. Either set an OutputDirectory with restricted access, or remove the Transcription policy. See Safety (never-do list).' }
+    'Off'        { Add-Row @() 'Safety' $txLabel $txExpected '<absent or 0>' 'PASS' $txNote.Trim() }
+    'Directed'   { Add-Row @() 'Safety' $txLabel $txExpected "1, OutputDirectory=$($tx.OutputDirectory)$txScope" 'PASS' ('Transcription is on and directed to a folder. Set by another policy; the kit never changes it. Keep that folder readable only by the people who need the transcripts.' + $txNote) }
+    'Undirected' { Add-Row @() 'Safety' $txLabel $txExpected "1, no OutputDirectory$txScope" 'FAIL' ('Transcription is on with no OutputDirectory: every Windows PowerShell session writes a transcript into the user''s Documents folder, including anything typed on a command line. Set by another policy, not the kit. Either set an OutputDirectory with restricted access, or remove the Transcription policy. See Safety (never-do list).' + $txNote) }
 }
 
 # ----------------------- SMB auditing (Windows 11 24H2 / Server 2025+) ------
