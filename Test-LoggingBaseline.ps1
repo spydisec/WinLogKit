@@ -244,6 +244,22 @@ if ($null -eq $crash -or "$crash" -eq '0') {
     Add-Row @('Logging tampered with') 'Safety' $crashLabel '0 or absent' "$crash" 'FAIL' 'CrashOnAuditFail is on: the host halts when the Security log fills. Set by another policy; the kit never changes it. See Safety (never-do list).'
 }
 
+# PowerShell transcription (#91): the kit never sets it, but another policy
+# might. On with no OutputDirectory, every session writes a transcript into
+# the user's Documents folder (secrets typed on a command line included), so
+# that state fails. On with a folder is someone's deliberate choice: PASS
+# with a note. Uncategorised: it is a data-exposure finding, not a logging
+# one, so it drives the exit code without landing in a behaviour category.
+$tx = Get-TranscriptionPolicyState
+$txLabel = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription\EnableTranscripting'
+$txWow = ''
+if ($tx.Wow6432NodeOn -and $tx.State -eq 'Off') { $txWow = ' The Wow6432Node copy of the key enables it; check that path too.' }
+switch ($tx.State) {
+    'Off'        { Add-Row @() 'Safety' $txLabel 'absent or 0, or 1 with an OutputDirectory' '<absent or 0>' 'PASS' $txWow.Trim() }
+    'Directed'   { Add-Row @() 'Safety' $txLabel 'absent or 0, or 1 with an OutputDirectory' "1, OutputDirectory=$($tx.OutputDirectory)" 'PASS' 'Transcription is on and directed to a folder. Set by another policy; the kit never changes it. Keep that folder readable only by the people who need the transcripts.' }
+    'Undirected' { Add-Row @() 'Safety' $txLabel 'absent or 0, or 1 with an OutputDirectory' '1, no OutputDirectory' 'FAIL' 'Transcription is on with no OutputDirectory: every Windows PowerShell session writes a transcript into the user''s Documents folder, including anything typed on a command line. Set by another policy, not the kit. Either set an OutputDirectory with restricted access, or remove the Transcription policy. See Safety (never-do list).' }
+}
+
 # ----------------------- SMB auditing (Windows 11 24H2 / Server 2025+) ------
 
 $smbState = Get-SmbAuditState

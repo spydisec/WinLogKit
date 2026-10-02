@@ -140,6 +140,25 @@ function Test-RetentionForcedByPolicy {
     return ("$v" -eq '1')
 }
 
+# The PowerShell transcription policy (#91). The kit never sets it (removed
+# in 2.0.0, #36), but another policy might. Enabled with no OutputDirectory,
+# every Windows PowerShell session writes a transcript into the user's
+# Documents folder: Microsoft documents that as the policy's default and
+# says to restrict access to the output location. Returns a hashtable:
+#   State            Off | Directed (on, folder set) | Undirected (on, no folder)
+#   OutputDirectory  the configured folder, or ''
+#   Wow6432NodeOn    whether the Wow6432Node copy of the key also enables it
+# Read-only; compared as text so DWORD and string 1 read the same.
+function Get-TranscriptionPolicyState {
+    $base = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription'
+    $on   = ("$(Get-RegValue -Path $base -Name 'EnableTranscripting')" -eq '1')
+    $dir  = "$(Get-RegValue -Path $base -Name 'OutputDirectory')".Trim()
+    $wow  = ("$(Get-RegValue -Path 'HKLM:\SOFTWARE\Wow6432Node\Policies\Microsoft\Windows\PowerShell\Transcription' -Name 'EnableTranscripting')" -eq '1')
+    $state = 'Off'
+    if ($on) { if ($dir -ne '') { $state = 'Directed' } else { $state = 'Undirected' } }
+    return @{ State = $state; OutputDirectory = $dir; Wow6432NodeOn = $wow }
+}
+
 # The Set-/Get-Smb*Configuration property an SMB audit item maps to: its
 # Setting when it has one (the same setting exists on client and server,
 # and Ids must be unique), otherwise its Id. Works for settings-table
